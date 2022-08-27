@@ -1,0 +1,1 @@
+cljs: clojure -M:cljs/dev:cljs/build:repl watch app test

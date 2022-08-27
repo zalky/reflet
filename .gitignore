@@ -1,0 +1,5 @@
+.DS_Store
+/.cpcache
+/.shadow-cljs/
+/package-lock.json
+/resources/
