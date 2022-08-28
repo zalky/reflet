@@ -1,1 +1,2 @@
-cljs: clojure -M:cljs/dev:cljs/build:repl watch app test
+cljs: make npm; clojure -M:cljs watch app test
+sass: clojure -M:sass

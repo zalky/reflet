@@ -1,5 +1,5 @@
 (ns reflet.interceptors
-  (:require [reflet.util :as util]
+  (:require [cinch.core :as util]
             [re-frame.core :as f]
             [re-frame.registrar :as reg]))
 

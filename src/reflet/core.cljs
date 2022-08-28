@@ -1,5 +1,5 @@
 (ns reflet.core
-  "Re-defines Re-frame api and provides convenience utilites."
+  "Re-defines re-frame api and provides convenience utilites."
   (:refer-clojure :exclude [uuid])
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]
@@ -11,55 +11,39 @@
             [reflet.db :as db]
             [reflet.interceptors :as itor]
             [reflet.interop :as i]
-            [reflet.ref-spec :as ref-spec])
+            [reflet.ref-spec :as rs]
+
+            ;; Required for macro use.
+            [cinch.core])
   (:require-macros [reflet.core]))
-
-(defn ^:dynamic *random-ref*
-  "This is only meant to be referenced or rebound from this namespace
-  and the corresponding test namespace. In all other namespaces prefer
-  the :random-ref co-effect via inject-cofx."
-  ([k] (db/random-ref k))
-  ([k _] (db/random-ref k)))
-
-(f/reg-cofx :random-ref
-  (fn [cofx bindings]
-    (->> bindings
-         (s/conform ::ref-spec/binding-map)
-         (reduce (fn [m {:keys [key attr]}]
-                   (assoc m key (*random-ref* attr)))
-                 {})
-         (assoc cofx :random-ref))))
 
 ;;;; Re-frame API
 
+(def reflet-interceptors
+  [db/inject-index itor/add-global-interceptors])
+
 (defn reg-event-db
-  "Overloaded re-frame event registration injects global
-  interceptors."
   ([id handler]
    (reg-event-db id nil handler))
   ([id interceptors handler]
    (f/reg-event-db id
-     [db/inject-index itor/add-global-interceptors interceptors]
+     [reflet-interceptors interceptors]
      handler)))
 
 (defn reg-event-fx
-  "Overloaded re-frame event registration injects global
-  interceptors."
   ([id handler]
    (reg-event-fx id nil handler))
   ([id interceptors handler]
    (f/reg-event-fx id
-     [db/inject-index itor/add-global-interceptors interceptors]
+     [reflet-interceptors interceptors]
      handler)))
 
 (defn reg-event-ctx
-  "Overloaded re-frame event registration injects global
-  interceptors."
   ([id handler]
    (reg-event-ctx id nil handler))
   ([id interceptors handler]
    (f/reg-event-ctx id
-     [db/inject-index itor/add-global-interceptors interceptors]
+     [reflet-interceptors interceptors]
      handler)))
 
 (def dispatch                   f/dispatch)
@@ -99,9 +83,22 @@
 (def add-post-event-callback    f/add-post-event-callback)
 (def remove-post-event-callback f/remove-post-event-callback)
 
-;;;; Aria entity model API
+;;;; Reflet API
 
-(defn- assert-get-handler
+(defn reg-config
+  "Registers reflet configuration map. The configuration should be
+  registered before application boot. Currently supported
+  configuration options:
+
+  :sync-start!   - Sync expressions within pull syntax are
+                   dispatched via a sync-start!. Default is nil, which
+                   means sync expressions are ignored."
+  [config]
+  (reg/register-handler ::config ::config config))
+
+(reg-fx ::reg-config reg-config)
+
+(defn- get-handler
   [kind id]
   (or (reg/get-handler kind id)
       (throw
@@ -110,91 +107,79 @@
         {:kind kind
          :id   id}))))
 
-(defn wrap-result-reaction
-  "Given an input reaction, and a query vector, returns a reaction
-  wrapped with a result computation, if it exists."
+(defn result-reaction
   [input-r [id :as query-v]]
   (if-let [f (reg/get-handler :result-fn id)]
     (db/result-reaction input-r query-v f)
     input-r))
 
-(defn reg-config
-  "Sync expressions within pull syntax are dispatched via a global
-  sync-start! fn that can be configured on application boot. If not
-  configured it is simply ignored."
-  [config]
-  (reg/register-handler ::config ::config config))
-
-(reg-fx ::reg-config reg-config)
-
-(defn synced-pull-reaction
-  [query-v expr-fn]
+(defn pull-reaction
+  [expr-fn query-v]
   (->> (reg/get-handler ::config ::config)
        (db/pull-reaction query-v expr-fn)))
 
-(defn pull-reaction-handler
+(defn pull-handler
   [_ [id :as query-v]]
-  (let [expr-fn (assert-get-handler :expr-fn id)]
-    (-> query-v
-        (synced-pull-reaction expr-fn)
-        (wrap-result-reaction query-v))))
+  (-> (get-handler ::expr-fn id)
+      (pull-reaction query-v)
+      (result-reaction query-v)))
 
 (defn reg-pull*
-  "Registers a named pull query. Semantics are datomic pull, with the
-  addition of link queries and attribute accessing. Link queries allow
-  the user to query the db for a global named attribute reference in
-  the db, rather than a UUID based entity reference. Attribute
-  accessing is just a convenience for returning the value of a
-  specific attribute, rather than an entity map containing the
-  attribute entry."
+  "Prefer reg-pull macro."
   ([id expr-fn]
    (reg-pull* id expr-fn nil))
   ([id expr-fn result-fn]
-   (reg/register-handler :expr-fn id expr-fn)
+   (reg/register-handler ::expr-fn id expr-fn)
    (when result-fn
      (reg/register-handler :result-fn id result-fn))
-   (reg-sub-raw id pull-reaction-handler)))
+   (reg-sub-raw id pull-handler)))
+
+(defn- reg-comp-rf
+  [r id]
+  (let [query-v [id r]]
+    (-> (get-handler ::expr-fn id)
+        (comp deref)
+        (pull-reaction query-v)
+        (result-reaction query-v))))
 
 (defn reg-comp
   "Composes a series of named reactions, where the result of each
   reaction in the sequence is provided as input to the next. Semantics
-  are similar to `clojure.core/comp`, in that aside from the first
-  reaction, each reaction in the pipeline should expect only a single
-  argument. Like `comp`, the order of operations is also reverse the
-  order in which they are listed. Note that reactions that participate
-  in compositions are not uniquely identified by their query vector
-  arguments, but by their input reactions. This is in contrast to
-  reactions produced by `reg-pull`, `reg-sub` or `reg-sub-raw`, which
-  are uniquely identified by query vector used to construct them. This
-  has implications for subscription caching: while the overall
-  reaction pipeline that is returned by `reg-comp` is cached by
-  `re-frame.core/subscribe`, the constituent reactions are by their
-  nature always distinct between two different compositions."
+  are similar to `clojure.core/comp`. Except for the first, every
+  other reaction in the pipeline should expect only a single argument.
+  As with comp, the order of operations is reversed from the order in
+  which they are declared. The resultant reaction returned by the
+  composition is cached according to the input arguments of the
+  pipeline. No intermediary reactions are cached."
   [id comp-ids]
   (let [[r1-id & ids] (reverse comp-ids)]
-    (letfn [(comp-r [r id]
-              (let [expr-fn  (assert-get-handler :expr-fn id)
-                    expr-fn* (comp expr-fn deref)
-                    query-v  [id r]]
-                (-> query-v
-                    (synced-pull-reaction expr-fn*)
-                    (wrap-result-reaction query-v))))]
-      (reg-sub-raw id
-        (fn [_ [_ & args]]
-          (let [query-v (vec (cons r1-id args))
-                r1      (pull-reaction-handler nil query-v)]
-            (reduce comp-r r1 ids)))))))
+    (reg-sub-raw id
+      (fn [_ query-v]
+        (let [r1 (->> (rest query-v)
+                      (cons r1-id)
+                      (vec)
+                      (pull-handler nil))]
+          (reduce reg-comp-rf r1 ids))))))
+
+(f/reg-cofx :random-ref
+  ;; This cofx has the same semantics as with-ref, with the exception
+  ;; that refs cannot be transient, because there is no reactive
+  ;; context in event handlers.
+  (fn [cofx {:keys [meta]
+             :as   bindings}]
+    (letfn [(rf [m {:keys [key id-attr]}]
+              (->> (db/random-ref id-attr meta key)
+                   (assoc m key)))]
+      (->> bindings
+           (s/conform ::rs/binding-map)
+           (reduce rf {})
+           (assoc cofx :random-ref)))))
 
 (reg-event-fx ::with-ref-cleanup
   (fn [{:keys [db]} [_ & refs]]
     {::i/cleanup refs
      :db         (apply db/dissocn db refs)
      :log        (concat [:debug "Entity cleanup"] refs)}))
-
-(deftype IResubscribe [sub-fn]
-  IDeref
-  (-deref [this]
-    (deref (sub-fn))))
 
 ;;;; Additional Utilities
 

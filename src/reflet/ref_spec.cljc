@@ -6,9 +6,9 @@
   (s*/conform-to
     (s/or :keyword keyword?
           :symbol symbol?)
-    (fn [[_ binding*]]
-      {:key (keyword binding*)
-       :sym (symbol (name binding*))})))
+    (fn [[_ binding]]
+      {:key (keyword binding)
+       :sym (symbol (name binding))})))
 
 (s/def ::binding-vector
   (s/coll-of ::binding :kind vector?))
@@ -21,6 +21,6 @@
        (fn [[k binding-vector]]
          (map
           (fn [parsed]
-            (assoc parsed :attr k))
+            (assoc parsed :id-attr k))
           binding-vector))
        binding-map))))

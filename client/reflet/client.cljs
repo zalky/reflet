@@ -1,7 +1,15 @@
-(ns build.client
+(ns reflet.client
   "Stand-alone client example, and testing."
   (:require [reagent.dom :as dom]
-            [reflet.core :as f]))
+            [reflet.core :as f]
+            [reflet.db :as db]
+
+            ;; Require for use.
+            [reflet.log]))
+
+(f/reg-event-fx ::init
+  (fn [_ _]
+    {:db (db/new-db)}))
 
 (defn root
   []
@@ -16,4 +24,6 @@
 
 (defn init!
   []
+  (f/dispatch-sync [::init])
   (render!))
+

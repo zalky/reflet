@@ -17,10 +17,10 @@
   (r/atom {}))
 
 (s/def ::js-ref
-  (s/tuple #{:js/uuid} uuid?))
+  (s/tuple qualified-keyword? uuid?))
 
 (s/def ::dom-ref
-  (s/tuple #{:dom/uuid :js/uuid :component/uuid} uuid?))
+  (s/tuple qualified-keyword? uuid?))
 
 (defn get-obj
   "The preferred function for getting objects in effect handlers.
@@ -74,13 +74,13 @@
 (f/reg-fx ::cleanup
   ;; Called from `with-ref` cleanup to remove references belonging to
   ;; an unmounted React comp
-  (fn [ids]
-    (doseq [id ids]
-      (when-let [{:keys [destroy obj]} (get @js-db id)]
+  (fn [refs]
+    (doseq [ref refs]
+      (when-let [{:keys [destroy obj]} (get @js-db ref)]
         (when destroy
           (destroy obj))
-        (swap! js-db dissoc id))
-      (swap! dom-db dissoc id))))
+        (swap! js-db dissoc ref))
+      (swap! dom-db dissoc ref))))
 
 (f/reg-cofx :js-db
   ;; Provides the JS db as a co-effect to event handlers

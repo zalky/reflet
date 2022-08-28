@@ -30,7 +30,7 @@
 
       (testing "entity"
         (is (= (s/conform ::s*/ref-any {:system/uuid A
-                                        :kr.type :entity})
+                                        :kr/type :entity})
                ::s/invalid))))
 
     (testing "cardinality many"
@@ -44,23 +44,23 @@
 
       (testing "entity"
         (is (= (s/conform ::s*/ref-any [{:system/uuid A
-                                         :kr.type :entity}
+                                         :kr/type :entity}
                                         {:system/uuid B
-                                         :kr.type :entity}])
+                                         :kr/type :entity}])
                ::s/invalid)))
 
       (testing "with heterogenous"
         (is (= (s/conform ::s*/ref-any [A
                                         [:system/uuid B]
                                         {:system/uuid C
-                                         :kr.type :entity}])
+                                         :kr/type :entity}])
                ::s/invalid)))
 
       (testing "with errors"
         (is (= (s/conform ::s*/ref-any [:bad-ref
                                         [:system/uuid B]
                                         {:system/uuid C
-                                         :kr.type :entity}])
+                                         :kr/type :entity}])
                ::s/invalid)))))
 
   (testing "ref coerce many"

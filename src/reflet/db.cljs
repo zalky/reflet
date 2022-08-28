@@ -1,65 +1,73 @@
 (ns reflet.db
-  "Provides db, normalized query and mutation methods, and differential,
-  reactive pull subscriptions.
+  "Provides a differential, reactive db, with mutation and query
+  methods.
 
   Storing data in normalized form has many benefits for application
-  architecture as well as data integrity. The main trade-off is the
-  performance cost of normalizing data during writes, and
-  de-normalizing data during queries.
+  and data design. The main trade-off is the performance cost of
+  normalizing data during writes, and de-normalizing data during
+  queries. Specifically, some normalized queries can end up spanning
+  the entire db, and so in a reactive application, understanding when
+  to re-run queries is key to performance.
 
-  A key insight that can help optimize denormalization is that for the
-  set of queries that conform to a Datomic pull, a result cannot
-  change if the entities that were looked up to produce the result
-  have not changed. The exception to this are Datomic reverse
-  attribute lookups, which can be avoided.
+  The naive approach of just re-running every query whenever the db
+  changes is rarely feasible. Just one expensive query will grind the
+  entire app to a halt, and predicting the cost of a query is a
+  run-time calculation that depends on the data.
 
-  The Subgraph library, for example, leverages this guarantee to cache
-  entity lookups via reactions in the computed result. This avoids
-  recomputing the result if none of the entities that were looked up
-  have changed.
-  
-  The problem with this approach is that all those lookup reactions
-  depend directly on the db itself, and the cumulative overhead of
-  managing those reactions often significantly outweighs the marginal
-  benefit of not having to recompute the query result every time. The
-  naive method of just recomputing the query result every time is
-  actually faster.
+  A key insight that can help optimize query denormalization is that
+  for the set of queries that conform to a Datomic pull, a result
+  cannot change if the entities that were traversed while walking the
+  joins have not changed.
 
-  Unfortunately, the naive method is not good enough:
+  An approach used elsewhere that leverages this guarantee is to use
+  reagent reactions to cache entity joins in the computed result. This
+  avoids recomputing the entire query if some of the entities that
+  were traversed in the joins have not changed. Only the subgraph that
+  depends on the changed entities will be recomputed.
 
-  With normalized data, any query may potentially span the entire db,
-  and therefore every query must re-run whenever the db changes. While
-  this may work if every query is cheap, just one expensive query will
-  grind the entire app to halt.
+  Unfortunately this approach runs into a fundamental problem: by
+  turning every join into a reactive computation, the cumulative
+  overhead of tracking every reaction significantly exceeds the cost
+  of just running the full non-reactive query. Equality checks are
+  expensive, and the number of join reactions created depends on the
+  shape of data at run-time, which can be huge. The naive approach, to
+  just recompute the full query when the db changes, is always faster.
 
   The solution presented in this namespace leverages the guarantee on
-  query results to implement a differential, reactive loop between the
-  db and queries.
+  query results and combines it with an event sourcing strategy to
+  implement a differential, reactive loop between the db and queries.
 
-  The key component is a symmetric index for mapping queries to
-  entities and entities to queries. When a query runs, it updates the
-  index with entities it is tracking. On the write side, when a db
-  mutation function touches a normalized entity, it can trivially
-  lookup in the index which queries must re-run. Those queries that do
-  not need to re-run can return a cached result.
-  
-  Any set of query operations are commutative and idempotent. This is
-  true even though the query reactions update the query index via
-  side-effect.
+  To summarize: each query tracks the entities it traversed to produce
+  its result. When a mutation operation is performed on the db, the
+  entities that were touched by the mutation are then directly mapped
+  to the queries that need to update. This is essentially a mutation
+  event sourcing strategy.
 
-  Any set of db mutation operations that were previously commutative
-  or idempotent on unnormalized data should remain so. The db mutation
-  functions are pure and operate on the db value provided to event
-  handlers. They can be arbitrarily composed in event handler code,
-  similar to associative methods like `clojure.core/assoc`.
+  Importantly, while queries react to mutation events, they will also
+  always return the correct value if for whatever reason the db is
+  reset outside the mutation functions, for example, if the db value
+  is set by re-frame-undo or debug tooling like re-frame-10x. The
+  reactive queries respect time-travel.
+
+  Another key design point is that query operations must be
+  commutative and idempotent with respect to the tracking index. On
+  the mutation side, any set of db operations that were previously
+  commutative or idempotent on unnormalized data should remain so.
+
+  The db mutation operations are pure functions that operate on the db
+  value provided to event handlers. They can be arbitrarily composed
+  in event handler code, similar to associative methods like
+  `clojure.core/assoc`. They can also be freely interleaved with
+  non-normalzied db operations. At the end of the day the re-frame db
+  is still just a big map.
 
   It is important to note that the query index is not actually stored
-  as part of application state, since it is inherently not application
-  state. Rather, it is state associated with the reactive queries,
-  analogous to how reagent reactions maintain internal state to
-  function properly. If you wind back application state to a previous
-  value, the query state should not change until the queries have
-  re-run.
+  as part of application state, since it is fundamentally not
+  application state. Rather, it is state associated with the reactive
+  queries, analogous to how reagent reactions maintain internal state
+  to function properly. If you wind back application state to a
+  previous value, the query state should not change until the queries
+  have re-run.
 
   In order for the pure db mutation functions to operate on the index,
   an interceptor injects the index into the db coeffect, as well as
@@ -70,7 +78,7 @@
 
   1. db tick
   2. index tick
-  3. query tick (one for each query)
+  3. query tick one for each query
 
   Step by step:
 
@@ -99,7 +107,7 @@
      a) updates the entities it is tracking in the query index
      b) clears the touched query set
      c) syncs the query tick to the db tick
-  
+
   6. After all queries have been run, the index tick is synced to
      to the db tick.
 
@@ -110,22 +118,19 @@
 
   However, aside from this one constraint, all regular db operation on
   un-normalized data are completely orthogonal to the differential
-  reactive loop. At the end of the day, the db is still just a map.
-  While it is probably not recommended for broader architectural
-  reasons, it is technically feasible to interleave normalized db
-  operation with un-normalized ones in the same event handler.
+  reactive loop. At the end of the day, the db is still just a map,
+  and you can mutate it in any way as long as you persist the ::data
+  key.
 
   This namespace additionally provides an implementation for link
   queries similar to those in Fulcro or Om Next. A link attribute
-  allows you to store normalized data at a semantincally meaningful,
+  allows you to store normalized data at a semantically meaningful,
   global keyword in the normalized db. For example, you could store
-  normalized user data at a global `:current-user` attribute in the db
-  index. A query on a link attribute poses an edge case when it
-  updates: a link query must not only track the entities used to
-  construct the result, but the value of the link attribute itself.
+  normalized user data at a global `::current-user` attribute in the
+  db index.
 
-  Finally, this algorithm is implemented entirely via the existing
-  reagent and re-frame machinery."
+  Finally, this algorithm is implemented entirely via existing reagent
+  and re-frame machinery."
   (:require [clojure.set :as set]
             [clojure.walk :as walk]
             [com.rpl.specter :as sp]
@@ -136,12 +141,13 @@
             [reagent.core :as r*]
             [reagent.ratom :as r]
             [reflet.db.normalize :as norm]
-            [reflet.util :as util]
+            [cinch.core :as util]
             [reflet.util.transients :as t]
             [taoensso.timbre :as log]))
 
 (defmulti random-ref*
-  "Given a unique id attribute, returns a random entity reference."
+  "Extend this to produce different kinds of random entity references
+  for new id attributes."
   identity)
 
 (defmethod random-ref* nil
@@ -152,11 +158,12 @@
   [id-attr]
   [id-attr (random-uuid)])
 
-(defn random-ref
-  [id-attr & {:keys [label provisional]}]
+(defn ^:dynamic random-ref
+  "Given a unique id attribute, and optionally metadata, returns a
+  random entity reference. Only rebound for testing."
+  [id-attr & [meta]]
   (cond-> (random-ref* id-attr)
-    label       (update 1 vary-meta assoc :label label)
-    provisional (update 1 vary-meta assoc :provisional true)))
+    meta (update 1 with-meta meta)))
 
 ;;;; Transient Entity Reference Tracking
 
@@ -311,17 +318,25 @@
   (when (transient-unmounted? ref)
     (log/warn "Writing to unmounted transient state" ref)))
 
+(defn- mergen-normalize
+  [tx {:keys [id-attrs] :as opts}]
+  (->> (norm/to-many tx id-attrs)
+       (filter map?)
+       (mapcat #(norm/normalize % opts))))
+
+(defn- get-opts
+  [db]
+  {:id-attrs (::id-attrs db)})
+
 (defn mergen
   "Normalizes the given tx data, merges all normalized entities into the
   db, touches any queries tracking those entities in the index, and
   increments the db and index ticks."
-  [{:keys [::id-attrs] :as db} tx]
-  (let [opts {:id-attrs id-attrs}]
+  [db tx]
+  (let [opts (get-opts db)]
     (loop [data       (transient (::data db {}))
            index      (transient (::index db {}))
-           [e & more] (->> (norm/to-many tx id-attrs)
-                           (filter map?)
-                           (mapcat #(norm/normalize % opts)))]
+           [e & more] (mergen-normalize tx opts)]
       (if e
         (let [ref (norm/refer-one e opts)]
           (warn-on-transient-write ref)
@@ -331,7 +346,14 @@
         (-> db
             (assoc ::data (persistent! data))
             (assoc ::index (persistent! index))
-            inc-tick)))))
+            (inc-tick))))))
+
+(defn- valid-path?
+  [db path]
+  (and (->> db
+            (::id-attrs)
+            (norm/ref? (first path)))
+       (<= (count path) 2)))
 
 (defn assoc-inn
   "Adds the unnormalized value to entity at path. Similar semantics to
@@ -339,20 +361,51 @@
   touches any queries that are tracking the entity and increments the
   db and index ticks. Does not resolve entity references, so it cannot
   do deep updates in normalized data."
-  [{:keys [::id-attrs] :as db} [ref :as path] value]
-  {:pre [(norm/ref? ref id-attrs)]}
+  [db [ref :as path] value]
+  {:pre [(valid-path? db path)]}
   (warn-on-transient-write ref)
-  (-> db
-      (assoc-in (cons ::data path) value)
-      (update ::index touch-queries ref)
-      inc-tick))
+  (let [p (cons ::data path)]
+    (-> db
+        (assoc-in p value)
+        (update ::index touch-queries ref)
+        (inc-tick))))
+
+(defn update-inn
+  "Updates the value at the normalized db path. Similar semantics to
+  clojure.core/update-in, where the entity ref or link attribute is
+  first part of path. The updated value is either an entity, a link
+  attribute value, or an attribute of an entity. Does not resolve
+  entity references, so it cannot do deep updates in normalized data."
+  [db [ref :as path] f & args]
+  {:pre [(valid-path? db path)]}
+  (warn-on-transient-write ref)
+  (let [p (cons ::data path)]
+    (-> (apply update-in db p f args)
+        (update ::index touch-queries ref)
+        (inc-tick))))
+
+(defn assocn
+  "Adds a normalized link at the given attribute."
+  [db attr tx]
+  {:pre [(identity attr)]}
+  (letfn [(assocn* [refs]
+            (-> db
+                (mergen tx)
+                (assoc-in [::data attr] refs)
+                (update ::index touch-queries attr)))]
+    (let [opts (get-opts db)]
+      (if-let [ref (norm/refer-one tx opts)]
+        (assocn* ref)
+        (if-let [refs (norm/refer-many tx opts)]
+          (assocn* (norm/like tx refs))
+          db)))))
 
 (defn dissocn
   "Removes the list of entities from the db, touches any queries
   tracking those entities in the index, and increments the db and
   index ticks. Does not remove any nested entities in tx."
-  [{:keys [::id-attrs] :as db} & tx]
-  (let [opts {:id-attrs id-attrs}]
+  [db & tx]
+  (let [opts (get-opts db)]
     (loop [data         (transient (::data db {}))
            index        (transient (::index db {}))
            [ref & more] (or (norm/refer-many tx opts)
@@ -365,39 +418,7 @@
         (-> db
             (assoc ::data (persistent! data))
             (assoc ::index (persistent! index))
-            inc-tick)))))
-
-(defn update-inn
-  "Updates the value at the normalized db path. Similar semantics to
-  clojure.core/update-in, where the entity ref or link attribute is
-  first part of path. The updated value is either an entity, a link
-  attribute value, or an attribute of an entity. Does not resolve
-  entity references, so it cannot do deep updates in normalized data."
-  [{:keys [::id-attrs] :as db} [ref :as path] f & args]
-  {:pre [(or (and (keyword? ref)
-                  (= (count path) 1))
-             (and (norm/ref? ref id-attrs)
-                  (<= (count path) 2)))]}
-  (warn-on-transient-write ref)
-  (-> (apply update-in db (cons ::data path) f args)
-      (update ::index touch-queries ref)
-      inc-tick))
-
-(defn assocn
-  "Adds a normalized link at the given attribute."
-  [{:keys [::id-attrs] :as db} attr tx]
-  {:pre [(identity attr)]}
-  (letfn [(assocn* [refs]
-            (-> db
-                (mergen tx)
-                (assoc-in [::data attr] refs)
-                (update ::index touch-queries attr)))]
-    (let [opts {:id-attrs id-attrs}]
-      (if-let [ref (norm/refer-one tx opts)]
-        (assocn* ref)
-        (if-let [refs (norm/refer-many tx opts)]
-          (assocn* (norm/like tx refs))
-          db)))))
+            (inc-tick))))))
 
 ;;;; Query API
 
@@ -414,8 +435,8 @@
 (defn- pull-pattern
   [{:keys [db ref acc-refs!] :as context} pattern result]
   (let [c (assoc context
-            :entity (get db ref)
-            :pattern pattern)]
+                 :entity (get db ref)
+                 :pattern pattern)]
     (when (and acc-refs! ref)
       (acc-refs! ref))
     (reduce (fn [result expr]
@@ -424,13 +445,13 @@
             (distinct pattern))))
 
 (defn- pull-sync!
-  "Parses sync expression and dispatches sync init."
+  "Parses sync expression and dispatches sync init. Only dispatch
+  side-effects if they have been explicitly configured. The default
+  pull implementation should be pure."
   [{:keys [db ref sync-start!] :as context} sync result]
   (let [[id expr & args] (case (first sync) ; Account for quoted list expressions
                            list (rest sync)
                            sync)]
-    ;; Only dispatch side-effects if they have been explicitly
-    ;; configured. The default pull implementation should be pure.
     (when sync-start!
       (sync-start! {:id   id
                     :db   db
@@ -526,15 +547,22 @@
      :else                (throw (ex-info "Invalid pull expression"
                                           {::expr expr})))))
 
-(defn pull!
-  "For any `:db` provided in `context`, evaluates the pull expression
-  specified by `expr`. By default, this implementation is a pure
-  function of the given `:db` value. However, if `:acc-refs!` and
-  `:sync-start!` fns are provided in `context`, this implementation
-  accumulates touched entity references, and dispatches sync
-  expressions via side-effects. This means the entire impl must also
-  be eager. This function is not part of the api and not meant to be
-  used directly."
+(defn- pull!
+  "Evaluates the pull expression specified by `expr` against a given
+  context. A context will contain at least:
+
+  :db          - DB value against which the expression is evaluated
+  :ref         - [Optional] Root entity reference with which to
+                 start the graph traversal
+  :acc-refs!   - [Optional] Fn that accumulates entity references
+                 via side effects
+  :sync-start! - [Optional] Fn that dispatches sync events
+
+  By default, this implementation is a pure function of the given
+  `:db` value. However, if `:acc-refs!` and `:sync-start!` are
+  provided in the context map, this implementation runs them for
+  side-effects. This means the entire impl must also be eager. This
+  function is not part of the api and not meant to be used directly."
   [{ref :ref :as context} expr]
   (letfn [(get-attr [expr]
             (when ref
@@ -731,7 +759,7 @@
         n  (name id)]
     (-> (keyword ns (str n "[result-fn]"))
         (cons args)
-        vec)))
+        (vec))))
 
 (defn result-reaction
   [input-r query-v result-fn]
@@ -749,12 +777,12 @@
                        (trace/merge-trace! {:tags {:value res}})
                        res)))]
     (->> r
-         interop/reagent-id
+         (interop/reagent-id)
          (reset! r-id))
     r))
 
 (defn pull-reaction
-  "Returns a differential pull reaction. `expr-rn` is a function that
+  "Returns a differential pull reaction. `expr-fn` is a function that
   given query vector arguments, returns a pull query spec and
   optionally an entity ref that is being queried. `query-v` is the
   query vector supplied to the generating subscription. The tracing of
@@ -785,7 +813,7 @@
                                   :e-ref      e-ref
                                   :q-ref      q-ref
                                   :query-tick @q-tick})
-                             
+
                              {i   :index
                               res :result} (pull-reactive in)]
                          (reset! query-index i)
@@ -797,7 +825,7 @@
                    (when-let [f (:on-dispose config)]
                      (f))))]
     (->> r
-         interop/reagent-id
+         (interop/reagent-id)
          (reset! r-id))
     r))
 
@@ -817,15 +845,14 @@
    (fn [x]
      (and (map? x) (:kr/type x)))])
 
-(defn e
-  [m ref]
-  (apply util/assoc-nil m ref))
-
 (defn new
   [m]
   (letfn [(f [x]
-            (cond-> x
-              (not (:system/uuid x)) (e (random-ref :system/uuid :provisional true))))]
+            (if-not (:system/uuid x)
+              (->> {:provisional true}
+                   (random-ref :system/uuid)
+                   (apply util/assoc-nil x))
+              x))]
     (sp/transform entity-walker f m)))
 
 ;;;; Utils
@@ -838,7 +865,7 @@
               (cond-> (get-label ref)
                 label (= label))))]
     (->> @db/app-db
-         ::data
+         (::data)
          (filter f)
          (into {}))))
 
@@ -850,4 +877,3 @@
        (vary-meta x assoc :label label)
        x))
    tx))
-
