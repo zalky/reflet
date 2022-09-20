@@ -732,23 +732,25 @@
        (swap! query-index assoc ::tick db-tick)))
     db-tick))
 
-(f/reg-sub-raw ::query-tick
-  ;; Returns the given query's tick, syncing to the db tick when the
-  ;; query must re-run. The query must re-run whenever it has been
-  ;; touched, it is uninitialized, or the db tick and index ticks are
-  ;; out of sync, indicating time-travel.
-  (fn [_ [_ q-ref]]
-    (let [db-tick (f/subscribe [::db-tick])]
-      (r/reaction
-        (let [index      (.-state query-index)
-              touched    (::touched-queries index)
-              index-tick (::tick index)
-              query-tick (q->tick index q-ref)]
-          (if (or (contains? touched q-ref)
-                  (nil? query-tick)
-                  (not= @db-tick index-tick))
-            @db-tick                    ; Next query tick = db tick
-            query-tick))))))
+(defn query-tick
+  "Returns the given query's tick, syncing to the db tick when the query
+  must re-run. The query must re-run whenever it has been touched, it
+  is uninitialized, or the db tick and index ticks are out of sync,
+  indicating time-travel. We do not cache or trace these reactions, as
+  they are unique to each pull query, and considered an implementation
+  detail."
+  [q-ref]
+  (let [db-tick (f/subscribe [::db-tick])]
+    (r/reaction
+      (let [index      (.-state query-index)
+            touched    (::touched-queries index)
+            index-tick (::tick index)
+            query-tick (q->tick index q-ref)]
+        (if (or (contains? touched q-ref)
+                (nil? query-tick)
+                (not= @db-tick index-tick))
+          @db-tick                      ; Next query tick = db tick
+          query-tick)))))
 
 (defn reactive?
   [x]
@@ -759,14 +761,20 @@
   (cond-> x
     (reactive? x) deref))
 
+(defn get-result-v
+  [[id & args]]
+  (let [ns (namespace id)
+        n  (str (name id) "[result-fn]")]
+    (-> (keyword ns n)
+        (cons args)
+        (vec))))
+
 (defn result-reaction
-  [input-r [id & args] result-fn]
-  (let [ns      (namespace id)
-        n       (str (name id) "[result-fn]")
-        query-v (vec (cons (keyword ns n) args))]
-    (traced-reaction query-v
+  [input-r query-v result-fn]
+  (let [result-v (get-result-v query-v)]
+    (traced-reaction result-v
       (fn []
-        (->> query-v
+        (->> result-v
              (map maybe-deref)
              (apply result-fn @input-r))))))
 
@@ -783,23 +791,19 @@
   query tick, which tracks the db-tick and synced."
   [query-v expr-fn & [config]]
   (let [q-ref  (random-ref :query/uuid)
-        q-tick (f/subscribe [::query-tick q-ref])]
+        q-tick (query-tick q-ref)]
     (traced-reaction query-v
       (fn []
-        (let [[id & args]   query-v
-              [expr e-ref]  (apply expr-fn args)
-              in            (merge
-                             config
-                             {:db         (.-state db/app-db)
-                              :index      (.-state query-index)
-                              :expr       expr
-                              :e-ref      e-ref
-                              :q-ref      q-ref
-                              :query-tick @q-tick})
-              {i   :index
-               res :result} (pull-reactive in)]
-          (reset! query-index i)
-          res))
+        (let [expr-r (apply expr-fn (rest query-v))
+              in     {:db         (.-state db/app-db)
+                      :index      (.-state query-index)
+                      :expr       (first expr-r)
+                      :e-ref      (second expr-r)
+                      :q-ref      q-ref
+                      :query-tick @q-tick}
+              out    (pull-reactive (merge config in))]
+          (reset! query-index (:index out))
+          (:result out)))
       (fn []
         (swap! query-index dispose-query q-ref)
         (when-let [f (:on-dispose config)]

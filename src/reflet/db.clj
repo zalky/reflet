@@ -4,7 +4,7 @@
             [reagent.ratom :as r]))
 
 (defmacro traced-reaction
-  [query-v reaction-fn & [on-dispose-fn]]
+  [query-v reaction-fn & [dispose-fn]]
   `(let [r-id# (atom nil)
          r#    (r/make-reaction
                  (fn []
@@ -16,7 +16,7 @@
                      (let [res# (~reaction-fn)]
                        (trace/merge-trace! {:tags {:value res#}})
                        res#)))
-                 :on-dispose ~on-dispose-fn)]
+                 :on-dispose ~dispose-fn)]
      (->> r#
           (interop/reagent-id)
           (reset! r-id#))
