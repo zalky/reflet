@@ -8,18 +8,20 @@
 
   Each fsm is defined declaratively. For example:
 
-  (let [fact #uuid 123]
-    {:id         fact
-     :state-attr :kr.epist/status
-     :start      ::start
-     :stop       ::accepted
-     :fsm
-     {::start       {:user/voted {:to ::provisional}}
-      ::provisional [fact {:to       ::review
-                           :when     ::review-threshold
-                           :dispatch [:review/notify fact]}]
-      ::review      {:user/accepted {:to ::accepted}
-                     :user/clarification {:to ::provisional}}}})
+  (f/reg-fsm ::review
+    (fn [self]
+      {:id         self
+       :state-attr :kr/votes
+       :start      ::open
+       :stop       [::accepted]
+       :fsm
+       {::open       {[:voted self] {:to ::provisional}}
+        ::provisional [self {:to       ::review
+                             :when     ::review-threshold
+                             :dispatch [:notify self]}]
+        ::review      {[:accepted self]      {:to ::accepted}
+                       [:clarification self] {:to      ::provisional
+                                              :dipatch [:reset-votes self]}}}}))
 
   Here, the `:fsm` attribute defines a transition map, mapping fsm
   states to allowed transitions. All fsm states are global and must be
@@ -31,9 +33,9 @@
 
   Event transitions:
 
-  These are expressed as a map, with one or more allowed transitions
-  per state. Each event transition maps an input re-frame event id to
-  the next fsm state, `:to`, an optional `:when` condition, and an
+  These are expressed as a map, with multiple alternative transitions
+  per state. Each event transition maps an input re-frame event vector
+  to the next fsm state, `:to`, an optional `:when` condition, and an
   optional `:dispatch` event. The `:when` condition is a clojure spec
   keyword that, when present, is used as a predicate for when the
   transition can occur.

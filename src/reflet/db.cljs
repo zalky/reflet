@@ -143,7 +143,8 @@
             [reflet.db.normalize :as norm]
             [cinch.core :as util]
             [reflet.util.transients :as t]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log])
+    (:require-macros [reflet.db :refer [traced-reaction]]))
 
 (defmulti random-ref*
   "Extend this to produce different kinds of random entity references
@@ -425,7 +426,7 @@
 (declare pull*)
 
 (defn- link?
-  [{:keys [ref]} expr]
+  [ref expr]
   (and (map? expr) (not ref)))
 
 (defn- wildcard?
@@ -536,16 +537,16 @@
 (defn- pull*
   ([context expr]
    (pull* context expr nil))
-  ([context expr result]
+  ([{ref :ref :as context} expr result]
    (cond
-     (link? context expr) (pull-link context expr result)
-     (list? expr)         (pull-sync! context expr result)
-     (vector? expr)       (pull-pattern context expr result)
-     (keyword? expr)      (pull-attr context expr result)
-     (wildcard? expr)     (pull-wildcard context expr result)
-     (map? expr)          (pull-join context expr result)
-     :else                (throw (ex-info "Invalid pull expression"
-                                          {::expr expr})))))
+     (link? ref expr) (pull-link context expr result)
+     (list? expr)     (pull-sync! context expr result)
+     (vector? expr)   (pull-pattern context expr result)
+     (keyword? expr)  (pull-attr context expr result)
+     (wildcard? expr) (pull-wildcard context expr result)
+     (map? expr)      (pull-join context expr result)
+     :else            (throw (ex-info "Invalid pull expression"
+                                      {::expr expr})))))
 
 (defn- pull!
   "Evaluates the pull expression specified by `expr` against a given
@@ -652,11 +653,21 @@
            (transient (or index {}))
            fresh-entities)))
 
+(defn- update-index
+  [index fresh stale query-tick q-ref]
+  (-> index
+      (assoc-in [::q->e q-ref] @fresh)
+      (update ::e->q clear-stale-entities @stale q-ref)
+      (update ::e->q add-fresh-entities @fresh q-ref)
+      (assoc-in [::q->tick q-ref] query-tick)
+      (assoc ::touched-queries #{})))
+
 (defn- acc-refs!
   "Accumulates freshly touched entity refs in volatiles."
-  [fresh stale e-ref]
-  (vswap! fresh conj e-ref)
-  (vswap! stale disj e-ref))
+  [fresh stale]
+  (fn [e-ref]
+    (vswap! fresh conj e-ref)
+    (vswap! stale disj e-ref)))
 
 (defn- pull-reactive
   "Given a pull expression and an entity reference, returns the
@@ -670,17 +681,12 @@
         result (pull! {:id-attrs    (::id-attrs db)
                        :db          (::data db)
                        :ref         e-ref
-                       :acc-refs!   (partial acc-refs! fresh stale)
+                       :acc-refs!   (acc-refs! fresh stale)
                        :sync-start! sync-start!}
                       expr)]
     {:db     db
      :result result
-     :index  (-> index
-                 (assoc-in [::q->e q-ref] @fresh)
-                 (update ::e->q clear-stale-entities @stale q-ref)
-                 (update ::e->q add-fresh-entities @fresh q-ref)
-                 (assoc-in [::q->tick q-ref] query-tick)
-                 (assoc ::touched-queries #{}))}))
+     :index  (update-index index fresh stale query-tick q-ref)}))
 
 (defn- dispose-query
   [index q-ref]
@@ -753,33 +759,16 @@
   (cond-> x
     (reactive? x) deref))
 
-(defn result-query-v
-  [[id & args]]
-  (let [ns (namespace id)
-        n  (name id)]
-    (-> (keyword ns (str n "[result-fn]"))
-        (cons args)
-        (vec))))
-
 (defn result-reaction
-  [input-r query-v result-fn]
-  (let [query-v* (result-query-v query-v)
-        r-id     (atom nil)
-        r        (r/reaction
-                   (trace/with-trace
-                     {:operation (first query-v*)
-                      :op-type   :sub/run
-                      :tags      {:query-v  query-v*
-                                  :reaction @r-id}}
-                     (let [res (->> query-v*
-                                    (map maybe-deref)
-                                    (apply result-fn @input-r))]
-                       (trace/merge-trace! {:tags {:value res}})
-                       res)))]
-    (->> r
-         (interop/reagent-id)
-         (reset! r-id))
-    r))
+  [input-r [id & args] result-fn]
+  (let [ns      (namespace id)
+        n       (str (name id) "[result-fn]")
+        query-v (vec (cons (keyword ns n) args))]
+    (traced-reaction query-v
+      (fn []
+        (->> query-v
+             (map maybe-deref)
+             (apply result-fn @input-r))))))
 
 (defn pull-reaction
   "Returns a differential pull reaction. `expr-fn` is a function that
@@ -794,40 +783,27 @@
   query tick, which tracks the db-tick and synced."
   [query-v expr-fn & [config]]
   (let [q-ref  (random-ref :query/uuid)
-        q-tick (f/subscribe [::query-tick q-ref])
-        r-id   (atom nil)
-        r      (r/make-reaction
-                 (fn []
-                   (let [[id & args]  query-v
-                         [expr e-ref] (apply expr-fn args)]
-                     (trace/with-trace
-                       {:operation id
-                        :op-type   :sub/run
-                        :tags      {:query-v  query-v
-                                    :reaction @r-id}}
-                       (let [in (merge
-                                 config
-                                 {:db         (.-state db/app-db)
-                                  :index      (.-state query-index)
-                                  :expr       expr
-                                  :e-ref      e-ref
-                                  :q-ref      q-ref
-                                  :query-tick @q-tick})
-
-                             {i   :index
-                              res :result} (pull-reactive in)]
-                         (reset! query-index i)
-                         (trace/merge-trace! {:tags {:value res}})
-                         res))))
-                 :on-dispose
-                 (fn []
-                   (swap! query-index dispose-query q-ref)
-                   (when-let [f (:on-dispose config)]
-                     (f))))]
-    (->> r
-         (interop/reagent-id)
-         (reset! r-id))
-    r))
+        q-tick (f/subscribe [::query-tick q-ref])]
+    (traced-reaction query-v
+      (fn []
+        (let [[id & args]   query-v
+              [expr e-ref]  (apply expr-fn args)
+              in            (merge
+                             config
+                             {:db         (.-state db/app-db)
+                              :index      (.-state query-index)
+                              :expr       expr
+                              :e-ref      e-ref
+                              :q-ref      q-ref
+                              :query-tick @q-tick})
+              {i   :index
+               res :result} (pull-reactive in)]
+          (reset! query-index i)
+          res))
+      (fn []
+        (swap! query-index dispose-query q-ref)
+        (when-let [f (:on-dispose config)]
+          (f))))))
 
 ;; Transactions and entities
 
