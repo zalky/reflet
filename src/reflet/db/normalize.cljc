@@ -116,9 +116,3 @@
   "Coerces x to a cardinality many value."
   [x id-attrs]
   (if (many? x id-attrs) x [x]))
-
-(defn refer-map
-  "Returns a reference to x in map form."
-  [x id-attr]
-  (when-let [r (get x id-attr)]
-    {id-attr r}))

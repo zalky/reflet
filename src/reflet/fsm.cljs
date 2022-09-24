@@ -179,7 +179,7 @@
           (f/dispatch e)))
       next-state)))
 
-(defn next-state
+(defn- next-state
   "Returns next state if there is a valid transition, `nil` otherwise."
   [fsm db event]
   (let [{id         :id
@@ -253,19 +253,19 @@
 (defn- get-fsm
   [fsm-v]
   (let [[id & args] fsm-v]
-    (or (some-> (reg/get-handler :fsm-fn id)
+    (or (some-> (reg/get-handler ::fsm-fn id)
                 (apply args)
                 (assoc :fsm-v fsm-v))
         (throw (ex-info "No FSM handler" {:id id})))))
 
-(defn started?
-  [{id :id}]
-  (i/global-interceptor-registered? id))
-
-(defn initial-dispatch!
+(defn- initial-dispatch!
   [{:keys [dispatch]}]
   (doseq [event dispatch]
     (f/dispatch event)))
+
+(defn started?
+  [{id :id}]
+  (i/global-interceptor-registered? id))
 
 (defn start!
   [fsm-v]
@@ -306,7 +306,7 @@
 
 ;;;; Subs
 
-(defn fsm-reaction-handler
+(defn- fsm-reaction-handler
   [_ fsm-v]
   (let [{ref         :id
          start-state :start
@@ -315,17 +315,17 @@
          :as         fsm} (get-fsm fsm-v)
         query-v           [::pull ref]]
     (if ref
-      (letfn [(expr [ref] [state-attr ref])
-              (result [r] (or r start-state))]
+      (letfn [(expr-fn [ref] [state-attr ref])
+              (result-fn [r] (or r start-state))]
         (start! fsm-v)
-        (let [config {:on-dispose #(stop! fsm-v)}]
-          (-> (db/pull-reaction query-v expr config)
-              (db/result-reaction query-v result))))
+        (-> {:on-dispose #(stop! fsm-v)}
+            (db/pull-reaction expr-fn query-v)
+            (db/result-reaction result-fn query-v)))
       (r/reaction nil))))
 
 (defn reg-fsm
   [id fsm-fn]
-  (reg/register-handler :fsm-fn id fsm-fn)
+  (reg/register-handler ::fsm-fn id fsm-fn)
   (f/reg-sub-raw id fsm-reaction-handler))
 
 ;;;; Materialized View

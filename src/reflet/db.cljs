@@ -770,7 +770,7 @@
         (vec))))
 
 (defn result-reaction
-  [input-r query-v result-fn]
+  [input-r result-fn query-v]
   (let [result-v (get-result-v query-v)]
     (traced-reaction result-v
       (fn []
@@ -789,7 +789,7 @@
   the pull reaction is dependent on the db and query index values, it
   is not reactive to them. Instead, it is reactive to changes the
   query tick, which tracks the db-tick and synced."
-  [query-v expr-fn & [config]]
+  [config expr-fn query-v]
   (let [q-ref  (random-ref :query/uuid)
         q-tick (query-tick q-ref)]
     (traced-reaction query-v

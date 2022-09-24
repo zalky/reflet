@@ -128,7 +128,7 @@
     (is (= (norm/normalize {:a [{:i 1
                                  :a 1}]}
                            {:id-attrs #{:i}
-                            :refer-fn norm/refer-map})
+                            :refer-fn #(select-keys %1 [%2])})
            [{:a [{:i 1}]}
             {:i 1, :a 1}])))
 

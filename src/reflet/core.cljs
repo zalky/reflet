@@ -98,49 +98,59 @@
 
 (reg-fx ::reg-config reg-config)
 
-(defn- get-handler
-  [kind id]
-  (or (reg/get-handler kind id)
-      (throw
-       (ex-info
-        "Could not find handler"
-        {:kind kind
-         :id   id}))))
+(defn reg-expr-fn
+  [id expr-fn]
+  (reg/register-handler ::expr-fn id expr-fn))
+
+(defn reg-result-fn
+  [id result-fn]
+  (reg/register-handler ::result-fn id result-fn))
+
+(defn get-config
+  []
+  (reg/get-handler ::config ::config))
+
+(defn get-expr-fn
+  [id]
+  (or (reg/get-handler ::expr-fn id)
+      (throw (ex-info "expr-fn not defined" {:id id}))))
+
+(defn get-result-fn
+  [id]
+  (reg/get-handler ::result-fn id))
 
 (defn result-reaction
   [input-r [id :as query-v]]
-  (if-let [f (reg/get-handler :result-fn id)]
-    (db/result-reaction input-r query-v f)
+  (if-let [f (get-result-fn id)]
+    (db/result-reaction input-r f query-v)
     input-r))
 
 (defn pull-reaction
-  [expr-fn query-v]
-  (->> (reg/get-handler ::config ::config)
-       (db/pull-reaction query-v expr-fn)))
-
-(defn pull-handler
-  [_ [id :as query-v]]
-  (-> (get-handler ::expr-fn id)
-      (pull-reaction query-v)
-      (result-reaction query-v)))
+  ([[id :as query-v]]
+   (-> (get-expr-fn id)
+       (pull-reaction query-v)))
+  ([expr-fn query-v]
+   (-> (get-config)
+       (db/pull-reaction expr-fn query-v)
+       (result-reaction query-v))))
 
 (defn reg-pull*
   "Prefer reg-pull macro."
   ([id expr-fn]
    (reg-pull* id expr-fn nil))
   ([id expr-fn result-fn]
-   (reg/register-handler ::expr-fn id expr-fn)
-   (when result-fn
-     (reg/register-handler :result-fn id result-fn))
-   (reg-sub-raw id pull-handler)))
+   (reg-expr-fn id expr-fn)
+   (when result-fn (reg-result-fn id result-fn))
+   (reg-sub-raw id
+     (fn [_ query-v]
+       (pull-reaction query-v)))))
 
 (defn- reg-comp-rf
   [r id]
   (let [query-v [id r]]
-    (-> (get-handler ::expr-fn id)
+    (-> (get-expr-fn id)
         (comp deref)
-        (pull-reaction query-v)
-        (result-reaction query-v))))
+        (pull-reaction query-v))))
 
 (defn reg-comp
   "Composes a series of named reactions, where the result of each
@@ -158,7 +168,7 @@
         (let [r1 (->> (rest query-v)
                       (cons r1-id)
                       (vec)
-                      (pull-handler nil))]
+                      (pull-reaction))]
           (reduce reg-comp-rf r1 ids))))))
 
 (f/reg-cofx :random-ref
