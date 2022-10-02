@@ -193,17 +193,17 @@
   (-meta [o]
     (.-metadata o)))
 
+(defn ref-meta
+  "Returns metadata for entity reference"
+  [ref]
+  (when (sequential? ref)
+    (meta (second ref))))
+
 (defn transient?
   "Returns true if the given entity references is transient."
   [ref]
   (boolean
-   (some-> ref norm/ref-meta :transient)))
-
-(defn provisional-ref?
-  "Returns true if the given entity references is provisional."
-  [ref]
-  (boolean
-   (some-> ref norm/ref-meta :provisional)))
+   (some-> ref ref-meta :transient)))
 
 (defonce mounted-transient-refs
   ;; The set of transient entity references that are associated with
@@ -545,8 +545,8 @@
 (defn- attr-expr
   [expr]
   (cond
-    (map? expr)     (ffirst expr)
     (keyword? expr) expr
+    (map? expr)     (ffirst expr)
     (list? expr)    (attr-expr (second expr))
     :else           nil))
 
@@ -587,14 +587,6 @@
   [db [ref :as path] & [or]]
   (get-in db (cons ::data path) or))
 
-(defn pull-provisional
-  [{:keys [::data ::id-attrs]} e-ref]
-  (pull! {:id-attrs id-attrs
-          :db       data
-          :ref      e-ref
-          :join?    provisional-ref?}
-         [{'* '...}]))
-
 (defn pull
   "Pulls normalized data from the given db. This is a non-reactive,
   functionally pure version of pull! for use in event handlers. The
@@ -622,9 +614,9 @@
            recursion."
   ([db expr]
    (pull db expr nil))
-  ([{:keys [::data ::id-attrs] :as db} expr e-ref]
-   (pull! {:id-attrs id-attrs
-           :db       data
+  ([db expr e-ref]
+   (pull! {:id-attrs (::id-attrs db)
+           :db       (::data db)
            :ref      e-ref}
           expr)))
 
@@ -805,25 +797,13 @@
         (when-let [f (:on-dispose config)]
           (f))))))
 
-;; Transactions and entities
-
-(defn new
-  [m]
-  (letfn [(f [x]
-            (if-not (:system/uuid x)
-              (->> {:provisional true}
-                   (random-ref :system/uuid)
-                   (apply util/assoc-nil x))
-              x))]
-    (tx/walk-maps f m)))
-
 ;;;; Utils
 
 (defn get-label
   "Returns any metadata label associated with the given entity
   reference."
   [ref]
-  (some-> ref norm/ref-meta :label))
+  (some-> ref ref-meta :label))
 
 (defn db-label-filter
   "Returns a version of the re-frame db filtered by label."

@@ -7,7 +7,7 @@
 (def B (random-uuid))
 (def C (random-uuid))
 
-(deftest test-ref-conform
+(deftest ref-conform-test
   (testing "ref conform basic"
     (is (= (s/conform ::s*/ref-any nil)
            ::s/invalid))

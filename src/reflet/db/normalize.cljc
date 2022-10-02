@@ -11,12 +11,6 @@
        (= (count x) 2)
        (contains? id-attrs (first x))))
 
-(defn ref-meta
-  "Returns metadata for entity reference"
-  [ref]
-  (when (sequential? ref)
-    (meta (second ref))))
-
 (defn uuid-str
   [ref]
   (when (sequential? ref)

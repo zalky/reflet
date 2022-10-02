@@ -38,7 +38,7 @@
             tx))
 
 (defn walk-tx
-  "Walks tx, applying `f` to nodes post traversal."
+  "Walks all nodes of the tx, applying `f` post depth-first traversal."
   [f tx]
   (let [loc (tx-zipper tx)]
     (if (z/branch? loc)
@@ -55,3 +55,9 @@
             (cond-> node
               (map? node) f))]
     (walk-tx xform tx)))
+
+(defn reduce-maps
+  [f init tx]
+  (let [acc (volatile! init)]
+    (walk-maps #(vswap! acc f %) tx)
+    @acc))

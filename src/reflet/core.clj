@@ -22,7 +22,7 @@
          (contains? locals))))
 
 (defn- parse-meta
-  "All new refs are transient by default."
+  "All newly created refs are transient by default."
   [meta]
   (not-empty
    (if (false? (:transient meta))

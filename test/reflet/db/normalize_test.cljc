@@ -48,7 +48,7 @@
   [tx]
   (norm/normalize tx {:id-attrs #{:i}}))
 
-(deftest test-normalize
+(deftest normalize-test
   (testing "no normalization"
     (is (= (norm/normalize nil nil)
            [nil]))

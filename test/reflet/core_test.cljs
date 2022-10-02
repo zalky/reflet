@@ -18,19 +18,19 @@
     (binding [db/random-ref random-ref-test]
       (tests))))
 
-(deftest with-ref-meta
+(deftest with-ref-meta-test
   (testing "transient is default true on fresh refs"
     (is (= (f/with-ref {:system/uuid [p]}
-             (norm/ref-meta p))
+             (db/ref-meta p))
            {:transient true}))
     (let [props {:p [:system/uuid "a"]}]
       (is (nil? (f/with-ref {:system/uuid [p] :in props}
-                  (norm/ref-meta p))))))
+                  (db/ref-meta p))))))
 
   (testing "Arbitrary meta data"
     (is (= (f/with-ref {:system/uuid [p]
                         :meta        {:provisional true}}
-             (norm/ref-meta p))
+             (db/ref-meta p))
            {:provisional true
             :transient   true}))))
 
