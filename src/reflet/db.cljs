@@ -133,7 +133,6 @@
   and re-frame machinery."
   (:require [clojure.set :as set]
             [clojure.walk :as walk]
-            [com.rpl.specter :as sp]
             [re-frame.core :as f]
             [re-frame.db :as db]
             [re-frame.interop :as interop]
@@ -142,6 +141,7 @@
             [reagent.ratom :as r]
             [reflet.db.normalize :as norm]
             [cinch.core :as util]
+            [reflet.db.tx :as tx]
             [reflet.util.transients :as t]
             [taoensso.timbre :as log])
     (:require-macros [reflet.db :refer [traced-reaction]]))
@@ -204,12 +204,6 @@
   [ref]
   (boolean
    (some-> ref norm/ref-meta :provisional)))
-
-(defn get-label
-  "Returns any metadata label associated with the given entity
-  reference."
-  [ref]
-  (some-> ref norm/ref-meta :label))
 
 (defonce mounted-transient-refs
   ;; The set of transient entity references that are associated with
@@ -433,7 +427,7 @@
   [expr]
   (= expr '*))
 
-(defn- pull-pattern
+(defn- pull-props
   [{:keys [db ref acc-refs!] :as context} pattern result]
   (let [c (assoc context
                  :entity (get db ref)
@@ -444,6 +438,13 @@
               (pull* c expr result))
             result
             (distinct pattern))))
+
+(defn- pull-prop
+  [{:keys [entity]} attr result]
+  (let [v (get entity attr)]
+    (if (some? v)
+      (assoc result attr v)
+      result)))
 
 (defn- pull-sync!
   "Parses sync expression and dispatches sync init. Only dispatch
@@ -460,15 +461,8 @@
                     :args args}))
     (pull* context expr result)))
 
-(defn- pull-attr
-  [{:keys [entity]} attr result]
-  (let [v (get entity attr)]
-    (if (some? v)
-      (assoc result attr v)
-      result)))
-
 (defn- pull-join
-  [{:keys [entity pattern id-attrs provisional] :as context} join result]
+  [{:keys [entity pattern id-attrs join?] :as context} join result]
   (letfn [(dec-recursive-join []
             (mapv
              (fn [expr]
@@ -489,8 +483,8 @@
 
           (r-pull [expr value]
             (if (and (norm/ref? value id-attrs)
-                     (or (not provisional)
-                         (provisional-ref? value)))
+                     (or (not join?)
+                         (join? value)))
               (-> context
                   (assoc :ref value)
                   (pull* expr))
@@ -541,12 +535,20 @@
    (cond
      (link? ref expr) (pull-link context expr result)
      (list? expr)     (pull-sync! context expr result)
-     (vector? expr)   (pull-pattern context expr result)
-     (keyword? expr)  (pull-attr context expr result)
+     (vector? expr)   (pull-props context expr result)
+     (keyword? expr)  (pull-prop context expr result)
      (wildcard? expr) (pull-wildcard context expr result)
      (map? expr)      (pull-join context expr result)
      :else            (throw (ex-info "Invalid pull expression"
                                       {::expr expr})))))
+
+(defn- attr-expr
+  [expr]
+  (cond
+    (map? expr)     (ffirst expr)
+    (keyword? expr) expr
+    (list? expr)    (attr-expr (second expr))
+    :else           nil))
 
 (defn- pull!
   "Evaluates the pull expression specified by `expr` against a given
@@ -565,16 +567,10 @@
   side-effects. This means the entire impl must also be eager. This
   function is not part of the api and not meant to be used directly."
   [{ref :ref :as context} expr]
-  (letfn [(get-attr [expr]
-            (when ref
-              (cond
-                (map? expr)     (ffirst expr)
-                (keyword? expr) expr
-                (list? expr)    (get-attr (second expr))
-                :else           nil)))]
-    (if-let [attr (get-attr expr)]
-      (get (pull* context [expr]) attr)
-      (pull* context expr))))
+  (if-let [attr (when ref (attr-expr expr))]
+    (-> (pull* context [expr])
+        (get attr))
+    (pull* context expr)))
 
 (defn getn
   "Pulls the normalized entity from the db at the given path. Uses get
@@ -593,10 +589,10 @@
 
 (defn pull-provisional
   [{:keys [::data ::id-attrs]} e-ref]
-  (pull! {:id-attrs    id-attrs
-          :db          data
-          :ref         e-ref
-          :provisional true}
+  (pull! {:id-attrs id-attrs
+          :db       data
+          :ref      e-ref
+          :join?    provisional-ref?}
          [{'* '...}]))
 
 (defn pull
@@ -811,20 +807,6 @@
 
 ;; Transactions and entities
 
-(def tx-walker
-  (sp/recursive-path [] p
-    (sp/continue-then-stay
-     (sp/cond-path
-       map?        sp/MAP-VALS
-       sequential? sp/ALL
-       set?        sp/ALL)
-     p)))
-
-(def entity-walker
-  [tx-walker
-   (fn [x]
-     (and (map? x) (:kr/type x)))])
-
 (defn new
   [m]
   (letfn [(f [x]
@@ -833,9 +815,15 @@
                    (random-ref :system/uuid)
                    (apply util/assoc-nil x))
               x))]
-    (sp/transform entity-walker f m)))
+    (tx/walk-maps f m)))
 
 ;;;; Utils
+
+(defn get-label
+  "Returns any metadata label associated with the given entity
+  reference."
+  [ref]
+  (some-> ref norm/ref-meta :label))
 
 (defn db-label-filter
   "Returns a version of the re-frame db filtered by label."

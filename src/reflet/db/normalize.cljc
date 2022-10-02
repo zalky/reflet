@@ -17,7 +17,8 @@
   (when (sequential? ref)
     (meta (second ref))))
 
-(defn uuid-str [ref]
+(defn uuid-str
+  [ref]
   (when (sequential? ref)
     (str (second ref))))
 

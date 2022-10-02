@@ -181,3 +181,150 @@
                   [:system/uuid 1] {:system/uuid 1}
                   :attr [[:system/uuid 1] [:system/uuid 2]]}))))))
 
+(deftest pull-test
+  (let [dbv (db {[:system/uuid "name"]     {:system/uuid    "name"
+                                            :kr/name        "name"
+                                            :kr/description "description"
+                                            :kr/join        [:system/uuid "join"]}
+                 [:system/uuid "join"]     {:system/uuid "join"
+                                            :kr/name     "join"
+                                            :kr/label    "label"
+                                            :kr/join     [[:system/uuid "nested 1"]
+                                                          [:system/uuid "nested 2"]]}
+                 [:system/uuid "nested 1"] {:system/uuid "nested 1"
+                                            :kr/name     "nested 1"}
+                 [:system/uuid "nested 2"] {:system/uuid "nested 2"
+                                            :kr/name     "nested 2"
+                                            :kr/join     [:system/uuid "nested 3"]}
+                 [:system/uuid "nested 3"] {:system/uuid    "nested 3"
+                                            :kr/name        "nested 3"
+                                            :kr/description "leaf"}
+                 ::link                    [[:system/uuid "nested 1"]
+                                            [:system/uuid "nested 2"]]})]
+
+    (testing "pull"
+      (testing "attr"
+        (is (= (db/pull dbv
+                        :kr/name
+                        [:system/uuid "name"])
+               "name"))
+
+        (is (= (db/pull dbv
+                        {:kr/join [:system/uuid
+                                   :kr/name
+                                   :kr/label]}
+                        [:system/uuid "name"])
+               {:system/uuid "join"
+                :kr/name     "join"
+                :kr/label    "label"})))
+
+      (testing "pattern"
+        (is (= (db/pull dbv
+                        [:system/uuid
+                         :kr/name
+                         :kr/description]
+                        [:system/uuid "name"])
+               {:system/uuid    "name"
+                :kr/name        "name"
+                :kr/description "description"})))
+
+      (testing "join one"
+        (is (= (db/pull dbv
+                        [:system/uuid
+                         :kr/name
+                         :kr/description
+                         {:kr/join [:system/uuid
+                                    :kr/name
+                                    :kr/label]}]
+                        [:system/uuid "name"])
+               {:system/uuid    "name"
+                :kr/name        "name"
+                :kr/description "description"
+                :kr/join        {:system/uuid "join"
+                                 :kr/name     "join"
+                                 :kr/label    "label"}})))
+
+      (testing "join many"
+        (is (= (db/pull dbv
+                        [:system/uuid
+                         :kr/name
+                         :kr/label
+                         {:kr/join [:system/uuid
+                                    :kr/name
+                                    :kr/label]}]
+                        [:system/uuid "join"])
+               {:system/uuid "join"
+                :kr/name     "join"
+                :kr/label    "label"
+                :kr/join     [{:system/uuid "nested 1"
+                               :kr/name     "nested 1"}
+                              {:system/uuid "nested 2"
+                               :kr/name     "nested 2"}]}))))
+
+    (testing "Wildcard query"
+      (is (= (db/pull dbv
+                      '[*
+                        {:kr/join [*]}]
+                      [:system/uuid "name"])
+             {:system/uuid    "name"
+              :kr/name        "name"
+              :kr/description "description"
+              :kr/join
+              {:system/uuid "join"
+               :kr/name     "join"
+               :kr/label    "label"
+               :kr/join     [[:system/uuid "nested 1"]
+                             [:system/uuid "nested 2"]]}})))
+
+    (testing "Link query"
+      (is (= (db/pull dbv {::link [:system/uuid :kr/name]})
+             [{:system/uuid "nested 1"
+               :kr/name     "nested 1"}
+              {:system/uuid "nested 2"
+               :kr/name     "nested 2"}])))
+
+    (testing "Infinite recursive pull"
+      (is (= (db/pull dbv
+                      [:kr/name
+                       :kr/description
+                       {:kr/join '...}]
+                      [:system/uuid "name"])
+             {:kr/name        "name"
+              :kr/description "description"
+              :kr/join        {:kr/name "join"
+                               :kr/join [{:kr/name "nested 1"}
+                                         {:kr/name "nested 2"
+                                          :kr/join {:kr/name        "nested 3"
+                                                    :kr/description "leaf"}}]}})))
+
+    (testing "Limited recursive pull"
+      (is (= (db/pull dbv
+                      [:kr/name
+                       :kr/description
+                       {:kr/join 2}]
+                      [:system/uuid "name"])
+             {:kr/name        "name"
+              :kr/description "description"
+              :kr/join        {:kr/name "join"
+                               :kr/join [{:kr/name "nested 1"}
+                                         {:kr/name "nested 2"
+                                          :kr/join [:system/uuid "nested 3"]}]}})))
+
+    (testing "Infinitely recursive wildcard query (pull everything)"
+      (is (= (db/pull dbv
+                      '[*
+                        {:kr/join ...}]
+                      [:system/uuid "name"])
+             {:system/uuid    "name"
+              :kr/name        "name"
+              :kr/description "description"
+              :kr/join        {:system/uuid "join"
+                               :kr/name     "join"
+                               :kr/label    "label"
+                               :kr/join     [{:system/uuid "nested 1"
+                                              :kr/name     "nested 1"}
+                                             {:system/uuid "nested 2"
+                                              :kr/name     "nested 2"
+                                              :kr/join     {:system/uuid    "nested 3"
+                                                            :kr/name        "nested 3"
+                                                            :kr/description "leaf"}}]}})))))
