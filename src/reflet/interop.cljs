@@ -61,8 +61,8 @@
   that function will be run at teardown with the obj as argument."
   ([ref obj]
    (reg-js ref obj nil))
-  ([ref obj spec]
-   (->> spec
+  ([ref obj opts]
+   (->> opts
         (merge {:obj obj})
         (swap! js-db assoc ref))))
 

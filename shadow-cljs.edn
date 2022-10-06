@@ -9,7 +9,6 @@
                  :asset-path       "/js"
                  :devtools         {:http-port  8022
                                     :http-root  "resources"
-                                    :after-load reflet.client/render!
                                     :watch-dir  "resources"
                                     :preloads   [day8.re-frame-10x.preload]}
                  :compiler-options {:infer-externs   :auto
