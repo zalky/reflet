@@ -276,13 +276,12 @@
         (set-timeout! fsm timeout (:start fsm))
         (->> (partial advance fsm timeout)
              (f/enrich)
-             (i/reg-global-interceptor (:id fsm))))
+             (i/reg-global-interceptor fsm-v)))
       (initial-dispatch! fsm))))
 
 (defn stop!
   [fsm-v]
-  (when-let [id (:id (get-fsm fsm-v))]
-    (i/clear-global-interceptor id)))
+  (i/clear-global-interceptor fsm-v))
 
 (f/reg-fx ::start
   (fn [fsm-v]

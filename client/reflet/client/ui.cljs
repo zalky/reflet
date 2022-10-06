@@ -1,95 +1,84 @@
 (ns reflet.client.ui
   (:require [reactstrap-cljs.core :as b]
             [reagent.core :as r]
+            [reflet.client.ui.impl :as impl]
+            [reflet.client.ui.interop :as interop]
             [reflet.core :as f]
-            [reflet.db :as db]
             [reflet.interop :as i]))
 
-;; Re-frame/Clojurescript
+(defn dispatch-player-fsm
+  [{:player/keys [self self-sel]}]
+  @(f/subscribe [::impl/player-fsm self self-sel]))
 
-(f/reg-event-db ::init
-  (fn [db [_ {:player/keys [self]}]]
-    (->> {:component/uuid (second self)
-          :player/track   "/audio/01 Orbits.mp3"
-          :player/state   ::paused}
-         (db/mergen db))))
+(defmulti controls
+  dispatch-player-fsm
+  :hierarchy #'impl/state-hierarchy)
 
-(f/reg-pull ::component
-  (fn [self]
-    [[:player/track
-      :player/state]
-     self]))
+(defmethod controls ::impl/loading
+  [_]
+  [b/button {:color :primary}
+   "Player"])
 
-(f/reg-event-db ::toggle
-  (fn [db [_ {:player/keys [self]}]]
-    (db/update-inn db [self :player/state]
-      (fn [state]
-        (case state
-          ::playing ::paused
-          ::paused  ::playing)))))
+(defmethod controls ::impl/running
+  [{:player/keys [self self-sel]}]
+  (r/with-let [toggle #(f/dispatch [::impl/toggle self])
+               state  (f/subscribe [::impl/player-fsm self self-sel])]
+    [b/button {:color    :primary
+               :on-click toggle}
+     (case @state
+       ::impl/playing "Pause"
+       "Play")]))
 
-;; Interop
+(defn selector
+  [{:player/keys [self self-sel]}]
+  (r/with-let [on-click #(f/dispatch [::impl/toggle self-sel])
+               info     (f/subscribe [::impl/track-info self])]
+    [b/button {:color    :secondary
+               :on-click on-click}
+     (:kr.track/name @info "Select Track")]))
 
-(defn init-context
-  [{node-r    :player/node
-    context-r :player/context
-    source-r  :player/source}]
-  (let [context (js/AudioContext.)
-        node    (i/grab @i/db node-r)
-        source  (.createMediaElementSource context node)]
-    (.connect source (.-destination context))
-    (i/reg context-r context)
-    (i/reg source-r source)))
-
-(defn update-context
-  [{state     :player/state
-    context-r :player/context
-    node-r    :player/node
-    :as       props}]
-  (let [node    (i/grab @i/db node-r)
-        context (i/grab @i/db context-r)]
-    (when-not context (init-context props))
-    (case state
-      ::paused  (.play node)
-      ::playing (.pause node))))
+(defn track-list
+  [{:player/keys [self self-sel]}]
+  (r/with-let [tracks (f/subscribe [::impl/track-list])]
+    [:div {:class "player-track-list mt-2"}
+     (doall
+      (for [{id     :system/uuid
+             artist :kr.track/artist
+             name   :kr.track/name
+             :as    t} @tracks]
+        (let [ref      [:system/uuid id]
+              duration @(f/subscribe [::impl/track-duration ref])
+              on-click #(f/dispatch [::impl/selected self-sel self ref])]
+          ^{:key id}
+          [:div {:on-click on-click}
+           [:div artist]
+           [:div name]
+           [:div duration]])))]))
 
 (defn player-inner
   [_]
   (r/create-class
    {:component-did-update
-    (f/props-did-update-handler update-context)
+    (f/props-did-update-handler interop/update-context)
 
     :reagent-render
-    (fn [{:player/keys [node track]}]
+    (fn [{{uri :kr.track/uri} :player/track
+          node                :player/node}]
       [:audio {:ref (i/node! node)
-               :src track}])}))
-
-;; View
-
-(defn info
-  [{:player/keys [self]}]
-  (r/with-let [c (f/subscribe [::component self])]
-    [:div {:class "player-info mb-2"}
-     (:player/track @c)]))
+               :src uri}])}))
 
 (defn player
   [props]
-  (f/with-ref {:component/uuid [player/self]
+  (f/with-ref {:component/uuid [player/self player/self-sel]
                :js/uuid        [player/context player/source]
                :dom/uuid       [player/node]
                :in             props}
-    (r/with-let [_      (f/dispatch [::init props])
-                 toggle #(f/dispatch [::toggle props])
-                 c      (f/subscribe [::component self])]
-      (when-let [{:player/keys [state]} @c]
-        [:div
-         [info props]
-         [player-inner (merge props @c)]
-         [b/button-toolbar
-          [b/button-group
-           [b/button {:color    :primary
-                      :on-click toggle}
-            (case state
-              ::playing "Pause"
-              ::paused  "Play")]]]]))))
+    (r/with-let [m          (f/subscribe [::impl/materialized self])
+                 selecting? (f/subscribe [::impl/selecting? self-sel])]
+      [:div {:class ["player" (when @selecting? "selecting")]}
+       [player-inner (merge props @m)]
+       [b/button-toolbar 
+        [b/button-group [controls props]]
+        [b/button-group [selector props]]]
+       [track-list props]])))
 

@@ -71,7 +71,7 @@
 
      (f/with-ref {:component/uuid [fsm/self]}
        (let [state (f/subscribe [::stop-fsm self])]
-         (is (reg/get-handler :global-interceptor self))
+         (is (reg/get-handler :global-interceptor [::stop-fsm self]))
          (is (= ::s1 @state))
          (f/dispatch [::advance self])
          (is (= ::s2 @state))
@@ -83,7 +83,7 @@
          (is (= ::stop @state))
          (f/dispatch [::advance self])
          (is (= ::stop @state))
-         (is (not (reg/get-handler :global-interceptor self))))))))
+         (is (not (reg/get-handler :global-interceptor [::stop-fsm self]))))))))
 
 (s/def ::threshold
   (fn [entity]

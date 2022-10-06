@@ -1,19 +1,23 @@
 
+@use "sass:color";
+
 @import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro|Noto+Sans+Mono');
 
 // Variables
 
 $black:                       #434343;
-$primary:                     #5dffbf;
-$secondary:                   #9650ff;
-
 $gray-100:                    #f7f7f7;
+
+$primary:                     #5dffbf;
+$secondary:                   $gray-100;
 
 $font-family-sans-serif:      "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 $font-family-monospace:       "Noto Sans Mono";
 $font-color:                  $black;
 
 $card-bg:                     $gray-100;
+$border-width:                0;
+$border-radius:               0.5rem;
 
 @import "bootstrap/scss/bootstrap";
 @import "bootstrap/scss/bootstrap-grid";
@@ -25,17 +29,68 @@ body {
     color: $font-color;
 }
 
-#container {
-    display: flex;
-    height: 100vh;
-    width: 100vw;
-    justify-content: center;
-    align-items: center;
+* {
+    &:focus, &:hover, &:active {
+        outline: none;
+    }
 }
 
-.player-info {
-    padding: 2rem;
-    border-radius: 0.5rem;
-    font-size: 1.25rem;
-    background: $card-bg;
+.player {
+    width: 30rem;
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, 0);
+
+    .btn-toolbar .btn {
+        width: 5rem;
+    }
+
+    .btn-toolbar > :last-child {
+        flex: 1;
+        margin-left: 0.5rem;
+        border-radius: $border-radius;
+        background: $card-bg;
+    }
+
+    &-track-list {
+        display: grid;
+        grid-template-columns: 0.75fr 2fr auto;
+        gap: 1rem 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: $border-radius;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        transform: scaleY(0);
+        transform-origin: top;
+        opacity: 0;
+
+        .selecting & {
+            transform: scaleY(1);
+            opacity: 1;
+        }
+
+        > div {
+            display: contents;
+
+            &:hover > div {
+                background: color.scale($card-bg, $lightness: -2%);
+            }
+
+            > div {
+                margin: -0.5rem -1rem;
+                padding: 0.5rem 1rem;
+                overflow: hidden;
+                white-space: nowrap;
+                background: $card-bg;
+                cursor: pointer;
+            }
+        }
+
+        > :nth-child(2n) > div {
+            background: color.scale($card-bg, $lightness: 80%);
+        }
+    }
 }
+
+

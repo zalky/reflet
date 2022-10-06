@@ -58,5 +58,5 @@ nuke: clean
 clean:
 	@echo "Cleaning target and resources"
 	@rm -rf target
-	@find resources -not -name \index.html -mindepth 1 -prune -exec rm -rf {} \;
+	@find resources -not -name \index.html -not -name \audio -mindepth 1 -prune -exec rm -rf {} \;
 
