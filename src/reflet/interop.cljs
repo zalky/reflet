@@ -10,87 +10,63 @@
             [re-frame.core :as f]
             [reagent.ratom :as r]))
 
-(defonce js-db
+(defonce db
   (r/atom {}))
 
-(defonce dom-db
-  (r/atom {}))
-
-(s/def ::js-ref
+(s/def ::ref
   (s/tuple qualified-keyword? uuid?))
 
-(s/def ::dom-ref
-  (s/tuple qualified-keyword? uuid?))
-
-(defn get-obj
+(defn grab
   "The preferred function for getting objects in effect handlers.
   Accepts the corresponding object DB as first argument, ref as
   second. In an event handler, the DB is typically obtained by
-  injecting the coeffect: (f/inject-cofx :js-db)"
+  injecting the coeffect: (f/inject-cofx ::db)"
   [db ref]
   (:obj (get db ref)))
 
-(defn update-js!
+(defn update!
   "Semantics like `clojure.core/update`, mutates the object in db by
   running the function with existing object as parameter."
   [ref f & args]
-  (apply swap! js-db update-in [ref :obj] f args))
+  (apply swap! db update-in [ref :obj] f args))
 
-(f/reg-sub ::get-js
+(f/reg-sub ::grab
   ;; Subscription for use in components and other subscriptions
-  ;; Usage `(f/subscribe [::js-object obj-ref])`
-  (constantly js-db)
+  ;; Usage `(f/subscribe [::grab node-ref])`
+  (constantly db)
   (fn [db [_ ref]]
-    (get-obj db ref)))
-
-(f/reg-sub ::get-dom
-  ;; Subscription for use in components and other subscriptions
-  ;; Usage `(f/subscribe [::dom-node node-ref])`
-  (constantly dom-db)
-  (fn [db [_ ref]]
-    (get-obj db ref)))
+    (grab db ref)))
 
 (defn node-mounted?
   "If a DOM node is stored in this DB with the provided ref, it has been mounted"
   [ref]
-  (boolean (get @dom-db ref)))
+  (boolean (get @db ref)))
 
-(defn reg-js
-  "Stores the stateful JS object in the object DB. Optionally accepts
-  a spec with a single key, `:destroy`. If a destroy fn is provided,
+(defn reg
+  "Stores the interop oobject in the object DB. Optionally accepts a
+  spec with a single key, `:destroy`. If a destroy fn is provided,
   that function will be run at teardown with the obj as argument."
   ([ref obj]
-   (reg-js ref obj nil))
+   (reg ref obj nil))
   ([ref obj opts]
    (->> opts
         (merge {:obj obj})
-        (swap! js-db assoc ref))))
-
-(defn reg-dom
-  "Stores the DOM node in DOM DB."
-  [ref node]
-  (swap! dom-db assoc ref {:obj node}))
+        (swap! db assoc ref))))
 
 (f/reg-fx ::cleanup
   ;; Called from `with-ref` cleanup to remove references belonging to
   ;; an unmounted React comp
   (fn [refs]
     (doseq [ref refs]
-      (when-let [{:keys [destroy obj]} (get @js-db ref)]
+      (when-let [{:keys [destroy obj]} (get @db ref)]
         (when destroy
           (destroy obj))
-        (swap! js-db dissoc ref))
-      (swap! dom-db dissoc ref))))
+        (swap! db dissoc ref)))))
 
-(f/reg-cofx :js-db
+(f/reg-cofx :interop-db
   ;; Provides the JS db as a co-effect to event handlers
   (fn [cofx]
-    (assoc cofx :js-db @js-db)))
-
-(f/reg-cofx :dom-db
-  ;; Provides the DOM9 db as a co-effect to event handlers
-  (fn [cofx]
-    (assoc cofx :dom-db @dom-db)))
+    (assoc cofx :interop-db @db)))
 
 (defn node!
   "Returns a react callback for initializing a node ref and putting it
@@ -104,7 +80,7 @@
   [ref & {:keys [flush cb]}]
   (fn [node]
     (when-not (node-mounted? ref)
-      (reg-dom ref node)
+      (reg ref node)
       (when cb (cb node))
       (when flush (r/flush!)))))
 

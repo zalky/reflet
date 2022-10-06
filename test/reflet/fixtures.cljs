@@ -21,8 +21,7 @@
   [f]
   (with-redefs [db/query-index            (r/atom {})
                 db/mounted-transient-refs (r/atom #{})
-                i/js-db                   (r/atom {})
-                i/dom-db                  (r/atom {})
+                i/db                      (r/atom {})
                 f/debounced-events        (r/atom {})]
     (f/dispatch-sync [::internals])
     (f)))

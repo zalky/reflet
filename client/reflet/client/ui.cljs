@@ -35,19 +35,19 @@
     context-r :player/context
     source-r  :player/source}]
   (let [context (js/AudioContext.)
-        node    (i/get-obj @i/dom-db node-r)
+        node    (i/grab @i/db node-r)
         source  (.createMediaElementSource context node)]
     (.connect source (.-destination context))
-    (i/reg-js context-r context)
-    (i/reg-js source-r source)))
+    (i/reg context-r context)
+    (i/reg source-r source)))
 
 (defn update-context
   [{state     :player/state
     context-r :player/context
     node-r    :player/node
     :as       props}]
-  (let [node    (i/get-obj @i/dom-db node-r)
-        context (i/get-obj @i/js-db context-r)]
+  (let [node    (i/grab @i/db node-r)
+        context (i/grab @i/db context-r)]
     (when-not context (init-context props))
     (case state
       ::paused  (.play node)
