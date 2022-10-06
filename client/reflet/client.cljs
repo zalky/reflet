@@ -1,6 +1,7 @@
 (ns reflet.client
   "Stand-alone client example, and testing."
-  (:require [reagent.dom :as dom]
+  (:require [reactstrap-cljs.core :as b]
+            [reagent.dom :as dom]
             [reflet.core :as f]
             [reflet.db :as db]
 
@@ -13,7 +14,11 @@
 
 (defn root
   []
-  [:div "Hello, world!"])
+  [:div
+   [:div {:class "welcome mb-2"}
+    "Hello, world!"]
+   [b/button {:color :primary}
+    "Submit"]])
 
 (defn render!
   []

@@ -1,2 +1,2 @@
-cljs: make npm; clojure -M:cljs watch app test
+client: make npm; clojure -M:cljs:cljs/client watch app test
 sass: clojure -M:sass
