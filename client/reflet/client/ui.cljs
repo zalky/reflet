@@ -7,48 +7,49 @@
             [reflet.interop :as i]))
 
 (defn dispatch-player-fsm
-  [{:player/keys [self self-sel]}]
-  @(f/subscribe [::impl/player-fsm self self-sel]))
+  [{:player/keys [self]}]
+  @(f/subscribe [::impl/player-fsm self]))
 
 (defmulti controls
   dispatch-player-fsm
   :hierarchy #'impl/state-hierarchy)
 
-(defmethod controls ::impl/loading
+(defmethod controls ::impl/init
   [_]
   [b/button {:color :primary}
    "Player"])
 
-(defmethod controls ::impl/running
-  [{:player/keys [self self-sel]}]
-  (r/with-let [toggle #(f/dispatch [::impl/toggle self])
-               state  (f/subscribe [::impl/player-fsm self self-sel])]
-    [b/button {:color    :primary
-               :on-click toggle}
-     (case @state
-       ::impl/playing "Pause"
-       "Play")]))
+(defmethod controls ::impl/playing
+  [{:player/keys [self]}]
+  [b/button {:color    :primary
+             :on-click #(f/dispatch [::impl/pause self])}
+   "Pause"])
+
+(defmethod controls ::impl/paused
+  [{:player/keys [self]}]
+  [b/button {:color    :primary
+             :on-click #(f/dispatch [::impl/play self])}
+   "Play"])
 
 (defn selector
-  [{:player/keys [self self-sel]}]
-  (r/with-let [on-click #(f/dispatch [::impl/toggle self-sel])
+  [{:player/keys [self]}]
+  (r/with-let [on-click #(f/dispatch [::impl/toggle self])
                info     (f/subscribe [::impl/track-info self])]
     [b/button {:color    :secondary
                :on-click on-click}
      (:kr.track/name @info "Select Track")]))
 
 (defn track-list
-  [{:player/keys [self self-sel]}]
+  [{:player/keys [self]}]
   (r/with-let [tracks (f/subscribe [::impl/track-list])]
     [:div {:class "player-track-list mt-2"}
      (doall
       (for [{id     :system/uuid
              artist :kr.track/artist
-             name   :kr.track/name
-             :as    t} @tracks]
+             name   :kr.track/name} @tracks]
         (let [ref      [:system/uuid id]
               duration @(f/subscribe [::impl/track-duration ref])
-              on-click #(f/dispatch [::impl/selected self-sel self ref])]
+              on-click #(f/dispatch [::impl/selected self ref])]
           ^{:key id}
           [:div {:on-click on-click}
            [:div artist]
@@ -69,12 +70,12 @@
 
 (defn player
   [props]
-  (f/with-ref {:component/uuid [player/self player/self-sel]
+  (f/with-ref {:component/uuid [player/self]
                :js/uuid        [player/context player/source]
                :dom/uuid       [player/node]
                :in             props}
     (r/with-let [m          (f/subscribe [::impl/materialized self])
-                 selecting? (f/subscribe [::impl/selecting? self-sel])]
+                 selecting? (f/subscribe [::impl/selecting? self])]
       [:div {:class ["player" (when @selecting? "selecting")]}
        [player-inner (merge props @m)]
        [b/button-toolbar 

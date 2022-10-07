@@ -6,37 +6,36 @@
 
 (def state-hierarchy
   (util/derive-pairs
-   [::init               ::loading
-    [::paused ::playing] ::running]))
+   [[::paused ::playing] ::running]))
 
 (fsm/reg-fsm ::selector-fsm
-  (fn [self-sel]
-    {:id         self-sel
-     :state-attr :player/selector-state
-     :start      ::closed
-     :fsm        {::closed {[::toggle self-sel] {:to ::open}}
-                  ::open   {[::toggle self-sel]   {:to ::closed}
-                            [::selected self-sel] {:to ::closed}}}}))
+  (fn [self]
+    {:id    self
+     :attr  :player/selector-state
+     :start ::closed
+     :fsm   {::closed {[::toggle self] ::open}
+             ::open   {[::toggle self]   ::closed
+                       [::selected self] ::closed}}}))
 
 (fsm/reg-fsm ::player-fsm
-  ;; We need a separate starting state, in addition to ::paused
-  ;; and ::playing. This true both because we do not want to start
-  ;; playing if we have not selected a track, but also the browser
-  ;; will complain if we try to mutate the AudioContext object before
-  ;; a user event has been triggered.
-  (fn [self self-sel]
-    {:id         self
-     :state-attr :player/state
-     :start      ::init
-     :fsm        {::init    {[::selected self-sel] {:to ::playing}}
-                  ::playing {[::toggle self] {:to ::paused}}
-                  ::paused  {[::toggle self]       {:to ::playing}
-                             [::selected self-sel] {:to ::playing}}}}))
+  ;; We need a separate starting state in addition to ::paused
+  ;; and ::playing. This is true both because we do not want to start
+  ;; playing if a track has not been selected, but also because the
+  ;; browser will complain if we try to mutate the AudioContext object
+  ;; before a user event has been triggered.
+  (fn [self]
+    {:id    self
+     :attr  :player/state
+     :start ::init
+     :fsm   {::init    {[::selected self] ::playing}
+             ::playing {[::pause self] ::paused}
+             ::paused  {[::play self]     ::playing
+                        [::selected self] ::playing}}}))
 
-(f/reg-no-op ::toggle)
+(f/reg-no-op ::toggle ::play ::pause)
 
 (f/reg-event-db ::selected
-  (fn [db [_ _ self track-r]]
+  (fn [db [_ self track-r]]
     (db/assoc-inn db [self :player/track] track-r)))
 
 (f/reg-pull ::track-list
@@ -67,7 +66,7 @@
       (str (Math/floor (/ secs 60)) ":" (mod secs 60)))))
 
 (f/reg-sub ::selecting?
-  (fn [[_ self-sel]]
-    (f/subscribe [::selector-fsm self-sel]))
+  (fn [[_ self]]
+    (f/subscribe [::selector-fsm self]))
   (fn [state _]
     (= state ::open)))

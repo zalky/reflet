@@ -28,12 +28,7 @@
   "Given a spec, returns a version of that spec that additionally
   applies f to the conformed value."
   [spec f]
-  (s/conformer
-   (fn [x]
-     (let [form (s/conform spec x)]
-       (if (= form ::s/invalid)
-         form
-         (f form))))))
+  (s/and spec (s/conformer f)))
 
 (defn cardinality-many-conformed
   "Given a spec, returns a version that conforms to cardinality many
