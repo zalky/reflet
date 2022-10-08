@@ -1,9 +1,9 @@
 (ns reflet.fsm
   "Provides finite state machine DSL and implementation.
 
-  The fsm implementation is based on an entity model, where any entity
-  in the db can be transitioned through allowed states given defined
-  inputs. This means both domain entities as well as component
+  This fsm implementation is based on an entity model, where any
+  entity in the db can be transitioned through allowed states given
+  defined inputs. This means both domain entities as well as component
   entities can be used as fsms.
 
   Each fsm is defined declaratively. For example:
@@ -22,59 +22,99 @@
                            [:revisit self]  {:to      ::review
                                              :dipatch [:reset-votes self]}}}}))
 
-  Here, the `:fsm` attribute defines a transition map, mapping fsm
-  states to allowed transitions. All fsm states are global and must be
-  namespaced.
+  Here, the `:fsm` attribute defines a state map, mapping each fsm
+  state to allowed transitions for those states.
 
-  Two types of transition maps can be defined based on the type of the
-  transition input. Inputs can be entities, or dispatched re-frame
-  events.
+  Each allowed transition is a map between an input, and one or more
+  output clauses.
 
-  Event transitions:
+  There three types of transitions currently implemented, each
+  corresponding to their input type:
 
-  These are expressed as a map, or a vector of maps. Each transition
-  set maps re-frame event vectors with transition states.
+  1. Event transitions
+  2. Entity transitions
+  3. Timeout transitions
 
-  Entity transitions:
+  Only one entity or timeout transition is allowed in a state's
+  transition map. However, a state's transition map can have an
+  arbitrary number of event transitions. If a state defines both an
+  entity and event transitions, the event transitions will always be
+  matched before the entity transition.
 
-  These are expressed as a vector, with only a single allowed
-  transition per state (though the DSL could be easily extended to
-  allow multiple entity transitions in the future without
-  breaking). Each entity transition maps an input entity ref to the
-  next fsm state.
+  Recieved events are matched to an event input stem. The longest
+  event stem in the transition map is matched first. This means for
+  the recieved event `[:voted self first-pref second-pref]`, and the
+  set of input keys:
 
-  In addition to specifying the next state in the transition, both
-  event transitions and entity transitions can specify optional
-  conditional clauses, and dispatch clauses.
+  [:voted self]
+  [:voted self first-pref]
 
-  Other attributes that define an fsm:
+  The matching key would be:
+  
+  [:voted self first-pref]
+
+  Entity inputs are expressed as a vector of entity references, each
+  reference being a tuple of unique attribute and a uuid.
+
+  Timeout inputs are just normal events vector where the first three
+  positional elements are: `[::timeout ref ms ...]`, where `ref` is an
+  entity reference, and `ms` is the timeout duration in milliseconds.
+
+  If the FSM implementation parses a timeout input whose `ref` is the
+  same as the FSM `id` it will ensure that those timeouts will fire
+  for their designated state, and be cleaned up appropriately.
+
+  All transition inputs match one or more output clauses. Each output
+  clause be either simple or expanded form.
+
+  1. Simple: Just a state keyword
+  2. Complex: A map containing the following attributes:
+
+  `:to`         - The next state to transition to [required]
+  `:when`       - The id of a Clojure spec that must return s/valid?
+                  true for the transition input in order for the
+                  transition to fire. For event inputs, this is
+                  simply the full recieved event vector. For entity
+                  inputs, the entity references are pulled from the
+                  db, and passed to the Clojure spec. [optional]
+  `:dispatch`   - An event vector to dispatch on a succesful
+                  transition [optional]
+  
+  Other root FSM attributes:
 
   `:id`         - A  db reference to the fsm entity being advanced
-                  through states
+                  through states [required]
 
   `:start`      - The default starting state if the entity is not
-                  already in a state
+                  already in a state [optional]
 
-  `:attr`       - Optional: the entity attribute where the state is
+  `:attr`       - The entity attribute where the state is
                   stored, when not provided `::state` is used
+                  [optional]
   
-  `:stop`       - Optional: the state where the fsm will be stopped
+  `:stop`       - The state which when reach will stop the fsm
+                  [optional]
 
-  `:return`     - An optional pull spec run as the return value of the
+  `:return`     - A pull spec run as the return value of the
                   resultant FSM subscription. By default, the fsm
                   subscription returns a simple attribute query on
                   the state attribute specified by `:attr`. The
                   query is always run agains the FSM `:id` as the
-                  root reference.
+                  root reference. [optional]
 
   An fsm can be started and stopped by dispatching the `::start` and
-  `::stop` events, respectively."
+  `::stop` events, respectively.
+
+  Because the FSM implementation is based on global interceptors that
+  run every time, all the matching and lookup algorithms are written
+  to be very fast."
   (:require [clojure.spec.alpha :as s]
             [re-frame.core :as f]
             [re-frame.registrar :as reg]
             [reagent.ratom :as r]
             [reflet.db :as db]
             [reflet.interceptors :as i]
+            [reflet.trie :as t]
             [reflet.util.spec :as s*]))
 
 (s/def ::id ::s*/ref)
@@ -83,10 +123,23 @@
 (s/def ::to ::state)
 (s/def ::start ::state)
 
+(s/def ::event-id
+  (s/and keyword? (complement #{::timeout})))
+
 (s/def ::event
   (s*/identity-conformer
-   (s/cat :event-id keyword?
-          :event-args (s/* any?))))
+   (s/cat :event-id   ::event-id
+          :more       (s/* any?))))
+
+(s/def ::timeout
+  (s*/identity-conformer
+   (s/cat :id     #{::timeout}
+          :ref    ::s*/ref
+          :number number?
+          :more   (s/* any?))))
+
+(s/def ::entity-vec
+  (s/coll-of ::s*/ref :kind vector?))
 
 (s/def ::dispatch
   (s*/any-cardinality ::event :coerce-many true))
@@ -94,7 +147,7 @@
 (s/def ::stop
   (s/coll-of ::state :kind set?))
 
-(s/def ::transition-to-complex
+(s/def ::transition-to-expanded
   (s/keys :req-un [::to]
           :opt-un [::dispatch ::when]))
 
@@ -102,12 +155,12 @@
 
 (s/def ::transition-to
   (s*/conform-to
-    (s/or :simple ::transition-to-simple
-          :complex ::transition-to-complex)
+    (s/or :simple   ::transition-to-simple
+          :expanded ::transition-to-expanded)
     (fn [[t form]]
       (case t
-        :simple  {:to form}
-        :complex form))))
+        :simple   {:to form}
+        :expanded form))))
 
 (s/def ::transition-to-any
   (s*/any-cardinality ::transition-to :coerce-many true))
@@ -118,78 +171,51 @@
 (s/def ::entity-transition
   (s/tuple (s/coll-of ::s*/ref) ::transition-to-any))
 
+(s/def ::timeout-transition
+  (s/tuple ::timeout ::transition-to-any))
+
 (s/def ::transition
-  (s/and (s/or :event ::event-transition
-               :entity ::entity-transition)
-         (s/conformer second)))
+  (s*/conform-to
+    (s/or :event   ::event-transition
+          :entity  ::entity-transition
+          :timeout ::timeout-transition)
+    (fn [[t form]]
+      (with-meta form {:type t}))))
 
-(s/def ::at-most-one-timeout-transition
+(def ^:private -type
+  (comp :type meta))
+
+(s/def ::max-one-timeout-transition
   (fn [transitions]
     (->> transitions
-         (map first)
-         (filter (comp #{::timeout} first))
+         (filter (comp #{:timeout} -type))
          (count)
          (>= 1))))
 
-(s/def ::entity-vec
-  (s/coll-of ::s*/ref :kind vector?))
-
-(s/def ::at-most-one-entity-transition
+(s/def ::max-one-entity-transition
   (fn [transitions]
     (->> transitions
-         (map first)
-         (filter (partial s/valid? ::entity-vec))
+         (filter (comp #{:entity} -type))
          (count)
          (>= 1))))
 
-(defn- compile-smallest-match
+(defn- compile-transitions
   [transitions]
-  (->> transitions
-       (keys)
-       (map count)
-       (apply min)
-       (vary-meta transitions assoc :smallest-match)))
-
-(defn- find-timeout
-  [transitions]
-  (->> transitions
-       (keys)
-       (filter (comp #{::timeout} first))
-       (first)))
-
-(defn- compile-timeout
-  [transitions]
-  (if-let [event-v (find-timeout transitions)]
-    (vary-meta transitions assoc :timeout event-v)
-    transitions))
-
-(defn- compile-event-transitions
-  [transitions]
-  (-> (into {} transitions)
-      (compile-smallest-match)
-      (compile-timeout)))
-
-(defn- compile-entity-transitions
-  [transitions]
-  (-> (into {} transitions)
-      (compile-timeout)))
-
-(s/def ::event-transitions
-  (s/and (s/conformer seq)
-         (s/coll-of ::event-transition)
-         ::at-most-one-timeout-transition
-         (s/conformer compile-event-transitions)))
-
-(s/def ::entity-transitions
-  (s/and (s/conformer seq)
-         (s/coll-of ::transition :min-count 1 :max-count 2)
-         ::at-most-one-timeout-transition
-         ::at-most-one-entity-transition
-         (s/conformer compile-entity-transitions)))
+  (letfn [(f [t [k v]]
+            (t/add t k [k v]))]
+    (-> (group-by -type transitions)
+        (update :timeout ffirst)
+        (update :entity first)
+        (dissoc :event)
+        (assoc :event-trie
+               (reduce f (t/trie) transitions)))))
 
 (s/def ::transitions
-  (s/or :event  ::event-transitions
-        :entity ::entity-transitions))
+  (s/and (s/conformer seq)
+         (s/coll-of ::transition)
+         ::max-one-timeout-transition
+         ::max-one-entity-transition
+         (s/conformer compile-transitions)))
 
 (s/def :state-map/fsm
   (s/map-of ::state ::transitions))
@@ -202,126 +228,73 @@
   [fsm]
   (s*/assert! ::fsm fsm))
 
-(defn- match-clause
-  [x clauses]
+(defn- cond-clause
+  [[input clauses]]
   (->> clauses
        (remove nil?)
-       (filter (fn [{c :when}] (or (not c) (s/valid? c x))))
+       (filter (fn [{c :when}] (or (not c) (s/valid? c input))))
        (first)))
 
-(defn- keep-matching?
-  [transitions event]
-  (let [n (:smallest (meta transitions))]
-    (and (seq event)
-         (or (not n)
-             (<= n (count event))))))
+(defn- get-transition
+  [db event {trie   :event-trie
+             entity :entity}]
+  (or (t/match trie event)
+      (when entity
+        (-> (partial db/getn db)
+            (map (first entity))
+            (vector (second entity))))))
 
-(defn- match-transition
-  "Find a transition that matches a sub sequence of the event."
-  [event transitions]
-  (when (keep-matching? transitions event)
-    (or (get transitions event)
-        (recur (pop event) transitions))))
-
-(defn match-event
-  [event transitions]
-  (some->> transitions
-           (match-transition event)
-           (match-clause event)))
-
-(defn- event-transition!
-  "Given a transition map and an event, returns the next fsm state if
-  there is a valid transition, `nil` otherwise. Event transition
-  `:when` clause is optionally applied."
-  [event transitions]
-  (when-let [clause (match-event event transitions)]
-    (let [{to       :to
-           dispatch :dispatch} clause]
+(defn- transition!
+  [db event transition]
+  (when-let [clause (->> transition
+                         (get-transition db event)
+                         (cond-clause))]
+    (let [{:keys [to dispatch]} clause]
       (when dispatch
         (doseq [e dispatch]
           (f/dispatch e)))
       to)))
 
-(defn- get-entities
-  [db refs]
-  (map (partial db/getn db) refs))
-
-(defn- get-entity-transition
-  "Handles entity transitions and timeouts."
-  [db event transitions]
-  (or (find transitions event)          ; Only timeouts would match
-      (some (fn [[[k :as v] clauses]]
-              (when-not (= k ::timeout)
-                [(get-entities db v) clauses]))
-            transitions)))
-
-(defn- entity-transition!
-  "Given a transition map and a db, returns the next fsm state if there
-  is a valid transition, `nil` otherwise. Entity transitions will
-  always have a `:when` spec predicate."
-  [db event transitions]
-  (let [[input clauses] (get-entity-transition db event transitions)]
-    (when-let [clause (match-clause input clauses)]
-      (let [{to       :to
-             dispatch :dispatch} clause]
-        (when dispatch
-          (doseq [e dispatch]
-            (f/dispatch e)))
-        to))))
-
-(defn- maybe-vec
-  "Event must be a vector for efficient partial matching. It should
-  almost always be one, but don't fail edge cases where it is not."
-  [event]
-  (cond-> event
-    (not (vector? event)) vec))
-
 (defn- next-state
   "Returns next state if there is a valid transition, `nil` otherwise."
-  [fsm db event*]
+  [fsm db event]
   (let [{state-map :fsm
          :keys     [id attr start]
-         :or       {attr ::state}} fsm
-
-        event           (maybe-vec event*)
-        current-state   (db/get-inn db [id attr] start)
-        [t transitions] (get state-map current-state)]
-    (case t
-      :event  (event-transition! event transitions)
-      :entity (entity-transition! db event transitions)
-      nil)))
-
-;;;;;;;;;;;; Timeout implementation ;;;;;;;;;;;;;;;;;;;
+         :or       {attr ::state}} fsm]
+    (->> (db/get-inn db [id attr] start)
+         (get state-map)
+         (transition! db event))))
 
 (defn- get-timeout
   [fsm state]
   (some-> fsm
           (:fsm)
           (get state)
-          (second)
-          (meta)
           (:timeout)))
 
-(defn- assert-timeout!
+(defn- self-timeout?
   [fsm ref]
-  (when-not (= (:id fsm) ref)
-    (throw
-     (ex-info
-      "Only self timeouts allowed in FSMs"
-      {:fsm fsm}))))
+  
+  (throw
+   (ex-info
+    "Only self timeouts allowed in FSMs"
+    {:fsm fsm})))
 
 (defn- clear-timeout!
   [timeout]
   (some-> @timeout (js/clearTimeout)))
 
 (defn- set-timeout!
-  [{id :id :as fsm} timeout state]
-  (when-let [[_ ref ms :as event-v] (get-timeout fsm state)]
-    (assert-timeout! fsm ref)
-    (clear-timeout! timeout)
-    (as-> #(f/dispatch event-v) %
-      (js/setTimeout % ms)
-      (reset! timeout %))))
+  [fsm timeout state]
+  (when-let [[_ ref ms
+              :as event-v] (get-timeout fsm state)]
+    (when (= (:id fsm) ref)
+      (clear-timeout! timeout)
+      (as-> #(f/dispatch event-v) %
+        (js/setTimeout % ms)
+        (reset! timeout %)))))
+
+(declare stop!)
 
 (defn advance
   "Given a parsed fsm, a db, and an event, advances the fsm. Else,
@@ -333,7 +306,7 @@
     db
     (if-let [state (next-state fsm db event)]
       (do (when (and stop (contains? stop state))
-            (f/dispatch [::stop fsm-v]))
+            (stop! fsm-v))
           (set-timeout! fsm timeout state)
           (db/assoc-inn db [id attr] state))
       db)))

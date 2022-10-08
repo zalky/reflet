@@ -303,7 +303,7 @@
                   ::middle {[self] {:to   ::start
                                     :when ::threshold}
 
-                            [::fsm/timeout self 1]
+                            [::fsm/timeout self 1 ::middle]
                             {:to       ::finish
                              :dispatch [::timeout-success]}}}}))
 
