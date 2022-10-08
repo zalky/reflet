@@ -7,9 +7,9 @@
   [{node-r    :player/node
     context-r :player/context
     source-r  :player/source}]
-  (when-not (i/grab @i/db context-r)
+  (when-not (i/grab context-r)
     (let [context (js/AudioContext.)
-          node    (i/grab @i/db node-r)
+          node    (i/grab node-r)
           source  (.createMediaElementSource context node)]
       (.connect source (.-destination context))
       (i/reg context-r context)
@@ -28,7 +28,7 @@
       node-r :player/node
       :as    props}]
   (when (running? state)
-    (let [node (i/grab @i/db node-r)]
+    (let [node (i/grab node-r)]
       (create-context props)
       (case state
         ::impl/playing (.play node)

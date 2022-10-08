@@ -21,8 +21,8 @@
   Accepts the corresponding object DB as first argument, ref as
   second. In an event handler, the DB is typically obtained by
   injecting the coeffect: (f/inject-cofx ::db)"
-  [db ref]
-  (:obj (get db ref)))
+  [ref]
+  (:obj (get @db ref)))
 
 (defn update!
   "Semantics like `clojure.core/update`, mutates the object in db by
@@ -35,12 +35,7 @@
   ;; Usage `(f/subscribe [::grab node-ref])`
   (constantly db)
   (fn [db [_ ref]]
-    (grab db ref)))
-
-(defn node-mounted?
-  "If a DOM node is stored in this DB with the provided ref, it has been mounted"
-  [ref]
-  (boolean (get @db ref)))
+    (:obj (get db ref))))
 
 (defn reg
   "Stores the interop oobject in the object DB. Optionally accepts a
@@ -63,11 +58,6 @@
           (destroy obj))
         (swap! db dissoc ref)))))
 
-(f/reg-cofx :interop-db
-  ;; Provides the JS db as a co-effect to event handlers
-  (fn [cofx]
-    (assoc cofx :interop-db @db)))
-
 (defn node!
   "Returns a react callback for initializing a node ref and putting it
   into the dom node db.
@@ -79,7 +69,7 @@
   lifecycle."
   [ref & {:keys [flush cb]}]
   (fn [node]
-    (when-not (node-mounted? ref)
+    (when-not (grab ref)
       (reg ref node)
       (when cb (cb node))
       (when flush (r/flush!)))))
