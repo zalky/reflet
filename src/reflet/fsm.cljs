@@ -12,14 +12,15 @@
     (fn [self]
       {:id   self
        :attr :kr/votes
-       :stop [::accepted]
-       :fsm  {::open     {[:voted self] ::review}
+       :stop #{::accepted ::cancelled}
+       :fsm  {nil        {[:voted self] ::review}
               ::review   {[self] {:to       ::review
                                   :when     ::review-threshold
                                   :dispatch [:notify self]}}
-              ::decision {[:accepted self] ::accepted
-                          [:revisit self]  {:to      ::review
-                                            :dipatch [:reset self]}}}}))
+              ::decision {[:accepted self]          ::accepted
+                          [:revisit self]           {:to      ::review
+                                                     :dipatch [:reset self]}
+                          [::fsm/timeout self 1000] [:to ::cancelled]}}}))
 
   Here, the `:fsm` attribute defines a state map, mapping each fsm
   state to allowed transitions for those states.
@@ -34,37 +35,50 @@
   2. Entity transitions
   3. Timeout transitions
 
+  Event transitions match a recieved event against a set of event
+  stems. Each stem either matches the event exactly, or an event with
+  additional args. If more than one input stem would match, then the
+  longest stem is chosen. For example, given the recieved event:
+
+  [:voted self first-pref second-pref]
+
+  and the set of input stems:
+
+  [:voted self]
+  [:voted self first-pref]
+
+  Then matching stem would be:
+  
+  [:voted self first-pref]
+
+  Entity transitions match the state of their input entities against
+  the conditionals defined in their output clauses. The input entities
+  are expressed as a vector of entity references, each reference being
+  a tuple with a unique attribute and a uuid.
+
+  Timeout transitions are just like event transitions, except the first
+  three positional elements of their event vector are:
+
+  [:reflet.fsm/timeout ref ms ...]
+
+  where `ref` is an entity reference, and `ms` is the timeout duration
+  in milliseconds.
+
+  If the FSM implementation parses a timeout transition whose `ref` is
+  the same as the FSM `:id`, and it specifies a `ms` duration, it
+  actually ensures those timeouts will fire for their designated
+  state, and be cleaned up appropriately. In this way you can ensure
+  any state transition will timeout and advance within a certain
+  time. Otherwise timeouts are matched just like regular events.
+
   Only one entity or timeout transition is allowed in a state's
   transition map. However, a state's transition map can have an
   arbitrary number of event transitions. If a state defines both an
   entity and event transitions, the event transitions will always be
   matched before the entity transition.
 
-  Recieved events are matched to an event input stem. The longest
-  event stem in the transition map is matched first. This means for
-  the recieved event `[:voted self first-pref second-pref]`, and the
-  set of input keys:
-
-  [:voted self]
-  [:voted self first-pref]
-
-  The matching key would be:
-  
-  [:voted self first-pref]
-
-  Entity inputs are expressed as a vector of entity references, each
-  reference being a tuple of unique attribute and a uuid.
-
-  Timeout inputs are just normal events vector where the first three
-  positional elements are: `[::timeout ref ms ...]`, where `ref` is an
-  entity reference, and `ms` is the timeout duration in milliseconds.
-
-  If the FSM implementation parses a timeout input whose `ref` is the
-  same as the FSM `id` it will ensure that those timeouts will fire
-  for their designated state, and be cleaned up appropriately.
-
-  All transition inputs match one or more output clauses. Each output
-  clause be either simple or expanded form.
+  All transitions also define one or more output clauses. Each output
+  clause be expresed in either simple or expanded form.
 
   1. Simple: Just a state keyword
   2. Complex: A map containing the following attributes:
@@ -117,6 +131,7 @@
   run every time, all the matching and lookup algorithms are written
   to be very fast."
   (:require [cinch.core :as util]
+            [clojure.set :as set]
             [clojure.spec.alpha :as s]
             [re-frame.core :as f]
             [re-frame.db :as fdb]
@@ -136,12 +151,12 @@
   (s/and keyword? (complement #{::timeout})))
 
 (s/def ::event
-  (s*/identity-conformer
+  (s*/non-conformer
    (s/cat :event-id   ::event-id
           :more       (s/* any?))))
 
 (s/def ::timeout
-  (s*/identity-conformer
+  (s*/non-conformer
    (s/cat :id     #{::timeout}
           :ref    ::s*/ref
           :number number?
@@ -157,8 +172,10 @@
   (s/coll-of ::state :kind set?))
 
 (s/def ::transition-to-expanded
-  (s/keys :req-un [::to]
-          :opt-un [::dispatch ::when]))
+  (s*/any-cardinality
+   (s/keys :req-un [::to]
+           :opt-un [::dispatch ::when])
+   :coerce-many true))
 
 (s/def ::transition-to
   (s*/conform-to
@@ -166,20 +183,17 @@
           :expanded ::transition-to-expanded)
     (fn [[t form]]
       (case t
-        :simple   {:to form}
+        :simple   [{:to form}]
         :expanded form))))
 
-(s/def ::transition-to-any
-  (s*/any-cardinality ::transition-to :coerce-many true))
-
 (s/def ::event-transition
-  (s/tuple ::event ::transition-to-any))
+  (s/tuple ::event ::transition-to))
 
 (s/def ::entity-transition
-  (s/tuple (s/coll-of ::s*/ref) ::transition-to-any))
+  (s/tuple (s/coll-of ::s*/ref) ::transition-to))
 
 (s/def ::timeout-transition
-  (s/tuple ::timeout ::transition-to-any))
+  (s/tuple ::timeout ::transition-to))
 
 (s/def ::transition
   (s*/conform-to
@@ -213,9 +227,10 @@
     (-> (group-by -type transitions)
         (update :timeout ffirst)
         (update :entity first)
-        (dissoc :event)
-        (assoc :event-trie
-               (reduce f (t/trie) transitions)))))
+        (assoc :event (reduce f (t/trie) transitions))
+        (set/rename-keys
+         {:event  :event-trie
+          :entity :entity-transition}))))
 
 (s/def ::transitions
   (s/and (s/conformer seq)
@@ -242,15 +257,15 @@
        (filter (fn [{c :when}] (or (not c) (s/valid? c input))))
        (first)))
 
-(defn- match-clauses
+(defn- match-transition
   "Events are always matched before entities."
-  [db event {trie   :event-trie
-             entity :entity}]
+  [db event {trie     :event-trie
+             entity-t :entity-transition}]
   (or (t/match trie event)
-      (when entity
-        (-> (partial db/getn db)
-            (map (first entity))
-            (vector (second entity))))))
+      (when entity-t
+        (->> (partial db/getn db)
+             (partial map)
+             (update entity-t 0)))))
 
 (defn- match-clause
   "Given the current state of the fsm in the db, returns a matching
@@ -260,7 +275,7 @@
          :keys     [id attr]} fsm]
     (let [state (db/get-inn db [id attr])]
       (some->> (get state-map state)
-               (match-clauses db event)
+               (match-transition db event)
                (cond-clause)))))
 
 (defn- get-timeout

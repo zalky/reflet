@@ -14,15 +14,20 @@
         (s/explain-data spec value)))
       form)))
 
-(defn identity-conformer
-  "Returns a version of the given spec that conforms without changing
-  the value."
+(defn non-conformer
+  "Returns a version of the given spec that checks but does not conform
+  the value. A previous iteration of this function simply wrapped
+  `spec` within a conformer. While this worked on success, on error it
+  supressed the error report of the subspec, significantly reducing
+  its utility. This approach handles errors within the `spec`
+  transparently."
   [spec]
-  (s/conformer
-   (fn [x]
-     (if (s/valid? spec x)
-       x
-       ::s/invalid))))
+  (let [v       (volatile! nil)
+        tap     #(vreset! v %)
+        restore #(case % ::s/invalid % @v)]
+    (s/and (s/conformer tap)
+           spec
+           (s/conformer restore))))
 
 (defn conform-to
   "Given a spec, returns a version of that spec that additionally
