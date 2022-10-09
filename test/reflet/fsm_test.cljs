@@ -16,14 +16,13 @@
 (f/reg-event-fx ::next-state
   (constantly nil))
 
-(t/deftest idempotent-test
-  (t/testing "Idempotent"
+(t/deftest idempotent-lifecycles-test
+  (t/testing "Idempotent lifecycle"
     (fix/run-test-sync
      (fsm/reg-fsm ::idempotent
        (fn [self]
-         {:ref  self
-          :stop #{::stop}
-          :fsm  {}}))
+         {:ref self
+          :fsm {nil nil}}))
 
      (f/with-ref {:component/uuid [fsm/self]}
        (letfn [(get-handler []
@@ -57,7 +56,7 @@
      (fsm/reg-fsm ::no-op
        (fn [self]
          {:ref self
-          :fsm {}}))
+          :fsm {nil nil}}))
 
      (f/reg-no-op ::advance)
 
@@ -217,7 +216,7 @@
      (fsm/reg-fsm ::election
        (fn [self candidate]
          {:ref   self
-          :stop #{::elected}
+          :stop #{::done}
           :fsm  {nil       {[::kick-off self] ::running}
                  ::running {[candidate] {:to       ::done
                                          :when     ::threshold
@@ -322,10 +321,11 @@
      (fsm/reg-fsm ::timeout-fsm
        (fn [self]
          {:ref  self
-          :fsm {nil      {[::advance self] ::middle}
-                ::middle {[::fsm/timeout self 1]
-                          {:to       ::finish
-                           :dispatch [::timeout-success]}}}}))
+          :stop #{::finish}
+          :fsm  {nil      {[::advance self] ::middle}
+                 ::middle {[::fsm/timeout self 1]
+                           {:to       ::finish
+                            :dispatch [::timeout-success]}}}}))
 
      (f/reg-no-op ::advance ::timeout-success)
 
@@ -348,14 +348,15 @@
 
      (fsm/reg-fsm ::timeout-fsm
        (fn [self]
-         {:ref self
-          :fsm {nil      {[::advance self] ::middle}
-                ::middle {[self] {:to   ::start
-                                  :when ::threshold}
+         {:ref  self
+          :stop #{::finish}
+          :fsm  {nil      {[::advance self] ::middle}
+                 ::middle {[self] {:to   ::start
+                                   :when ::threshold}
 
-                          [::fsm/timeout self 1 ::middle]
-                          {:to       ::finish
-                           :dispatch [::timeout-success]}}}}))
+                           [::fsm/timeout self 1 ::middle]
+                           {:to       ::finish
+                            :dispatch [::timeout-success]}}}}))
 
      (f/reg-no-op ::advance ::timeout-success)
 

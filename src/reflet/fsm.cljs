@@ -243,7 +243,7 @@
          (s/conformer compile-transitions)))
 
 (s/def :state-map/fsm
-  (s/map-of ::state ::transitions))
+  (s/map-of ::state (s/nilable ::transitions)))
 
 (s/def ::fsm
   (s/keys :req-un [::ref :state-map/fsm]
@@ -251,7 +251,8 @@
 
 (defn- parse
   [fsm]
-  (s*/assert! ::fsm fsm))
+  (-> (s*/assert! ::fsm fsm)
+      (assoc :fsm-unparsed fsm)))
 
 (defn- cond-clause
   [[input clauses]]
@@ -270,14 +271,24 @@
              (partial map)
              (update entity-t 0)))))
 
+(defn- get-transition
+  [{state-map :fsm
+    {m :fsm}  :fsm-unparsed} state]
+  (if (contains? state-map state)
+    (get state-map state)
+    (throw
+     (ex-info
+      "FSM state not in state map"
+      {:state     state
+       :state-map m}))))
+
 (defn- match-clause
   "Given the current state of the fsm in the db, returns a matching
   clause. Care must be taken to handle the `nil` state."
   [fsm db event]
-  (let [{state-map :fsm
-         :keys     [ref attr]} fsm]
+  (let [{:keys [ref attr]} fsm]
     (let [state (db/get-inn db [ref attr])]
-      (some->> (get state-map state)
+      (some->> (get-transition fsm state)
                (match-transition db event)
                (cond-clause)))))
 
@@ -339,7 +350,14 @@
                 (assoc :fsm-v fsm-v))
         (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
+(defn- set-first-timeout!
+  [{:keys [ref attr]
+    :as   fsm} timeout db]
+  (->> (db/get-inn db [ref attr])
+       (set-timeout! fsm timeout)))
+
 (defn- initial-dispatch!
+  "Must happen after interceptor has been registered."
   [{:keys [dispatch]}]
   (doseq [event dispatch]
     (f/dispatch event)))
@@ -347,12 +365,6 @@
 (defn started?
   [fsm-v]
   (i/global-interceptor-registered? fsm-v))
-
-(defn- set-first-timeout!
-  [{:keys [ref attr]
-    :as   fsm} timeout db]
-  (->> (db/get-inn db [ref attr])
-       (set-timeout! fsm timeout)))
 
 (defn- start!
   [db fsm-v]
@@ -362,8 +374,8 @@
         (set-first-timeout! fsm timeout db)
         (->> (partial advance fsm timeout)
              (f/enrich)
-             (i/reg-global-interceptor fsm-v)))
-      (initial-dispatch! fsm))))
+             (i/reg-global-interceptor fsm-v))
+        (initial-dispatch! fsm)))))
 
 (defn- stop!
   [fsm-v]
