@@ -87,6 +87,31 @@
          (f/dispatch [::advance self])
          (is (= ::stop @state)))))))
 
+(t/deftest fsm-lifecycle-test
+  (t/testing "Start and top fx"
+    (fix/run-test-sync
+
+     (fsm/reg-fsm ::lifecycle
+       (fn [self]
+         {:ref  self
+          :stop #{::stop}
+          :fsm  {nil       {[::advance self] ::started}
+                 ::started {[::advance self] ::failed-to-stop}}}))
+
+     (f/reg-no-op ::do-not-advance ::advance)
+
+     (f/with-ref {:component/uuid [fsm/self]}
+       (f/dispatch [::fsm/start [::lifecycle self]])
+       (is (fsm/started? [::lifecycle self]))
+       (f/dispatch [::advance self])
+       (let [state (f/subscribe [::lifecycle self])]
+         (is (= ::started @state))
+         (f/dispatch [::fsm/stop [::lifecycle self]])
+         (is (not (fsm/started? [::lifecycle self])))
+         (f/dispatch [::advance self])
+         (is (= ::started @state))
+         (is (not= ::failed-to-stop @state)))))))
+
 (t/deftest fsm-initial-dispatch-test
   (t/testing "FSM initial dispatch"
     (fix/run-test-sync

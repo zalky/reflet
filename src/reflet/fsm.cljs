@@ -115,12 +115,15 @@
   Once an FSM has been declared using `reg-fsm`, instances can be
   created via subscriptions. When created this way, an FSM's lifecycle
   is tied to the lifecycle of its subscription. When the subscription
-  is disposed, the FSM is also stopped.
+  is disposed, the FSM is also stopped. Subscriptions are the
+  preferred way to create FSMs.
 
-  While there are `start!` and `stop!` methods, FSMs should only ever
-  be started during a React animation frame (see the `start!` doc
-  string for more detail), and in general it is much better to rely on
-  the automatic lifecycle management that comes with subscriptions.
+  If you really need to start or stop and FSM during the event/fx
+  phase of the application, you can do so using the `::start` and
+  `::stop` event and fx handlers, with the caveat that an FSM can
+  never be started or stopped while mutating the db at the same
+  time. The FSM implementation actually has an interceptor that throws
+  an error if this ever happens.
 
   When an FSM is started, its initial state will be whatever is
   referenced by its FSM `:ref` in the db. If no state exists, then it
@@ -351,14 +354,7 @@
   (->> (db/get-inn db [ref attr])
        (set-timeout! fsm timeout)))
 
-(defn start!
-  "FSM creation can happen ONLY during an animation frame. Never call
-  this in an fx or event handler. The animation frame is the only time
-  that we can safely read the value of the FSM's initial state from
-  the db, and also set a timeout on the first transition. Doing so
-  during the fx/event phase, given the interceptor/fx design, is not
-  concurrency safe. Also, the first timeout must be set manually
-  before the first advance."
+(defn- start!
   [db fsm-v]
   (let [fsm (parse (fsm-spec fsm-v))]
     (when-not (started? fsm-v)
@@ -369,9 +365,58 @@
              (i/reg-global-interceptor fsm-v)))
       (initial-dispatch! fsm))))
 
-(defn stop!
+(defn- stop!
   [fsm-v]
   (i/clear-global-interceptor fsm-v))
+
+(defn check-safe-usage
+  [{{::keys [start stop]
+     db     :db} :effects
+    {e :event}   :coeffects}]
+  (when (and db (or start stop))
+   (throw
+    (ex-info
+     "Cannot modify db when starting or stopping an FSM"
+     {:event e}))))
+
+(defn fsm-lifecycle-interceptor*
+  "Guards against unsafe usage of FSM lifecycle effects. An FSM can
+  never be started or stopped during the event/fx phase when the db is
+  also being modified."
+  [{{::keys [start stop]
+     db-fx  :db} :effects
+    {db-cfx :db} :coeffects
+    :as          context}]
+  (letfn [(f [fx]
+            (check-safe-usage context)
+            (conj [db-cfx] fx))]
+    (cond-> context
+      start           (update-in [:effects ::start] f)
+      stop            (update-in [:effects ::stop] f)
+      (or start stop) (update :effects dissoc :db))))
+
+(def fsm-lifecycle-interceptor
+  (f/->interceptor
+   :id :add-global-interceptors
+   :after fsm-lifecycle-interceptor*))
+
+(f/reg-fx ::start
+  (fn [[db fsm-v]]
+    (start! db fsm-v)))
+
+(f/reg-fx ::stop
+  (fn [[_ fsm-v]]
+    (stop! fsm-v)))
+
+(f/reg-event-fx ::start
+  fsm-lifecycle-interceptor
+  (fn [_ [_ fsm-v]]
+    {::start fsm-v}))
+
+(f/reg-event-fx ::stop
+  fsm-lifecycle-interceptor
+  (fn [_ [_ fsm-v]]
+    {::stop fsm-v}))
 
 ;;;; Subs
 

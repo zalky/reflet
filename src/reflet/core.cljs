@@ -9,6 +9,7 @@
             [reagent.ratom :as r]
             [reagent.impl.component :as util**]
             [reflet.db :as db]
+            [reflet.fsm :as fsm]
             [reflet.interceptors :as itor]
             [reflet.interop :as i]
             [reflet.ref-spec :as rs]
@@ -20,7 +21,9 @@
 ;;;; Re-frame API
 
 (def reflet-interceptors
-  [db/inject-index itor/add-global-interceptors])
+  [db/inject-index
+   itor/add-global-interceptors
+   fsm/fsm-lifecycle-interceptor])
 
 (defn reg-event-db
   ([id handler]
