@@ -10,17 +10,16 @@
 
   (f/reg-fsm ::review
     (fn [self]
-      {:id    self
-       :attr  :kr/votes
-       :start ::open
-       :stop  [::accepted]
-       :fsm   {::open     {[:voted self] ::review}
-               ::review   {[self] {:to       ::review
-                                   :when     ::review-threshold
-                                   :dispatch [:notify self]}}
-               ::decision {[:accepted self] ::accepted
-                           [:revisit self]  {:to      ::review
-                                             :dipatch [:reset-votes self]}}}}))
+      {:id   self
+       :attr :kr/votes
+       :stop [::accepted]
+       :fsm  {::open     {[:voted self] ::review}
+              ::review   {[self] {:to       ::review
+                                  :when     ::review-threshold
+                                  :dispatch [:notify self]}}
+              ::decision {[:accepted self] ::accepted
+                          [:revisit self]  {:to      ::review
+                                            :dipatch [:reset self]}}}}))
 
   Here, the `:fsm` attribute defines a state map, mapping each fsm
   state to allowed transitions for those states.
@@ -85,9 +84,6 @@
   `:id`         - A  db reference to the fsm entity being advanced
                   through states [required]
 
-  `:start`      - The default starting state if the entity is not
-                  already in a state [optional]
-
   `:attr`       - The entity attribute where the state is
                   stored, when not provided `::state` is used
                   [optional]
@@ -102,14 +98,28 @@
                   query is always run agains the FSM `:id` as the
                   root reference. [optional]
 
-  An fsm can be started and stopped by dispatching the `::start` and
-  `::stop` events, respectively.
+  Once an FSM has been declared using `reg-fsm`, instances can be
+  created via subscriptions. When created this way, an FSM's lifecycle
+  is tied to the lifecycle of its subscription. When the subscription
+  is disposed, the FSM is also stopped.
+
+  While there are `start!` and `stop!` methods, FSMs should only ever
+  be started during a React animation frame (see the `start!` doc
+  string for more detail), and in general it is much better to rely on
+  the automatic lifecycle management that comes with subscriptions.
+
+  When an FSM is started, its initial state will be whatever is
+  referenced by its FSM `:id` in the db. If no state exists, then it
+  will be `nil`. It is usually a good idea to always define a `nil`
+  transition, or the FSM will stop progressing.
 
   Because the FSM implementation is based on global interceptors that
   run every time, all the matching and lookup algorithms are written
   to be very fast."
-  (:require [clojure.spec.alpha :as s]
+  (:require [cinch.core :as util]
+            [clojure.spec.alpha :as s]
             [re-frame.core :as f]
+            [re-frame.db :as fdb]
             [re-frame.registrar :as reg]
             [reagent.ratom :as r]
             [reflet.db :as db]
@@ -118,10 +128,9 @@
             [reflet.util.spec :as s*]))
 
 (s/def ::id ::s*/ref)
-(s/def ::state qualified-keyword?)
+(s/def ::state (s/nilable qualified-keyword?))
 (s/def ::when qualified-keyword?)
 (s/def ::to ::state)
-(s/def ::start ::state)
 
 (s/def ::event-id
   (s/and keyword? (complement #{::timeout})))
@@ -151,11 +160,9 @@
   (s/keys :req-un [::to]
           :opt-un [::dispatch ::when]))
 
-(s/def ::transition-to-simple keyword?)
-
 (s/def ::transition-to
   (s*/conform-to
-    (s/or :simple   ::transition-to-simple
+    (s/or :simple   ::state
           :expanded ::transition-to-expanded)
     (fn [[t form]]
       (case t
@@ -221,7 +228,7 @@
   (s/map-of ::state ::transitions))
 
 (s/def ::fsm
-  (s/keys :req-un [::id ::start :state-map/fsm]
+  (s/keys :req-un [::id :state-map/fsm]
           :opt-un [::stop ::dispatch]))
 
 (defn- parse
@@ -235,7 +242,8 @@
        (filter (fn [{c :when}] (or (not c) (s/valid? c input))))
        (first)))
 
-(defn- get-transition
+(defn- match-clauses
+  "Events are always matched before entities."
   [db event {trie   :event-trie
              entity :entity}]
   (or (t/match trie event)
@@ -244,26 +252,16 @@
             (map (first entity))
             (vector (second entity))))))
 
-(defn- transition!
-  [db event transition]
-  (when-let [clause (->> transition
-                         (get-transition db event)
-                         (cond-clause))]
-    (let [{:keys [to dispatch]} clause]
-      (when dispatch
-        (doseq [e dispatch]
-          (f/dispatch e)))
-      to)))
-
-(defn- next-state
-  "Returns next state if there is a valid transition, `nil` otherwise."
+(defn- match-clause
+  "Given the current state of the fsm in the db, returns a matching
+  clause. Care must be taken to handle the `nil` state."
   [fsm db event]
   (let [{state-map :fsm
-         :keys     [id attr start]
-         :or       {attr ::state}} fsm]
-    (->> (db/get-inn db [id attr] start)
-         (get state-map)
-         (transition! db event))))
+         :keys     [id attr]} fsm]
+    (let [state (db/get-inn db [id attr])]
+      (some->> (get state-map state)
+               (match-clauses db event)
+               (cond-clause)))))
 
 (defn- get-timeout
   [fsm state]
@@ -272,22 +270,13 @@
           (get state)
           (:timeout)))
 
-(defn- self-timeout?
-  [fsm ref]
-  
-  (throw
-   (ex-info
-    "Only self timeouts allowed in FSMs"
-    {:fsm fsm})))
-
 (defn- clear-timeout!
   [timeout]
   (some-> @timeout (js/clearTimeout)))
 
 (defn- set-timeout!
   [fsm timeout state]
-  (when-let [[_ ref ms
-              :as event-v] (get-timeout fsm state)]
+  (when-let [[_ ref ms :as event-v] (get-timeout fsm state)]
     (when (= (:id fsm) ref)
       (clear-timeout! timeout)
       (as-> #(f/dispatch event-v) %
@@ -296,19 +285,25 @@
 
 (declare stop!)
 
+(defn- cleanup!
+  [{:keys [stop fsm-v]
+    :as   fsm} timeout state]
+  (if (contains? stop state)
+    (stop! fsm-v)
+    (set-timeout! fsm timeout state)))
+
 (defn advance
   "Given a parsed fsm, a db, and an event, advances the fsm. Else,
   no-op. Do not write to unmounted transient entities."
-  [{:keys [id attr stop start fsm-v]
-    :or   {attr ::state}
+  [{:keys [id attr]
     :as   fsm} timeout db event]
   (if (db/transient-unmounted? id)
     db
-    (if-let [state (next-state fsm db event)]
-      (do (when (and stop (contains? stop state))
-            (stop! fsm-v))
-          (set-timeout! fsm timeout state)
-          (db/assoc-inn db [id attr] state))
+    (if-let [{to     :to
+              events :dispatch} (match-clause fsm db event)]
+      (do (doseq [e events] (f/dispatch e))
+          (cleanup! fsm timeout to)
+          (db/assoc-inn db [id attr] to))
       db)))
 
 (f/reg-event-fx ::timeout
@@ -322,6 +317,7 @@
   (let [[id & args] fsm-v]
     (or (some-> (reg/get-handler ::fsm-fn id)
                 (apply args)
+                (util/assoc-nil :attr ::state)
                 (assoc :fsm-v fsm-v))
         (throw (ex-info "No FSM handler" {:id id})))))
 
@@ -334,13 +330,25 @@
   [fsm-v]
   (i/global-interceptor-registered? fsm-v))
 
+(defn- set-first-timeout!
+  [{:keys [id attr]
+    :as   fsm} timeout db]
+  (->> (db/get-inn db [id attr])
+       (set-timeout! fsm timeout)))
+
 (defn start!
-  [fsm-v]
-  ;; Must manually set timeout on start state.
+  "FSM creation can happen ONLY during an animation frame. Never call
+  this in an fx or event handler. The animation frame is the only time
+  that we can safely read the value of the FSM's initial state from
+  the db, and also set a timeout on the first transition. Doing so
+  during the fx/event phase, given the interceptor/fx design, is not
+  concurrency safe. Also, the first timeout must be set manually
+  before the first advance."
+  [db fsm-v]
   (let [fsm (parse (fsm-spec fsm-v))]
-    (when (and fsm (not (started? fsm-v)))
+    (when-not (started? fsm-v)
       (let [timeout (atom nil)]
-        (set-timeout! fsm timeout (:start fsm))
+        (set-first-timeout! fsm timeout db)
         (->> (partial advance fsm timeout)
              (f/enrich)
              (i/reg-global-interceptor fsm-v)))
@@ -350,44 +358,17 @@
   [fsm-v]
   (i/clear-global-interceptor fsm-v))
 
-(f/reg-fx ::start
-  (fn [fsm-v]
-    (start! fsm-v)))
-
-(f/reg-fx ::stop
-  (fn [fsm-v]
-    (stop! fsm-v)))
-
-;;;; Events
-
-(f/reg-event-fx ::start
-  ;; Starts the interceptor for the given fsm.
-  (fn [_ [_ fsm-v]]
-    {::start fsm-v}))
-
-(f/reg-event-fx ::stop
-  ;; Stops the interceptor for the given fsm.
-  (fn [_ [_ fsm-v]]
-    {::stop fsm-v}))
-
 ;;;; Subs
 
 (defn- fsm-reaction-handler
-  [_ fsm-v]
-  (let [{ref         :id
-         attr        :attr
-         start-state :start
-         pull-expr   :return
-         :or         {attr ::state}
-         :as         fsm} (fsm-spec fsm-v)]
-    (if ref
-      (letfn [(expr-fn [ref] [(or pull-expr attr) ref])
-              (result-fn [r] (or r start-state))]
-        (start! fsm-v)
-        (-> {:on-dispose #(stop! fsm-v)}
-            (db/pull-reaction expr-fn fsm-v)
-            (db/result-reaction result-fn fsm-v)))
-      (r/reaction nil))))
+  [db fsm-v]
+  (let [{:keys [attr return]
+         :or   {return attr}
+         :as   fsm} (fsm-spec fsm-v)]
+    (start! @db fsm-v)
+    (db/pull-reaction {:on-dispose #(stop! fsm-v)}
+                      #(do [return %])
+                      fsm-v)))
 
 (defn reg-fsm
   [id fsm-fn]

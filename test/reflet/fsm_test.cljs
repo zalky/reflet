@@ -3,6 +3,7 @@
             [cljs.spec.alpha :as s]
             [cljs.test :as t :refer [is]]
             [day8.re-frame.test :as rf-test]
+            [re-frame.db :as fdb]
             [re-frame.registrar :as reg]
             [reflet.core :as f]
             [reflet.db :as db]
@@ -20,10 +21,9 @@
     (fix/run-test-sync
      (fsm/reg-fsm ::idempotent
        (fn [self]
-         {:id    self
-          :start ::start
-          :stop  #{::stop}
-          :fsm   {}}))
+         {:id   self
+          :stop #{::stop}
+          :fsm  {}}))
 
      (f/with-ref {:component/uuid [fsm/self]}
        (letfn [(get-handler []
@@ -35,10 +35,13 @@
            (let [state (f/subscribe [::idempotent self])]
              (is (fsm/started? [::idempotent self]))
              (is (get-handler))
-             (is (= ::start @state))
+             (is (nil? @state))
 
              (let [handler (get-handler)]
-               (fsm/start! [::idempotent self])
+               ;; We would normally not call fsm/start! outside an
+               ;; animation frame, but these tests are synchronous so
+               ;; we are ok.
+               (fsm/start! @fdb/app-db [::idempotent self])
                (is (fsm/started? [::idempotent self]))
                (is (= handler (get-handler))))))
 
@@ -53,17 +56,16 @@
 
      (fsm/reg-fsm ::no-op
        (fn [self]
-         {:id    self
-          :start ::start
-          :fsm   {}}))
+         {:id  self
+          :fsm {}}))
 
      (f/reg-no-op ::advance)
 
      (f/with-ref {:component/uuid [fsm/self]}
        (let [state (f/subscribe [::no-op self])]
-         (is (= ::start @state))
+         (is (nil? @state))
          (f/dispatch [::advance self])
-         (is (= ::start @state)))))))
+         (is (nil? @state)))))))
 
 (t/deftest event-fsm-test
   (t/testing "Basic event FSM"
@@ -71,18 +73,17 @@
 
      (fsm/reg-fsm ::test
        (fn [self]
-         {:id    self
-          :start ::start
-          :stop  #{::stop}
-          :fsm   {::start {[::advance self] ::stop}}}))
+         {:id   self
+          :stop #{::stop}
+          :fsm  {nil {[::advance self] ::stop}}}))
 
      (f/reg-no-op ::do-not-advance ::advance)
 
      (f/with-ref {:component/uuid [fsm/self]}
        (let [state (f/subscribe [::test self])]
-         (is (= ::start @state))
+         (is (nil? @state))
          (f/dispatch [::do-not-advance])
-         (is (= ::start @state))
+         (is (nil? @state))
          (f/dispatch [::advance self])
          (is (= ::stop @state)))))))
 
@@ -93,14 +94,16 @@
      (fsm/reg-fsm ::initial-dispatch
        (fn [self]
          {:id       self
-          :start    ::start
           :dispatch [::event self]
-          :fsm      {::start {[::event self] ::stop}}}))
+          :fsm      {nil {[::event self] ::stop}}}))
 
      (f/reg-no-op ::event)
 
      (f/with-ref {:component/uuid [fsm/self]}
        (let [state (f/subscribe [::initial-dispatch self])]
+         ;; Note in run-test-sync, all dispatches are via
+         ;; dispatch-sync. Under normal conditions, you would not
+         ;; immediately see the state transition to ::stop.
          (is (= ::stop @state)))))))
 
 (t/deftest transition-dispatch-test
@@ -109,12 +112,11 @@
 
      (fsm/reg-fsm ::test
        (fn [self]
-         {:id    self
-          :start ::start
-          :stop  #{::stop}
-          :fsm   {::start {[::advance self]
-                           {:to       ::stop
-                            :dispatch [::effect self]}}}}))
+         {:id   self
+          :stop #{::stop}
+          :fsm  {nil {[::advance self]
+                      {:to       ::stop
+                       :dispatch [::effect self]}}}}))
 
      (f/reg-event-db ::effect
        (fn [db event-v]
@@ -129,10 +131,10 @@
      (f/with-ref {:component/uuid [fsm/self]}
        (let [state  (f/subscribe [::test self])
              effect (f/subscribe [::effect])]
-         (is (= ::start @state))
+         (is (nil? @state))
          (is (nil? @effect))
          (f/dispatch [::do-not-advance])
-         (is (= ::start @state))
+         (is (nil? @state))
          (is (nil? @effect))
          (f/dispatch [::advance self])
          (is (= ::stop @state))
@@ -144,22 +146,29 @@
 
      (fsm/reg-fsm ::stop-fsm
        (fn [self]
-         {:id    self
-          :start ::s1
-          :stop  #{::stop ::error}
-          :fsm   {::s1 {[::advance self] ::s2}
-                  ::s2 {[::advance self] ::s1
-                        [::stop self]    ::stop
-                        [::error self]   ::error}}}))
+         {:id   self
+          :stop #{::stop ::error}
+          :fsm  {nil  {[::advance self] ::s1}
+                 ::s1 {[::advance self] ::s2
+                       [::reset self]   nil}
+                 ::s2 {[::advance self] ::s1
+                       [::stop self]    ::stop
+                       [::error self]   ::error}}}))
 
-     (f/reg-no-op ::advance ::stop ::error)
+     (f/reg-no-op ::advance ::stop ::error ::reset)
 
      (f/with-ref {:component/uuid [fsm/self]}
        (let [state (f/subscribe [::stop-fsm self])]
          (is (reg/get-handler :global-interceptor [::stop-fsm self]))
+         (is (nil? @state))
+         (f/dispatch [::advance self])
          (is (= ::s1 @state))
          (f/dispatch [::advance self])
          (is (= ::s2 @state))
+         (f/dispatch [::advance self])
+         (is (= ::s1 @state))
+         (f/dispatch [::reset self])
+         (is (nil? @state))
          (f/dispatch [::advance self])
          (is (= ::s1 @state))
          (f/dispatch [::advance self])
@@ -181,27 +190,42 @@
     (fix/run-test-sync
 
      (fsm/reg-fsm ::election
-       (fn [self entity]
-         {:id    self
-          :start ::running
-          :stop  #{::elected}
-          :fsm   {::running {[entity] {:to   ::elected
-                                       :when ::threshold}}}}))
+       (fn [self candidate]
+         {:id   self
+          :stop #{::elected}
+          :fsm  {nil       {[::kick-off self] ::running}
+                 ::running {[candidate] {:to       ::done
+                                         :when     ::threshold
+                                         :dispatch [::elected candidate]}}}}))
 
-     (f/reg-event-db ::cast-vote
-       (fn [db [_ entity]]
-         (db/update-inn db [entity :votes] inc)))
+     (f/reg-no-op ::kick-off)
+
+     (f/reg-event-db ::vote
+       (fn [db [_ candidate]]
+         (db/update-inn db [candidate :votes] inc)))
+
+     (f/reg-event-db ::elected
+       (fn [db [_ candidate]]
+         (db/assoc-inn db [candidate :elected] true)))
+
+     (f/reg-pull ::candidate
+       (fn [ref]
+         [[:votes :elected]
+          ref]))
 
      (f/with-ref {:component/uuid [fsm/self]
-                  :system/uuid    [test/entity]}
-       (let [state (f/subscribe [::election self entity])]
+                  :system/uuid    [test/candidate]}
+       (let [state (f/subscribe [::election self candidate])
+             c     (f/subscribe [::candidate candidate])]
+         (is (nil? @state))
+         (f/dispatch [::kick-off self])
          (is (= ::running @state))
-         (f/dispatch [::cast-vote entity])
+         (f/dispatch [::vote candidate])
          (is (= ::running @state))
-         (f/dispatch [::cast-vote entity])
+         (f/dispatch [::vote candidate])
          (is (= ::running @state))
-         (f/dispatch [::cast-vote entity])
-         (is (= ::elected @state)))))))
+         (f/dispatch [::vote candidate])
+         (is (= ::done @state)))))))
 
 (s/def ::even
   (comp even? ::n first))
@@ -218,18 +242,21 @@
 
      (fsm/reg-fsm ::number
        (fn [self]
-         {:id    self
-          :start ::odd
-          :stop  #{::done}
-          :fsm   {::odd  {[self] [{:to   ::done
-                                   :when ::four?}
-                                  {:to   ::even
-                                   :when ::even}]}
-                  ::even {[self] [{:to   ::done
-                                   :when ::four?}
-                                  {:to   ::odd
-                                   :when ::odd}]}
-                  ::done {[self] [{:to ::odd}]}}}))
+         {:id   self
+          :stop #{::done}
+          :fsm  {nil    {[self] [{:to   ::even
+                                  :when ::even}
+                                 {:to   ::odd
+                                  :when ::odd}]}
+                 ::odd  {[self] [{:to   ::done
+                                  :when ::four?}
+                                 {:to   ::even
+                                  :when ::even}]}
+                 ::even {[self] [{:to   ::done
+                                  :when ::four?}
+                                 {:to   ::odd
+                                  :when ::odd}]}
+                 ::done {[self] [{:to ::odd}]}}}))
 
      (f/reg-event-db ::set
        (fn [db [_ self n]]
@@ -243,7 +270,7 @@
        (let [state (f/subscribe [::number self])
              n     (f/subscribe [::n self])]
          (is (nil? @n))
-         (is (= ::odd @state))
+         (is (nil? @state))
          (f/dispatch [::set self 1])
          (is (= @n 1))         
          (is (= ::odd @state))
@@ -269,12 +296,11 @@
 
      (fsm/reg-fsm ::timeout-fsm
        (fn [self]
-         {:id    self
-          :start ::start
-          :fsm   {::start  {[::advance self] ::middle}
-                  ::middle {[::fsm/timeout self 1]
-                            {:to       ::finish
-                             :dispatch [::timeout-success]}}}}))
+         {:id  self
+          :fsm {nil      {[::advance self] ::middle}
+                ::middle {[::fsm/timeout self 1]
+                          {:to       ::finish
+                           :dispatch [::timeout-success]}}}}))
 
      (f/reg-no-op ::advance ::timeout-success)
 
@@ -285,7 +311,7 @@
      (f/with-ref {:component/uuid [fsm/self]
                   :meta           {:transient false}}
        (let [state (f/subscribe [::timeout-fsm self])]
-         (is (= ::start @state))
+         (is (nil? @state))
          (f/dispatch-sync [::advance self])
          (is (= ::middle @state))
          (rf-test/wait-for [::timeout-success]
@@ -297,15 +323,14 @@
 
      (fsm/reg-fsm ::timeout-fsm
        (fn [self]
-         {:id    self
-          :start ::start
-          :fsm   {::start  {[::advance self] ::middle}
-                  ::middle {[self] {:to   ::start
-                                    :when ::threshold}
+         {:id  self
+          :fsm {nil      {[::advance self] ::middle}
+                ::middle {[self] {:to   ::start
+                                  :when ::threshold}
 
-                            [::fsm/timeout self 1 ::middle]
-                            {:to       ::finish
-                             :dispatch [::timeout-success]}}}}))
+                          [::fsm/timeout self 1 ::middle]
+                          {:to       ::finish
+                           :dispatch [::timeout-success]}}}}))
 
      (f/reg-no-op ::advance ::timeout-success)
 
@@ -316,9 +341,8 @@
      (f/with-ref {:component/uuid [fsm/self]
                   :meta           {:transient false}}
        (let [state (f/subscribe [::timeout-fsm self])]
-         (is (= ::start @state))
+         (is (nil? @state))
          (f/dispatch-sync [::advance self])
          (is (= ::middle @state))
          (rf-test/wait-for [::timeout-success]
            (is (= ::finish @state))))))))
-

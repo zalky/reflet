@@ -10,12 +10,11 @@
 
 (fsm/reg-fsm ::selector-fsm
   (fn [self]
-    {:id    self
-     :attr  :player/selector-state
-     :start ::closed
-     :fsm   {::closed {[::toggle self] ::open}
-             ::open   {[::toggle self]   ::closed
-                       [::selected self] ::closed}}}))
+    {:id   self
+     :attr :player/selector-state
+     :fsm  {nil    {[::toggle self] ::open}
+            ::open {[::toggle self]   nil
+                    [::selected self] nil}}}))
 
 (fsm/reg-fsm ::player-fsm
   ;; We need a separate starting state in addition to ::paused
@@ -24,13 +23,12 @@
   ;; browser will complain if we try to mutate the AudioContext object
   ;; before a user event has been triggered.
   (fn [self]
-    {:id    self
-     :attr  :player/state
-     :start ::init
-     :fsm   {::init    {[::selected self] ::playing}
-             ::playing {[::pause self] ::paused}
-             ::paused  {[::play self]     ::playing
-                        [::selected self] ::playing}}}))
+    {:id   self
+     :attr :player/state
+     :fsm  {nil       {[::selected self] ::playing}
+            ::playing {[::pause self] ::paused}
+            ::paused  {[::play self]     ::playing
+                       [::selected self] ::playing}}}))
 
 (f/reg-no-op ::toggle ::play ::pause)
 

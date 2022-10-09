@@ -14,7 +14,7 @@
   dispatch-player-fsm
   :hierarchy #'impl/state-hierarchy)
 
-(defmethod controls ::impl/init
+(defmethod controls nil
   [_]
   [b/button {:color :primary}
    "Player"])
