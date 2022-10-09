@@ -10,7 +10,7 @@
 
   (f/reg-fsm ::review
     (fn [self]
-      {:id   self
+      {:ref  self
        :attr :kr/votes
        :stop #{::accepted ::cancelled}
        :fsm  {nil        {[:voted self] ::review}
@@ -65,7 +65,7 @@
   in milliseconds.
 
   If the FSM implementation parses a timeout transition whose `ref` is
-  the same as the FSM `:id`, and it specifies a `ms` duration, it
+  the same as the FSM `:ref`, and it specifies a `ms` duration, it
   actually ensures those timeouts will fire for their designated
   state, and be cleaned up appropriately. In this way you can ensure
   any state transition will timeout and advance within a certain
@@ -95,7 +95,7 @@
   
   Other root FSM attributes:
 
-  `:id`         - A  db reference to the fsm entity being advanced
+  `:ref`        - A  db reference to the fsm entity being advanced
                   through states [required]
 
   `:attr`       - The entity attribute where the state is
@@ -109,7 +109,7 @@
                   resultant FSM subscription. By default, the fsm
                   subscription returns a simple attribute query on
                   the state attribute specified by `:attr`. The
-                  query is always run agains the FSM `:id` as the
+                  query is always run agains the FSM `:ref` as the
                   root reference. [optional]
 
   Once an FSM has been declared using `reg-fsm`, instances can be
@@ -123,7 +123,7 @@
   the automatic lifecycle management that comes with subscriptions.
 
   When an FSM is started, its initial state will be whatever is
-  referenced by its FSM `:id` in the db. If no state exists, then it
+  referenced by its FSM `:ref` in the db. If no state exists, then it
   will be `nil`. It is usually a good idea to always define a `nil`
   transition, or the FSM will stop progressing.
 
@@ -142,7 +142,7 @@
             [reflet.trie :as t]
             [reflet.util.spec :as s*]))
 
-(s/def ::id ::s*/ref)
+(s/def ::ref ::s*/ref)
 (s/def ::state (s/nilable qualified-keyword?))
 (s/def ::when qualified-keyword?)
 (s/def ::to ::state)
@@ -243,7 +243,7 @@
   (s/map-of ::state ::transitions))
 
 (s/def ::fsm
-  (s/keys :req-un [::id :state-map/fsm]
+  (s/keys :req-un [::ref :state-map/fsm]
           :opt-un [::stop ::dispatch]))
 
 (defn- parse
@@ -272,8 +272,8 @@
   clause. Care must be taken to handle the `nil` state."
   [fsm db event]
   (let [{state-map :fsm
-         :keys     [id attr]} fsm]
-    (let [state (db/get-inn db [id attr])]
+         :keys     [ref attr]} fsm]
+    (let [state (db/get-inn db [ref attr])]
       (some->> (get state-map state)
                (match-transition db event)
                (cond-clause)))))
@@ -292,7 +292,7 @@
 (defn- set-timeout!
   [fsm timeout state]
   (when-let [[_ ref ms :as event-v] (get-timeout fsm state)]
-    (when (= (:id fsm) ref)
+    (when (= (:ref fsm) ref)
       (clear-timeout! timeout)
       (as-> #(f/dispatch event-v) %
         (js/setTimeout % ms)
@@ -310,15 +310,15 @@
 (defn advance
   "Given a parsed fsm, a db, and an event, advances the fsm. Else,
   no-op. Do not write to unmounted transient entities."
-  [{:keys [id attr]
+  [{:keys [ref attr]
     :as   fsm} timeout db event]
-  (if (db/transient-unmounted? id)
+  (if (db/transient-unmounted? ref)
     db
     (if-let [{to     :to
               events :dispatch} (match-clause fsm db event)]
       (do (doseq [e events] (f/dispatch e))
           (cleanup! fsm timeout to)
-          (db/assoc-inn db [id attr] to))
+          (db/assoc-inn db [ref attr] to))
       db)))
 
 (f/reg-event-fx ::timeout
@@ -334,7 +334,7 @@
                 (apply args)
                 (util/assoc-nil :attr ::state)
                 (assoc :fsm-v fsm-v))
-        (throw (ex-info "No FSM handler" {:id id})))))
+        (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
 (defn- initial-dispatch!
   [{:keys [dispatch]}]
@@ -346,9 +346,9 @@
   (i/global-interceptor-registered? fsm-v))
 
 (defn- set-first-timeout!
-  [{:keys [id attr]
+  [{:keys [ref attr]
     :as   fsm} timeout db]
-  (->> (db/get-inn db [id attr])
+  (->> (db/get-inn db [ref attr])
        (set-timeout! fsm timeout)))
 
 (defn start!

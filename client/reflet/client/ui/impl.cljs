@@ -10,7 +10,7 @@
 
 (fsm/reg-fsm ::selector-fsm
   (fn [self]
-    {:id   self
+    {:ref  self
      :attr :player/selector-state
      :fsm  {nil    {[::toggle self] ::open}
             ::open {[::toggle self]   nil
@@ -23,7 +23,7 @@
   ;; browser will complain if we try to mutate the AudioContext object
   ;; before a user event has been triggered.
   (fn [self]
-    {:id   self
+    {:ref  self
      :attr :player/state
      :fsm  {nil       {[::selected self] ::playing}
             ::playing {[::pause self] ::paused}

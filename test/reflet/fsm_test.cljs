@@ -21,7 +21,7 @@
     (fix/run-test-sync
      (fsm/reg-fsm ::idempotent
        (fn [self]
-         {:id   self
+         {:ref  self
           :stop #{::stop}
           :fsm  {}}))
 
@@ -56,7 +56,7 @@
 
      (fsm/reg-fsm ::no-op
        (fn [self]
-         {:id  self
+         {:ref self
           :fsm {}}))
 
      (f/reg-no-op ::advance)
@@ -73,7 +73,7 @@
 
      (fsm/reg-fsm ::test
        (fn [self]
-         {:id   self
+         {:ref  self
           :stop #{::stop}
           :fsm  {nil {[::advance self] ::stop}}}))
 
@@ -93,7 +93,7 @@
 
      (fsm/reg-fsm ::initial-dispatch
        (fn [self]
-         {:id       self
+         {:ref       self
           :dispatch [::event self]
           :fsm      {nil {[::event self] ::stop}}}))
 
@@ -112,7 +112,7 @@
 
      (fsm/reg-fsm ::test
        (fn [self]
-         {:id   self
+         {:ref   self
           :stop #{::stop}
           :fsm  {nil {[::advance self]
                       {:to       ::stop
@@ -146,7 +146,7 @@
 
      (fsm/reg-fsm ::stop-fsm
        (fn [self]
-         {:id   self
+         {:ref  self
           :stop #{::stop ::error}
           :fsm  {nil  {[::advance self] ::s1}
                  ::s1 {[::advance self] ::s2
@@ -191,7 +191,7 @@
 
      (fsm/reg-fsm ::election
        (fn [self candidate]
-         {:id   self
+         {:ref   self
           :stop #{::elected}
           :fsm  {nil       {[::kick-off self] ::running}
                  ::running {[candidate] {:to       ::done
@@ -242,7 +242,7 @@
 
      (fsm/reg-fsm ::number
        (fn [self]
-         {:id   self
+         {:ref  self
           :stop #{::done}
           :fsm  {nil    {[self] [{:to   ::even
                                   :when ::even}
@@ -296,7 +296,7 @@
 
      (fsm/reg-fsm ::timeout-fsm
        (fn [self]
-         {:id  self
+         {:ref  self
           :fsm {nil      {[::advance self] ::middle}
                 ::middle {[::fsm/timeout self 1]
                           {:to       ::finish
@@ -323,7 +323,7 @@
 
      (fsm/reg-fsm ::timeout-fsm
        (fn [self]
-         {:id  self
+         {:ref self
           :fsm {nil      {[::advance self] ::middle}
                 ::middle {[self] {:to   ::start
                                   :when ::threshold}
