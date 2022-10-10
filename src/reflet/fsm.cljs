@@ -39,7 +39,7 @@
             provided `::state` is used
 
   `:stop`
-            The state which when reached will stop the fsm.
+            One or more states which when reached will stop the fsm.
 
   `:return`
             A pull spec run as the return value of the resultant FSM
@@ -244,7 +244,12 @@
    :coerce-many true))
 
 (s/def ::stop
-  (s/coll-of ::state :kind set?))
+  (s*/conform-to
+    (s*/any-cardinality-conformed ::state)
+    (fn [[t form]]
+      (case t
+        :one  #{form}
+        :many (set form)))))
 
 (s/def ::transition-to-expanded
   (s*/any-cardinality
@@ -319,11 +324,11 @@
 
 (s/def ::fsm
   (s/keys :req-un [::ref :state-map/fsm]
-          :opt-un [::stop ::dispatch]))
+          :opt-un [::stop ::dispatch ::dispatch-later]))
 
 (defn- parse
   [fsm]
-  (-> (s*/assert! ::fsm fsm)
+  (-> (s*/parse ::fsm fsm)
       (assoc :fsm-unparsed fsm)))
 
 (defn- cond-clause

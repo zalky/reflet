@@ -24,10 +24,11 @@
 (defn- parse-meta
   "All newly created refs are transient by default."
   [meta]
-  (not-empty
-   (if (false? (:transient meta))
-     (dissoc meta :transient)
-     (assoc meta :transient true))))
+  `(not-empty
+    (if (or (false? (:transient ~meta))
+            *force-persistent-refs*)
+      (dissoc ~meta :transient)
+      (assoc ~meta :transient true))))
 
 (defn- mounted-random-ref
   [refs k id-attr {:keys [meta]}]

@@ -88,6 +88,13 @@
 
 ;;;; Reflet API
 
+(def ^:dynamic *force-persistent-refs*
+  "Only use during reflet.fixtures/run-test-async tests. All refs during
+  async tests are made to be persistent so that when the async test
+  falls out of the `with-ref` scope, the app state is not cleaned up
+  prematurely. You should not use this with a running application."
+  false)
+
 (defn reg-config
   "Registers reflet configuration map. The configuration should be
   registered before application boot. Currently supported

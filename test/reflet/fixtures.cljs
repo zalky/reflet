@@ -23,5 +23,6 @@
                 db/mounted-transient-refs (r/atom #{})
                 i/db                      (r/atom {})
                 f/debounced-events        (r/atom {})]
-    (f/dispatch-sync [::internals])
-    (f)))
+    (binding [f/*force-persistent-refs* true]
+      (f/dispatch-sync [::internals])
+      (f))))
