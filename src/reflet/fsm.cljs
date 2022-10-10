@@ -22,11 +22,77 @@
                                                      :dipatch [:reset self]}
                           [::fsm/timeout self 1000] [:to ::cancelled]}}}))
 
-  Here, the `:fsm` attribute defines a state map, mapping each fsm
-  state to allowed transitions for those states.
+  This spec requires the following attributes:
 
-  Each allowed transition is a map between an input, and one or more
-  output clauses.
+  `:ref`
+            A db reference to the FSM entity being advanced through
+            states
+
+  `:fsm`
+            Defines the allowed states of the FSM, mapping each state
+            to a set of allowed transitions.
+
+  The following optional attributes are also supported:
+
+  `:attr`
+            The entity attribute where the state is stored. If not
+            provided `::state` is used
+
+  `:stop`
+            The state which when reached will stop the fsm.
+
+  `:return`
+            A pull spec run as the return value of the resultant FSM
+            subscription. By default, the fsm subscription returns a
+            simple attribute something more query on the state
+            attribute specified by `:attr`. The query is always run
+            agains the FSM `:ref` as the root reference.
+
+  `:dispatch`
+            One or more events to dispatch immediately after starting
+            the FSM
+
+  `:dispatch-later`
+            Same, but conforms to the re-frame `:dispatch-later` fx
+            syntax.
+
+  Like re-frame events and subscriptions, FSMs are uniquely identified
+  by a vector that starts with their `reg-fsm` id, followed by their
+  arguments: `[::review self]`.
+
+  FSMs are implemented via interceptors that will advance the FSM on
+  any recieved re-frame event.
+
+  A running FSM will throw an error if it ever reaches a state that is
+  not defined in either the `:fsm` state map, or the set of `:stop`
+  states. You can define a state with no transitions by mapping the
+  state to `nil`:
+
+  {:fsm {::going-nowhere   nil
+         ::going-somewhere {[:event ref] ::going-nowhere}}}
+
+  Note this does NOT mean that `::going-nowhere` will transition to
+  the `nil` state, but rather that `::going-nowhere` has no
+  transitions defined.
+
+  This will effectively pause the FSM, without actually turning off
+  its interceptor. To prevent the interceptor from running needlessly
+  you would normally declare `::going-nowhere` as a stop state
+  instead:
+
+  {:stop #{::going-nowhere}
+   :fsm  {::going-somewhere {[:event ref] ::going-nowhere}}}
+
+  The one use case for mapping a state to `nil`, rather than declaring
+  it as a stop state, is if you want the FSM to sit and do nothing
+  until some other process has manually set the state attribute of the
+  FSM entity in the db. At this point the FSM would immediately
+  advance through the new state's defined transitions, starting with
+  the same event that manually set the FSM state. But this use case is
+  pretty niche.
+
+  Each transition for a given state is a map between an input, and one
+  or more output clauses.
 
   There three types of transitions currently implemented, each
   corresponding to their input type:
@@ -48,13 +114,15 @@
   [:voted self first-pref]
 
   Then matching stem would be:
-  
+
   [:voted self first-pref]
 
   Entity transitions match the state of their input entities against
   the conditionals defined in their output clauses. The input entities
   are expressed as a vector of entity references, each reference being
-  a tuple with a unique attribute and a uuid.
+  a tuple with a unique attribute and a uuid. To keep things fast, no
+  joins are traversed when retrieving the entity state from the db:
+  you only get a flat map.
 
   Timeout transitions are just like event transitions, except the first
   three positional elements of their event vector are:
@@ -64,12 +132,17 @@
   where `ref` is an entity reference, and `ms` is the timeout duration
   in milliseconds.
 
-  If the FSM implementation parses a timeout transition whose `ref` is
-  the same as the FSM `:ref`, and it specifies a `ms` duration, it
-  actually ensures those timeouts will fire for their designated
-  state, and be cleaned up appropriately. In this way you can ensure
-  any state transition will timeout and advance within a certain
-  time. Otherwise timeouts are matched just like regular events.
+  If the FSM arrives at a state that has a timeout in its transition
+  map, and the timeout's `ref` is the same as the FSM `:ref` and
+  specifies a `ms` duration, then the FSM will immediately set a
+  timeout for that state that will fire within the designated time. If
+  no other event causes the FSM to advance in this time, the timeout
+  event is fired via `dispatch-sync` to advance the FSM through the
+  timeout transition. Any timeouts that do not fire are cleaned up
+  appropriately. If the timeout's `ref` is not the same as the FSM
+  `:ref`, or if the timeout does not define a `ms` duration, then the
+  timeout will be matched just like a regular event. This way you can
+  listen for timeouts from other FSMs.
 
   Only one entity or timeout transition is allowed in a state's
   transition map. However, a state's transition map can have an
@@ -77,7 +150,7 @@
   entity and event transitions, the event transitions will always be
   matched before the entity transition.
 
-  All transitions also define one or more output clauses. Each output
+  All transitions define one or more output clauses. Each output
   clause be expresed in either simple or expanded form.
 
   1. Simple: Just a state keyword
@@ -100,28 +173,7 @@
             [optional]
 
   `:dispatch-later`
-            Same semantics as 
-  
-  Other root FSM attributes:
-
-  `:ref`
-            A  db reference to the fsm entity being advanced through
-            states [required]
-
-  `:attr`
-            The entity attribute where the state is stored, when not
-            provided `::state` is used [optional]
-  
-  `:stop`
-            
-            The state which when reach will stop the fsm [optional]
-
-  `:return`
-            A pull spec run as the return value of the resultant FSM
-            subscription. By default, the fsm subscription returns a
-            simple attribute something more query on the state
-            attribute specified by `:attr`. The query is always run
-            agains the FSM `:ref` as the root reference. [optional]
+            Same semantics as
 
   Once an FSM has been declared using `reg-fsm`, instances can be
   created via subscriptions. When created this way, an FSM's lifecycle
@@ -326,7 +378,7 @@
   (when-let [[_ ref ms :as event-v] (get-timeout fsm state)]
     (when (= (:ref fsm) ref)
       (clear-timeout! timeout)
-      (as-> #(f/dispatch event-v) %
+      (as-> #(f/dispatch-sync event-v) %
         (js/setTimeout % ms)
         (reset! timeout %)))))
 
