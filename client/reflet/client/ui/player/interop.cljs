@@ -1,5 +1,5 @@
-(ns reflet.client.ui.interop
-  (:require [reflet.client.ui.impl :as impl]
+(ns reflet.client.ui.player.interop
+  (:require [reflet.client.ui.player.impl :as impl]
             [reflet.interop :as i]))
 
 (defn create-context

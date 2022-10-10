@@ -6,14 +6,22 @@
 // Variables
 
 $black:                       #434343;
-$gray-100:                    #f7f7f7;
+$gray-100:                    #fafafa;
 
 $primary:                     #5dffbf;
 $secondary:                   $gray-100;
 
+$body-color:                  #ffffff;
+
+$font-family-default:         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 $font-family-sans-serif:      "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 $font-family-monospace:       "Noto Sans Mono";
 $font-color:                  $black;
+
+$link-color:                  $font-color;
+$link-decoration:             none;
+$link-hover-color:            hover-tint($link-color);
+$link-hover-decoration:       underline;
 
 $card-bg:                     $gray-100;
 $border-width:                0;
@@ -35,10 +43,43 @@ body {
     }
 }
 
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+
+    > :first-child {
+        background: linear-gradient(120deg, rgba(255,255,255,1) 20%, rgba(255,255,255,0) 50%),
+                    linear-gradient(240deg, rgba(255,255,255,1) 20%, rgba(255,255,255,0) 50%),
+                    linear-gradient(0deg, rgba(0,0,0,0.02), rgba(0,0,0,0) 50%);
+        padding-bottom: 1rem;
+    }
+
+    .header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 10rem;
+        font-family: $font-family-default;
+        font-size: 4rem;
+        font-weight: 100;
+    }
+
+    .menu {
+        justify-content: center;
+    }
+}
+
+.view {
+    position: relative;
+    flex: 1;
+}
+
 .player {
     width: 30rem;
-    position: fixed;
-    top: 40%;
+    position: absolute;
+    top: 30%;
     left: 50%;
     transform: translate(-50%, 0);
 

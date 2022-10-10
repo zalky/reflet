@@ -1,4 +1,4 @@
-(ns reflet.client.ui.impl
+(ns reflet.client.ui.player.impl
   (:require [cinch.core :as util]
             [reflet.core :as f]
             [reflet.fsm :as fsm]

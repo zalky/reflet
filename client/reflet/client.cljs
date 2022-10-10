@@ -13,7 +13,7 @@
   (f/clear-subscription-cache!)
   (some->> "container"
            (.getElementById js/document)
-           (dom/render [ui/player nil])))
+           (dom/render [ui/app])))
 
 (defn init!
   []
