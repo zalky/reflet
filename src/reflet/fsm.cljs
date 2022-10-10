@@ -83,34 +83,45 @@
   1. Simple: Just a state keyword
   2. Complex: A map containing the following attributes:
 
-  `:to`         - The next state to transition to [required]
-  `:when`       - The id of a Clojure spec that must return s/valid?
-                  true for the transition input in order for the
-                  transition to fire. For event inputs, this is
-                  simply the full recieved event vector. For entity
-                  inputs, the entity references are pulled from the
-                  db, and passed to the Clojure spec. [optional]
-  `:dispatch`   - An event vector to dispatch on a succesful
-                  transition [optional]
+  `:to`
+            The next state to transition to [required]
+
+  `:when`
+
+            The id of a Clojure spec that must return s/valid? true
+            for the transition input in order for the transition to
+            fire. For event inputs, this is simply the full recieved
+            event vector. For entity inputs, the entity references are
+            pulled from the db, and passed to the Clojure spec.
+            [optional]
+
+  `:dispatch`
+            An event vector to dispatch on a succesful transition
+            [optional]
+
+  `:dispatch-later`
+            Same semantics as 
   
   Other root FSM attributes:
 
-  `:ref`        - A  db reference to the fsm entity being advanced
-                  through states [required]
+  `:ref`
+            A  db reference to the fsm entity being advanced through
+            states [required]
 
-  `:attr`       - The entity attribute where the state is
-                  stored, when not provided `::state` is used
-                  [optional]
+  `:attr`
+            The entity attribute where the state is stored, when not
+            provided `::state` is used [optional]
   
-  `:stop`       - The state which when reach will stop the fsm
-                  [optional]
+  `:stop`
+            
+            The state which when reach will stop the fsm [optional]
 
-  `:return`     - A pull spec run as the return value of the
-                  resultant FSM subscription. By default, the fsm
-                  subscription returns a simple attribute query on
-                  the state attribute specified by `:attr`. The
-                  query is always run agains the FSM `:ref` as the
-                  root reference. [optional]
+  `:return`
+            A pull spec run as the return value of the resultant FSM
+            subscription. By default, the fsm subscription returns a
+            simple attribute something more query on the state
+            attribute specified by `:attr`. The query is always run
+            agains the FSM `:ref` as the root reference. [optional]
 
   Once an FSM has been declared using `reg-fsm`, instances can be
   created via subscriptions. When created this way, an FSM's lifecycle

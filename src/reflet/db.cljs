@@ -554,12 +554,20 @@
   "Evaluates the pull expression specified by `expr` against a given
   context. A context will contain at least:
 
-  :db          - DB value against which the expression is evaluated
-  :ref         - [Optional] Root entity reference with which to
-                 start the graph traversal
-  :acc-refs!   - [Optional] Fn that accumulates entity references
-                 via side effects
-  :sync-start! - [Optional] Fn that dispatches sync events
+  :db
+            DB value against which the expression is evaluated
+
+  :ref
+            Root entity reference with which to start the graph
+            traversal. If it is omitted, the query is considered
+            to be a link query.  [Optional]
+
+  :acc-refs!
+            Fn that accumulates entity references via side
+            effects [Optional]
+
+  :sync-start!
+            Fn that dispatches sync events [Optional]
 
   By default, this implementation is a pure function of the given
   `:db` value. However, if `:acc-refs!` and `:sync-start!` are
@@ -592,26 +600,31 @@
   functionally pure version of pull! for use in event handlers. The
   data is pulled from the entity according to a pull pattern that
   conforms to:
-     { :attr sub-pattern }
-           If the entity contains :attr, it is treated as an
-           entity reference and resolved. The algorithm then pulls
-           the sub-pattern from the resolved entity.
-     [ sub-pattern-1 sub-pattern-2 sub-pattern-3 ]
-           The algorithm attempts to pull each subpattern from the
-           given entity, and merging all the results together.
-     keyword
-           If the entity contains the keyword, includes it in the
-           entity result.
-     '*
-           (literal symbol asterisk) Includes all attributes from
-           the entity in the result.
-      { :attr '... }
-           Similar to the map pattern, but is recursive where the
-           sub-pattern is the same as the parent entity reference
-           and resolved. The algorithm then pulls the sub-pattern
-           from the resolved entity. The ellipses can be replaced
-           with an natural number to specify a limit to the
-           recursion."
+
+  { :attr sub-pattern }
+            If the entity contains :attr, it is treated as an
+            entity reference and resolved. The algorithm then pulls
+            the sub-pattern from the resolved entity.
+
+  [ sub-pattern-1 sub-pattern-2 sub-pattern-3 ]
+            The algorithm attempts to pull each subpattern from the
+            given entity, and merging all the results together.
+
+  keyword
+            If the entity contains the keyword, includes it in the
+            entity result.
+  
+  '*
+            (literal symbol asterisk) Includes all attributes from
+            the entity in the result.
+
+  { :attr '... }
+            Similar to the map pattern, but is recursive where the
+            sub-pattern is the same as the parent entity reference
+            and resolved. The algorithm then pulls the sub-pattern
+            from the resolved entity. The ellipses can be replaced
+            with an natural number to specify a limit to the
+            recursion."
   ([db expr]
    (pull db expr nil))
   ([db expr e-ref]

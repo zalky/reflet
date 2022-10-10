@@ -1,11 +1,11 @@
 (ns reflet.interop
-  "Provides a DB for stateful JS objects and DOM nodes. Objects are
-  indexed by an entity reference obtained through
-  `reflet.core/with-ref`.
+  "Provides a DB for JS objects and DOM nodes.
 
-  The `with-ref` macro ensures proper cleanup of objects when React
-  component unmounts.  It is important that entity refs are never
-  created outside of the `with-ref` macro, as that would cause leaks."
+  Items are indexed by entity references obtained through the
+  `reflet.core/with-ref` macro, and cleaned up when their React
+  component unmounts. Do not use refs that were not created by
+  `with-ref` unless you are prepared to clean them up yourself to
+  avoid leaks."
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]
             [reagent.ratom :as r]))

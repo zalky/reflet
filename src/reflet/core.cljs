@@ -93,9 +93,10 @@
   registered before application boot. Currently supported
   configuration options:
 
-  :sync-start!   - Sync expressions within pull syntax are
-                   dispatched via a sync-start!. Default is nil, which
-                   means sync expressions are ignored."
+  :sync-start!
+            Sync expressions within pull syntax are dispatched via a
+            sync-start!. Default is nil, which means sync expressions
+            are ignored."
   [config]
   (reg/register-handler ::config ::config config))
 
