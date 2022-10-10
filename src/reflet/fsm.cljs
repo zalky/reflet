@@ -276,21 +276,19 @@
     {m :fsm}  :fsm-unparsed} state]
   (if (contains? state-map state)
     (get state-map state)
-    (throw
-     (ex-info
-      "FSM state not in state map"
-      {:state     state
-       :state-map m}))))
+    (-> "FSM state not in state map"
+        (ex-info {:state state :state-map m})
+        (throw))))
 
 (defn- match-clause
   "Given the current state of the fsm in the db, returns a matching
   clause. Care must be taken to handle the `nil` state."
-  [fsm db event]
-  (let [{:keys [ref attr]} fsm]
-    (let [state (db/get-inn db [ref attr])]
-      (some->> (get-transition fsm state)
-               (match-transition db event)
-               (cond-clause)))))
+  [{:keys [ref attr]
+    :as   fsm} db event]
+  (let [state (db/get-inn db [ref attr])]
+    (some->> (get-transition fsm state)
+             (match-transition db event)
+             (cond-clause))))
 
 (defn- get-timeout
   [fsm state]
@@ -372,7 +370,8 @@
     (when-not (started? fsm-v)
       (let [timeout (atom nil)]
         (set-first-timeout! fsm timeout db)
-        (->> (partial advance fsm timeout)
+        (->> timeout
+             (partial advance fsm)
              (f/enrich)
              (i/reg-global-interceptor fsm-v))
         (initial-dispatch! fsm)))))
@@ -383,13 +382,12 @@
 
 (defn check-safe-usage
   [{{::keys [start stop]
-     db     :db} :effects
-    {e :event}   :coeffects}]
+     db     :db}   :effects
+    {event :event} :coeffects}]
   (when (and db (or start stop))
-   (throw
-    (ex-info
-     "Cannot modify db when starting or stopping an FSM"
-     {:event e}))))
+    (-> "Cannot modify db when starting or stopping an FSM"
+        (ex-info {:event event})
+        (throw))))
 
 (defn fsm-lifecycle-interceptor*
   "Guards against unsafe usage of FSM lifecycle effects. An FSM can

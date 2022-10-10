@@ -54,16 +54,17 @@
   "Two sets of symbols are bound, the symbols given by the bindings, and
   a set guaranteed to be unique in order to properly bound
   props."
-  [props-sym refs parsed opts env]
+  [refs parsed env {:keys [in] :as opts}]
   (let [keys        (mapv :key parsed)
         id-attrs    (mapv :id-attr parsed)
         given-syms  (mapv :sym parsed)
-        unique-syms (mapv gensym given-syms)]
+        unique-syms (mapv gensym given-syms)
+        props-sym   (or in (gensym))]
     [props-sym   (if (bound-local? env props-sym) props-sym {})
      unique-syms (get-refs props-sym refs keys id-attrs opts)
      given-syms  unique-syms
-     props-sym   `(merge ~props-sym
-                         ~(zipmap keys unique-syms))]))
+     props-sym   `(->> ~(zipmap keys unique-syms)
+                       (merge ~props-sym))]))
 
 (defn- with-ref-cleanup
   "Clean up clause."
@@ -80,21 +81,23 @@
              ;; so prefer regular dispatch.
              (f/dispatch [::with-ref-cleanup ref#])))))
 
+(defn get-opts
+  [bindings]
+  (util/split-keys bindings [:in :meta :times]))
+
 (defmacro with-ref
   "Generates entity references. Optionally rebinds props attributes,
   and dispatches entity cleanup. See the Reflet wiki for motivation,
   usage and other documentation."
   [bindings & body]
-  (let [[opts unparsed]  (util/split-keys bindings [:in :meta])
-        {props-sym* :in} opts
-        env              &env
-        parsed           (s/conform ::rs/binding-map unparsed)
-        props-sym        (or props-sym* (gensym))
-        refs             (gensym)]
+  (let [[opts unparsed] (get-opts bindings)
+        parsed          (s/conform ::rs/bindings unparsed)
+        refs            (gensym)
+        env             &env]
     `(reagent.core/with-let [~refs (volatile! {})]
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
-               (bind-refs props-sym refs parsed opts env))
+               (bind-refs refs parsed env opts))
          ~@body)
        ~(with-ref-cleanup refs))))
 

@@ -184,7 +184,7 @@
               (->> (db/random-ref id-attr meta key)
                    (assoc m key)))]
       (->> bindings
-           (s/conform ::rs/binding-map)
+           (s/conform ::rs/bindings)
            (reduce rf {})
            (assoc cofx :random-ref)))))
 

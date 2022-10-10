@@ -13,7 +13,7 @@
 (s/def ::binding-vector
   (s/coll-of ::binding :kind vector?))
 
-(s/def ::binding-map
+(s/def ::bindings
   (s*/conform-to
     (s/nilable (s/map-of qualified-keyword? ::binding-vector))
     (fn [binding-map]
