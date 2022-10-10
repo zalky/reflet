@@ -138,6 +138,7 @@
             [clojure.spec.alpha :as s]
             [re-frame.core :as f]
             [re-frame.db :as fdb]
+            [re-frame.fx :as fx]
             [re-frame.registrar :as reg]
             [reagent.ratom :as r]
             [reflet.db :as db]
@@ -149,6 +150,7 @@
 (s/def ::state (s/nilable qualified-keyword?))
 (s/def ::when qualified-keyword?)
 (s/def ::to ::state)
+(s/def ::ms number?)
 
 (s/def ::event-id
   (s/and keyword? (complement #{::timeout})))
@@ -162,7 +164,7 @@
   (s*/non-conformer
    (s/cat :id     #{::timeout}
           :ref    ::s*/ref
-          :number number?
+          :ms     ::ms
           :more   (s/* any?))))
 
 (s/def ::entity-vec
@@ -171,13 +173,20 @@
 (s/def ::dispatch
   (s*/any-cardinality ::event :coerce-many true))
 
+(s/def :dispatch-later/dispatch ::event)
+
+(s/def ::dispatch-later
+  (s*/any-cardinality
+   (s/keys :req-un [:dispatch-later/dispatch ::ms])
+   :coerce-many true))
+
 (s/def ::stop
   (s/coll-of ::state :kind set?))
 
 (s/def ::transition-to-expanded
   (s*/any-cardinality
    (s/keys :req-un [::to]
-           :opt-un [::dispatch ::when])
+           :opt-un [::when ::dispatch ::dispatch-later])
    :coerce-many true))
 
 (s/def ::transition-to
@@ -319,6 +328,14 @@
     (stop! fsm-v)
     (set-timeout! fsm timeout state)))
 
+(defn- fsm-dispatch!
+  "Must happen after interceptor has been registered."
+  [{:keys [dispatch dispatch-later]}]
+  (doseq [event dispatch]
+    (f/dispatch event))
+  (doseq [event dispatch-later]
+    (fx/dispatch-later event)))
+
 (defn advance
   "Given a parsed fsm, a db, and an event, advances the fsm. Else,
   no-op. Do not write to unmounted transient entities."
@@ -326,9 +343,9 @@
     :as   fsm} timeout db event]
   (if (db/transient-unmounted? ref)
     db
-    (if-let [{to     :to
-              events :dispatch} (match-clause fsm db event)]
-      (do (doseq [e events] (f/dispatch e))
+    (if-let [{to  :to
+              :as clause} (match-clause fsm db event)]
+      (do (fsm-dispatch! clause)
           (cleanup! fsm timeout to)
           (db/assoc-inn db [ref attr] to))
       db)))
@@ -354,12 +371,6 @@
   (->> (db/get-inn db [ref attr])
        (set-timeout! fsm timeout)))
 
-(defn- initial-dispatch!
-  "Must happen after interceptor has been registered."
-  [{:keys [dispatch]}]
-  (doseq [event dispatch]
-    (f/dispatch event)))
-
 (defn started?
   [fsm-v]
   (i/global-interceptor-registered? fsm-v))
@@ -374,7 +385,7 @@
              (partial advance fsm)
              (f/enrich)
              (i/reg-global-interceptor fsm-v))
-        (initial-dispatch! fsm)))))
+        (fsm-dispatch! fsm)))))
 
 (defn- stop!
   [fsm-v]

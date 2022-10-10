@@ -2,7 +2,7 @@
   (:require [reflet.fixtures :as fix]
             [cljs.spec.alpha :as s]
             [cljs.test :as t :refer [is]]
-            [day8.re-frame.test :as rf-test]
+            [day8.re-frame.test :as rft]
             [re-frame.db :as fdb]
             [re-frame.registrar :as reg]
             [reflet.core :as f]
@@ -136,7 +136,7 @@
 
      (fsm/reg-fsm ::test
        (fn [self]
-         {:ref   self
+         {:ref  self
           :stop #{::stop}
           :fsm  {nil {[::advance self]
                       {:to       ::stop
@@ -163,6 +163,39 @@
          (f/dispatch [::advance self])
          (is (= ::stop @state))
          (is (= @effect [::effect self])))))))
+
+(t/deftest transition-dispatch-later-test
+  (t/testing "FSM transition dispatch"
+    (fix/run-test-async
+
+     (fsm/reg-fsm ::test
+       (fn [self]
+         {:ref  self
+          :stop #{::stop}
+          :fsm  {nil {[::advance self]
+                      {:to             ::stop
+                       :dispatch-later {:dispatch [::effect self]
+                                        :ms       100}}}}}))
+
+     (f/reg-event-db ::effect
+       (fn [db event-v]
+         (assoc db ::effect event-v)))
+
+     (f/reg-sub ::effect
+       (fn [db _]
+         (get db ::effect)))
+
+     (f/reg-no-op ::do-not-advance ::advance)
+
+     (f/with-ref {:component/uuid [fsm/self]}
+       (let [state  (f/subscribe [::test self])
+             effect (f/subscribe [::effect])]
+         (is (nil? @state))
+         (is (nil? @effect))
+         (f/dispatch-sync [::advance self])
+         (is (= ::stop @state))
+         (rft/wait-for [::effect]
+           (is (= @effect [::effect self]))))))))
 
 (t/deftest fsm-stop-test
   (t/testing "Stop FSM"
@@ -339,7 +372,7 @@
          (is (nil? @state))
          (f/dispatch-sync [::advance self])
          (is (= ::middle @state))
-         (rf-test/wait-for [::timeout-success]
+         (rft/wait-for [::timeout-success]
            (is (= ::finish @state))))))))
 
 (t/deftest entity-timeout-fsm-test
@@ -370,5 +403,5 @@
          (is (nil? @state))
          (f/dispatch-sync [::advance self])
          (is (= ::middle @state))
-         (rf-test/wait-for [::timeout-success]
+         (rft/wait-for [::timeout-success]
            (is (= ::finish @state))))))))
