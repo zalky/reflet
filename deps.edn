@@ -1,6 +1,6 @@
 {:deps    {com.fzakaria/slf4j-timbre {:mvn/version "0.3.21"}
            com.taoensso/timbre       {:mvn/version "5.2.1"}
-           io.zalky/cinch            {:mvn/version "0.1.0-SNAPSHOT"}
+           io.zalky/cinch            {:mvn/version "0.1.0"}
            org.clojure/clojure       {:mvn/version "1.11.1"}
            re-frame/re-frame         {:mvn/version "1.1.2"}
            reagent/reagent           {:mvn/version "1.0.0"}}
@@ -18,7 +18,7 @@
            :cljs/client {:extra-paths ["client"]
                          :extra-deps  {io.zalky/reactstrap-cljs {:mvn/version "0.1.0"}}}
            :cljs/report {:main-opts ["-m" "shadow.cljs.build-report" "app" "target/report.html"]}
-           :sass        {:extra-deps {io.zalky/dart-sass-clj {:mvn/version "0.2.0-SNAPSHOT"}
+           :sass        {:extra-deps {io.zalky/dart-sass-clj {:mvn/version "0.2.0"}
                                       org.webjars/bootstrap  {:mvn/version "5.2.2"}}
                          :main-opts  ["-m" "dart-sass-clj.core"
                                       "--source-dirs" "[\"client/scss/\"]"
