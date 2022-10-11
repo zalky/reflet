@@ -197,6 +197,7 @@
   run every time, all the matching and lookup algorithms are written
   to be very fast."
   (:require [cinch.core :as util]
+            [cinch.spec :as s*]
             [clojure.set :as set]
             [clojure.spec.alpha :as s]
             [re-frame.core :as f]
@@ -206,8 +207,7 @@
             [reagent.ratom :as r]
             [reflet.db :as db]
             [reflet.interceptors :as i]
-            [reflet.trie :as t]
-            [reflet.util.spec :as s*]))
+            [reflet.trie :as t]))
 
 (s/def ::ref ::s*/ref)
 (s/def ::state (s/nilable qualified-keyword?))

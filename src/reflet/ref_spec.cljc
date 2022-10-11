@@ -1,5 +1,5 @@
 (ns reflet.ref-spec
-  (:require [reflet.util.spec :as s*]
+  (:require [cinch.spec :as s*]
             [clojure.spec.alpha :as s]))
 
 (s/def ::binding
