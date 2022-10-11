@@ -5,6 +5,7 @@ group-id        = io.zalky
 artifact-id     = reflet
 description     = A Re-frame/Reagent based library for frontend state management in Clojurescript
 license         = :apache
+url             = https://github.com/zalky/reflet
 
 include make-clj/Makefile
 
