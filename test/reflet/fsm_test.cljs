@@ -439,10 +439,6 @@
 
      (f/reg-no-op ::advance ::timeout-success)
 
-     ;; Careful, if you don't explicitly mark entity references as
-     ;; `:transient false`, with-ref will clean up app state as the
-     ;; async test falls out of scope. This will nerf the async FSM
-     ;; state, and cause the tests to hang..
      (f/with-ref {:component/uuid [fsm/self]}
        (let [state (f/subscribe [::timeout-fsm self])]
          (is (nil? @state))
@@ -469,10 +465,6 @@
 
      (f/reg-no-op ::advance ::timeout-success)
 
-     ;; Careful, if you don't explicitly mark entity references as
-     ;; `:transient false`, with-ref will clean up app state as the
-     ;; async test falls out of scope. This will nerf the async FSM
-     ;; state, and cause the tests to hang..
      (f/with-ref {:component/uuid [fsm/self]}
        (let [state (f/subscribe [::timeout-fsm self])]
          (is (nil? @state))
