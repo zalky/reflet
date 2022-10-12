@@ -451,8 +451,7 @@
     (when-not (started? fsm-v)
       (let [timeout (atom nil)]
         (set-first-timeout! fsm timeout db)
-        (->> timeout
-             (partial advance fsm)
+        (->> (partial advance fsm timeout)
              (f/enrich)
              (i/reg-global-interceptor fsm-v))
         (fsm-dispatch! fsm)))))

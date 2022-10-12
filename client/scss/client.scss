@@ -113,7 +113,7 @@ body {
         }
 
         > :nth-child(2n) > div {
-            background: color.scale($card-bg, $lightness: 80%);
+            background: color.scale($card-bg, $lightness: 50%);
         }
     }
 }
