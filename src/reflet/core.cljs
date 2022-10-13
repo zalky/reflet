@@ -5,8 +5,7 @@
             [re-frame.core :as f]
             [re-frame.interop :as interop]
             [re-frame.registrar :as reg]
-            [reagent.core :as reagent]
-            [reagent.ratom :as r]
+            [reagent.core :as r]
             [reagent.impl.component :as util**]
             [reflet.db :as db]
             [reflet.fsm :as fsm]
@@ -182,7 +181,7 @@
                       (pull-reaction))]
           (reduce reg-comp-rf r1 ids))))))
 
-(f/reg-cofx :random-ref
+(reg-cofx :random-ref
   ;; This cofx has the same semantics as with-ref, with the exception
   ;; that refs cannot be transient, because there is no reactive
   ;; context in event handlers.
@@ -223,13 +222,18 @@
     (.preventDefault e)
     (f e)))
 
-(f/reg-fx :stop-prop
+(reg-fx :stop-prop
   (fn [e]
     (.stopPropagation e)))
 
-(f/reg-fx :prevent-default
+(reg-fx :prevent-default
   (fn [e]
     (.preventDefault e)))
+
+;; Debugger
+
+(defonce debugger
+  (r/atom nil))
 
 ;;;; Debounced dispatch
 
@@ -254,6 +258,6 @@
   interchangeable."
   [f]
   (fn [this old-argv]
-    (let [new (reagent/props this)
+    (let [new (r/props this)
           old (util**/extract-props old-argv)]
       (f old new))))

@@ -99,7 +99,9 @@
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs refs parsed env opts))
-         ~@body)
+         (if-let [d# (deref debugger)]
+           [:<> (d#) ~@body]
+           (do ~@body)))
        ~(with-ref-cleanup refs))))
 
 (defn- no-eval-keywords
