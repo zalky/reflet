@@ -514,7 +514,9 @@
   (let [{:keys [attr return]
          :or   {return attr}
          :as   fsm} (fsm-spec fsm-v)]
-    (start! @db fsm-v)
+    ;; Get the value of the db for a one time init, but should not be
+    ;; reactive to it.
+    (start! (.-state db) fsm-v)
     (db/pull-reaction {:on-dispose #(stop! fsm-v)}
                       #(do [return %])
                       fsm-v)))
