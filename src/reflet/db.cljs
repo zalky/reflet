@@ -718,8 +718,6 @@
    :before inject-index-before
    :after inject-index-after))
 
-;;;; Fx
-
 (f/reg-fx ::index
   (fn [index]
     (reset! query-index index)))
@@ -779,6 +777,11 @@
              (map maybe-deref)
              (apply result-fn @input-r))))))
 
+(defn query-ref
+  [query-v]
+  (-> (random-ref :query/uuid)
+      (with-meta {:query-v query-v})))
+
 (defn pull-reaction
   "Returns a differential pull reaction. `expr-fn` is a function that
   given query vector arguments, returns a pull query spec and
@@ -791,7 +794,7 @@
   is not reactive to them. Instead, it is reactive to changes the
   query tick, which tracks the db-tick and synced."
   [config expr-fn query-v]
-  (let [q-ref  (random-ref :query/uuid)
+  (let [q-ref  (query-ref query-v)
         q-tick (query-tick q-ref)]
     (traced-reaction query-v
       (fn []

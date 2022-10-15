@@ -1,8 +1,12 @@
 
 .debug-node {
     position: fixed;
+    height: 16px;
+    width: 16px;
+    border-radius: 8px;
+    border: 3px solid #00a4ff;
 }
 
-.debug-tap-sibling {
+.debug-tap {
     display: none;
 }

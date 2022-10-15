@@ -3,17 +3,17 @@
             [clojure.spec.alpha :as s]
             [clojure.walk :as w]
             [re-frame.core :as f]
-            [reagent.ratom :as r]
+            [reagent.core :as r]
             [reflet.ref-spec :as rs]))
 
-(defn- throw-parse-err!
+(defn throw-parse-err!
   [unparsed]
   (throw
    (ex-info
     (s/explain ::rs/binding-map unparsed)
     unparsed)))
 
-(defn- bound-local?
+(defn bound-local?
   [env sym]
   (let [{:keys [locals]} env]
     (->> sym
@@ -21,7 +21,7 @@
          (symbol)
          (contains? locals))))
 
-(defn- parse-meta
+(defn parse-meta
   "All newly created refs are transient by default."
   [meta]
   `(not-empty
@@ -30,7 +30,7 @@
       (dissoc ~meta :transient)
       (assoc ~meta :transient true))))
 
-(defn- mounted-random-ref
+(defn mounted-random-ref
   [refs k id-attr {:keys [meta]}]
   `(let [m#   ~(parse-meta meta)
          ref# (reflet.db/random-ref ~id-attr m# ~k)]
@@ -38,7 +38,7 @@
      (reflet.db/mount-ref! ref#)
      ref#))
 
-(defn- get-refs
+(defn get-refs
   [props-sym refs keys id-attrs opts]
   (let [k       (gensym)
         id-attr (gensym)]
@@ -51,7 +51,7 @@
           ~keys
           ~id-attrs)))
 
-(defn- bind-refs
+(defn bind-refs
   "Two sets of symbols are bound, the symbols given by the bindings, and
   a set guaranteed to be unique in order to properly bound
   props."
@@ -67,7 +67,7 @@
      props-sym   `(->> ~(zipmap keys unique-syms)
                        (merge ~props-sym))]))
 
-(defn- with-ref-cleanup
+(defn with-ref-cleanup
   "Clean up clause."
   [refs]
   (list 'finally
@@ -84,7 +84,7 @@
 
 (defn get-opts
   [bindings]
-  (util/split-keys bindings [:in :meta :times]))
+  (util/split-keys bindings [:in :meta]))
 
 (defmacro with-ref
   "Generates entity references. Optionally rebinds props attributes,
@@ -95,16 +95,16 @@
         parsed          (s/conform ::rs/bindings unparsed)
         refs            (gensym)
         env             &env]
-    `(reagent.core/with-let [~refs (volatile! {})]
+    `(r/with-let [~refs (volatile! {})]
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs refs parsed env opts))
          (if-let [d# (deref debugger)]
-           [:<> (d#) ~@body]
+           [:<> (d# (deref ~refs)) ~@body]
            (do ~@body)))
        ~(with-ref-cleanup refs))))
 
-(defn- no-eval-keywords
+(defn no-eval-keywords
   [expr]
   (w/postwalk
    (fn [x]
