@@ -26,12 +26,34 @@
       {:left (max (- l (/ w 2)) 0)
        :top  (max (- t (/ h 2)) 0)})))
 
+(defn- debug-ref
+  [[attr uuid]]
+  [:div {:class "debug-ref"}
+   "@" (subs (str uuid) 0 6)])
+
 (defn- debug-node
   [target-el refs]
+  [:<>
+   [:div {:class "debug-node"}
+    [:div {:class "debug-node-content"}
+     (map-indexed
+      (fn [i [k ref]]
+        ^{:key i} [:div
+                   [:div (str k)]
+                   [debug-ref ref]])
+      refs)]]
+   [:div]])
+
+(defn- debug-node-group
+  [target-el refs]
   (with-ref {:dom/uuid [debug/node]}
-    [:div {:ref   (i/node node)
-           :class "debug-node"
-           :style (shift target-el node)}]))
+    (let [style (shift target-el node)]
+      [:div {:ref   (i/node node)
+             :class "debug-node-group open"
+             :style style}
+       [debug-node target-el refs]
+       [:div]
+       [:div]])))
 
 (defn- body-el
   []
@@ -50,7 +72,7 @@
     (if-not @target
       [:div {:class "debug-tap"
              :ref   (partial tap target)}]
-      (-> (debug-node @target refs)
+      (-> (debug-node-group @target refs)
           (r/as-element)
           (react-dom/createPortal body)))))
 

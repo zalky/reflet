@@ -1,0 +1,98 @@
+
+$node-radius: 8px;
+$node-border: 4px;
+$nodes-border: 2px;
+$node-color: color.adjust($blue, $alpha: -0.5);
+
+@mixin node {
+    position: absolute;
+    height: 2 * $node-radius;
+    width:  2 * $node-radius;
+    border-radius: $node-radius;
+}
+
+@mixin nodes {
+    @include node;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: $nodes-border solid $node-color;
+}
+
+.debug-node-group {
+    position: fixed;
+    height: 2 * $node-radius;
+    width:  2 * $node-radius;
+
+    > .debug-node {
+        position: absolute;
+        bottom: $node-border;
+        right: $node-border;
+        height: 2 * ($node-radius - $node-border);
+        width:  2 * ($node-radius - $node-border);
+        border-radius: $node-radius - $node-border;
+        background: $body-color;
+        z-index: 2;
+    }
+
+    > .debug-node + div {
+        @include node;
+        bottom: 0;
+        right: 0;
+        background: $node-color;
+    }
+
+    > :nth-child(3) {
+        @include nodes;
+        bottom: - 2 * $nodes-border;
+    }
+
+    > :nth-child(4) {
+        @include nodes;
+        bottom: - 4 * $nodes-border;
+    }
+
+    &.open {
+        > .debug-node {
+            height: 200px;
+            width: 250px;
+            border: 1px solid color.adjust($blue, $alpha: -0.91);
+            box-shadow: 0 0 80px rgba(0, 0, 0, 0.07);
+        }
+
+        > .debug-node + div {
+            height: 200px;
+            width: 250px;
+            background: color.adjust($blue, $alpha: -0.65);
+        }
+
+        > :nth-child(3) {
+            display: none;
+        }
+
+        > :nth-child(4) {
+            display: none;
+        }
+    }
+}
+
+.debug-node-content {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    overflow: hidden;
+    margin: 1rem;
+    font-family: $font-family-monospace;
+    font-size: $font-size-xs;
+
+    > div {
+        display: contents;
+    }
+}
+
+.debug-ref {
+    color: $blue;
+}
+
+.debug-tap {
+    display: none;
+}

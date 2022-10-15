@@ -3,33 +3,17 @@
 
 @import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro|Noto+Sans+Mono');
 
-// Variables
+@import "variables";
 
-$black:                       #434343;
-$gray-100:                    #fafafa;
-
-$primary:                     #5dffbf;
-$secondary:                   $gray-100;
-
-$body-color:                  #ffffff;
-
-$font-family-default:         -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-$font-family-sans-serif:      "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-$font-family-monospace:       "Noto Sans Mono";
-$font-color:                  $black;
-
-$link-color:                  $font-color;
-$link-decoration:             none;
-$link-hover-color:            hover-tint($link-color);
-$link-hover-decoration:       underline;
-
-$card-bg:                     $gray-100;
-$border-width:                0;
-$border-radius:               0.5rem;
+// Bootstrap
 
 @import "bootstrap/scss/bootstrap";
 @import "bootstrap/scss/bootstrap-grid";
 @import "bootstrap/scss/bootstrap-reboot";
+
+// Modules
+
+@import "debugger";
 
 // Main
 
