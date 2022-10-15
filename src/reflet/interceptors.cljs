@@ -18,6 +18,36 @@
   [id]
   (reg/get-handler :global-interceptor id))
 
+(defn cycle-id
+  [id]
+  (-> id
+      (meta)
+      (::cycle-id)))
+
+(defn with-cycle-id
+  [id]
+  (-> id
+      (meta)
+      (::cycle-id)))
+
+(defn new-cycle-id
+  [id]
+  (vary-meta id assoc ::cycle-id (random-uuid)))
+
+(defn same-cycle?
+  "Cycle ids can be used to ensure that interceptor operations from
+  different runtime lifecycles do not clobber each other. For example,
+  if interceptor stop handler from before a hot reload tries to clear
+  an interceptor that was registered after the hot reload."
+  [id]
+  (let [cid (cycle-id id)]
+    (-> @reg/kind->id->handler
+        (get :global-interceptor)
+        (find id)
+        (first)
+        (cycle-id)
+        (= cid))))
+
 (def add-global-interceptors
   "Adds global interceptors to the beginning of queue."
   (letfn [(cut-in-queue [queue xs]

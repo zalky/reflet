@@ -19,4 +19,3 @@
   []
   (f/dispatch-sync [::boot/boot])
   (render!))
-

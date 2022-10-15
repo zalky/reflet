@@ -5,6 +5,7 @@
             [day8.re-frame.test :as rft]
             [re-frame.db :as fdb]
             [re-frame.registrar :as reg]
+            [reagent.ratom :as r]
             [reflet.core :as f]
             [reflet.db :as db]
             [reflet.fsm :as fsm]
@@ -79,12 +80,12 @@
                ;; we are ok.
                (fsm/start! @fdb/app-db [::idempotent self])
                (is (fsm/started? [::idempotent self]))
-               (is (= handler (get-handler))))))
+               (is (= handler (get-handler))))
 
-         (t/testing "stop"
-           (fsm/stop! [::idempotent self])
-           (is (not (fsm/started? [::idempotent self])))
-           (is (nil? (get-handler)))))))))
+             (t/testing "stop"
+               (r/dispose! state)
+               (is (not (fsm/started? [::idempotent self])))
+               (is (nil? (get-handler)))))))))))
 
 (t/deftest fsm-lifecycle-test
   (t/testing "Start and stop fx"

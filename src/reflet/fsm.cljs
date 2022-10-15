@@ -457,7 +457,8 @@
 
 (defn- stop!
   [fsm-v]
-  (i/clear-global-interceptor fsm-v))
+  (when (i/same-cycle? fsm-v)
+    (i/clear-global-interceptor fsm-v)))
 
 (defn check-safe-usage
   [{{::keys [start stop]
@@ -516,10 +517,11 @@
          :as   fsm} (fsm-spec fsm-v)]
     ;; Get the value of the db for a one time init, but should not be
     ;; reactive to it.
-    (start! (.-state db) fsm-v)
-    (db/pull-reaction {:on-dispose #(stop! fsm-v)}
-                      #(do [return %])
-                      fsm-v)))
+    (let [fsm-v* (i/new-cycle-id fsm-v)]
+      (start! (.-state db) fsm-v*)
+      (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
+                        #(do [return %])
+                        fsm-v))))
 
 (defn reg-fsm
   [id fsm-fn]
