@@ -419,7 +419,9 @@
       db)))
 
 (f/reg-event-fx ::timeout
-  [db/inject-index i/add-global-interceptors]
+  [db/inject-query-index
+   db/debugger-tap-events
+   i/add-global-interceptors]
   (constantly nil))
 
 ;;;; Effects

@@ -20,7 +20,8 @@
 ;;;; Re-frame API
 
 (def reflet-interceptors
-  [db/inject-index
+  [db/inject-query-index
+   db/debugger-tap-events
    itor/add-global-interceptors
    fsm/fsm-lifecycle-interceptor])
 
