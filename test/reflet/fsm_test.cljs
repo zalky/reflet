@@ -12,7 +12,10 @@
             [reflet.interceptors :as itor]))
 
 (def interceptors
-  [itor/add-global-interceptors db/inject-index])
+  [db/inject-query-index
+   db/debugger-tap-events
+   itor/add-global-interceptors
+   fsm/fsm-lifecycle-interceptor])
 
 (f/reg-event-fx ::next-state
   (constantly nil))
