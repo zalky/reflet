@@ -4,6 +4,7 @@
             [reflet.core :as f]
             [reflet.db :as db]
             [reflet.db.normalize :as norm]
+            [reflet.debugger.cluster :as c]
             [reflet.interop :as i])
   (:require-macros [reflet.debugger :refer [with-ref]]))
 
