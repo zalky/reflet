@@ -4,6 +4,7 @@
             [clojure.walk :as w]
             [re-frame.core :as f]
             [reagent.core :as r]
+            [reflet.db :as db]
             [reflet.ref-spec :as rs]))
 
 (defn throw-parse-err!
@@ -95,12 +96,13 @@
         parsed          (s/conform ::rs/bindings unparsed)
         refs            (gensym)
         env             &env]
-    `(r/with-let [~refs (volatile! {})]
+    `(r/with-let [~refs (volatile! {})
+                  id#   (db/random-ref :debug/id)]
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs refs parsed env opts))
          (if-let [d# (deref debugger)]
-           [:<> (d# (deref ~refs)) ~@body]
+           [:<> (d# id# (deref ~refs)) ~@body]
            (do ~@body)))
        ~(with-ref-cleanup refs))))
 

@@ -18,14 +18,14 @@
      :height (.-height r)}))
 
 (defn- shift
-  [target-el node-r]
+  [target-rect node-r]
   (when-let [el (i/grab node-r)]
     (let [{l :left
-           t :top}    (rect target-el)
+           t :top}    target-rect
           {w :width
            h :height} (rect el)]
-      {:left (max (- l (/ w 2)) 0)
-       :top  (max (- t (/ h 2)) 0)})))
+      {:left (max (+ (- l w)) 0)
+       :top  (max (+ (- t h)) 0)})))
 
 (defn ref?
   "Returns true if x is an entity reference."
@@ -120,22 +120,29 @@
         [debug-value ref]])
      refs)])
 
-(defn- debug-node
-  [target-el refs]
-  [:<>
-   [:div {:class "debug-node"}
-    [debug-refs refs]
-    [debug-context refs]]
-   [:div]])
+(f/reg-sub ::rect
+  (fn [db [_ id]]
+    (get-in db [::debugger id ::rect])))
 
-(defn- debug-node-group
-  [target-el refs]
+(defn- debug-panel
+  [id refs]
   (with-ref {:dom/uuid [debug/node]}
-    (let [style (shift target-el node)]
+    (let [r (f/subscribe [::rect id])]
       [:div {:ref   (i/node node)
-             :class "debug-node-group open"
-             :style style}
-       [debug-node target-el refs]
+             :class "debug-panel"
+             :style (shift @r node)}
+       [:div {:class "debug-content"}
+        [debug-refs refs]
+        [debug-context refs]]
+       [:div]])))
+
+(defn- debug-node
+  [id refs]
+  (with-ref {:dom/uuid [debug/node]}
+    (let [r (f/subscribe [::rect id])]
+      [:div {:ref   (i/node node)
+             :class "debug-node group"
+             :style (shift @r node)}
        [:div]
        [:div]])))
 
@@ -143,20 +150,27 @@
   []
   (.querySelector js/document "body"))
 
+(f/reg-event-db ::tap
+  (fn [db [_ id r]]
+    (assoc-in db [::debugger id ::rect] r)))
+
 (defn- tap
-  [target tap-el]
+  [id target tap-el]
   (some->> tap-el
            (.-nextSibling)
-           (reset! target)))
+           (reset! target)
+           (rect)
+           (vector ::tap id)
+           (f/dispatch)))
 
 (defn debugger
-  [refs]
+  [id refs]
   (r/with-let [target (r/atom nil)
                body   (body-el)]
     (if-not @target
       [:div {:class "debug-tap"
-             :ref   (partial tap target)}]
-      (-> (debug-node-group @target refs)
+             :ref   (partial tap id target)}]
+      (-> [debug-node id refs]
           (r/as-element)
           (react-dom/createPortal body)))))
 

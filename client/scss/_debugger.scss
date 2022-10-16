@@ -1,100 +1,91 @@
 
-$node-radius: 8px;
-$node-border: 4px;
-$nodes-border: 2px;
 $node-color: color.adjust($blue, $alpha: -0.2);
+$node-border: 4px solid $node-color;
+$node-radius: 8px;
+$node-group-border: 2px;
 
-$node-open-border: 1px solid color.adjust($blue, $alpha: -0.91);
-$node-open-drop-shadow-color: color.adjust($blue, $alpha: -0.65);
+$node-panel-border: 1px solid color.adjust($blue, $alpha: -0.91);
+$node-panel-drop-shadow-color: color.adjust($blue, $alpha: -0.65);
 
 $syntax-keyword-namespace: #9167db;
 $syntax-keyword-name: #cb49f1;
 $syntax-ref: $blue;
 
-
 @mixin node {
-    position: absolute;
     height: 2 * $node-radius;
     width:  2 * $node-radius;
     border-radius: $node-radius;
+    background: $node-color;
 }
 
-@mixin nodes {
+@mixin node-group {
     @include node;
+    position: absolute;
     border-top: none;
     border-left: none;
     border-right: none;
-    border-bottom: $nodes-border solid $node-color;
+    border-bottom: $node-group-border solid $node-color;
+    background: transparent;
 }
 
 .debug-tap {
     display: none;
 }
 
-.debug-node-group {
+.debug-node {
+    @include node;
     position: fixed;
-    height: 2 * $node-radius;
-    width:  2 * $node-radius;
+    transform: translate($node-radius, $node-radius);
 
-    > :nth-child(3) {
-        @include nodes;
-        bottom: - 2 * $nodes-border;
+    &:not(.group) > * {
+        display: none;
     }
 
-    > :nth-child(4) {
-        @include nodes;
-        bottom: - 4 * $nodes-border;
+    > :nth-child(1) {
+        @include node-group;
+        transform: translateY(2 * $node-group-border);
     }
 
-    &.open {
-        > :nth-child(3), > :nth-child(4) {
-            display: none;
-        }
+    > :nth-child(2) {
+        @include node-group;
+        transform: translateY(4 * $node-group-border);
     }
 }
 
-.debug-node {
+.debug-panel {
+    position: fixed;
+    height: 200px;
+    width: 250px;
+    border: $node-panel-border;
+    border-radius: $node-radius;
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.07);
+    background: $body-color;
+    transform-style: preserve-3d;
+
+    $shadow-offset: 4px;
+
+    > :last-child {
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        top: $shadow-offset;
+        left: $shadow-offset;
+        border-radius: $node-radius + $shadow-offset / 2;
+        background: $node-panel-drop-shadow-color;
+        transform: translateZ(-4px);
+    }
+}
+
+.debug-content {
     display: flex;
     flex-direction: column;
-    position: absolute;
-    bottom: $node-border;
-    right: $node-border;
-    height: 2 * ($node-radius - $node-border);
-    width:  2 * ($node-radius - $node-border);
-    border-radius: $node-radius - $node-border;
-    background: $body-color;
-    z-index: 2;
-
-    .open & {
-        height: 200px;
-        width: 250px;
-        border: $node-open-border;
-        box-shadow: 0 0 80px rgba(0, 0, 0, 0.07);
-    }
-
-    + div {
-        @include node;
-        bottom: 0;
-        right: 0;
-        background: $node-color;
-
-        .open & {
-            height: 200px;
-            width: 250px;
-            background: $node-open-drop-shadow-color;
-        }
-    }
 
     > * {
         padding: 1rem;
-
-        :not(.open) > & {
-            display: none;
-        }
     }
 
     > :not(:first-child) {
-        border-top: $node-open-border;
+        border-top: $node-panel-border;
     }
 }
 
