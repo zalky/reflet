@@ -3,6 +3,7 @@
             [reagent.core :as r]
             [reflet.core :as f]
             [reflet.db :as db]
+            [reflet.db.normalize :as norm]
             [reflet.interop :as i])
   (:require-macros [reflet.debugger :refer [with-ref]]))
 
@@ -26,22 +27,105 @@
       {:left (max (- l (/ w 2)) 0)
        :top  (max (- t (/ h 2)) 0)})))
 
-(defn- debug-ref
+(defn ref?
+  "Returns true if x is an entity reference."
+  [x]
+  (and (vector? x)
+       (= (count x) 2)
+       (keyword? (first x))))
+
+(defmulti debug-value
+  (fn [x]
+    (cond
+      (ref? x)    ::ref
+      (string? x) ::string
+      (map? x)    ::map
+      :else       (type x))))
+
+(defmethod debug-value ::ref
   [[attr uuid]]
   [:div {:class "debug-ref"}
    "@" (subs (str uuid) 0 6)])
+
+(defmethod debug-value ::string
+  [s]
+  [:div {:class "debug-string"}
+   (str \" s \")])
+
+(def path-opts
+  {:vector-effect "non-scaling-stroke"
+   :style         {:fill              "transparent"
+                   :stroke            "currentColor"
+                   :stroke-width      "1px"
+                   :stroke-linecap    "round"
+                   :stroke-linejoin   "round"
+                   :stroke-miterlimit "1.5"}})
+
+(defn brace
+  []
+  [:div {:class "debug-map-brace"}
+   [:svg {:width    14
+          :height   10
+          :view-box "0 0 14 10"}
+    [:path (merge {:d "M 12,1 Q 6,1 6,10"} path-opts)]]
+   [:div]
+   [:svg  {:width    14
+           :height   20
+           :view-box "0 0 14 20"}
+    [:path (merge {:d "M 6,0 Q 6,7.5 1,10 Q 6,12.5 6,20"} path-opts)]]
+   [:div]
+   [:svg  {:width    14
+           :height   10
+           :view-box "0 0 14 10"}
+    [:path (merge {:d "M 6,0 Q 6,9 12,9"} path-opts)]]])
+
+(defmethod debug-value ::map
+  [m]
+  [:div {:class "debug-map"}
+   [brace]
+   [:div {:class "debug-map-data"}
+    (map-indexed
+     (fn [i [k ref]]
+       [:div {:key i}
+        [debug-value k]
+        [debug-value ref]])
+     m)]
+   [brace]])
+
+(defmethod debug-value Keyword
+  [k]
+  [:div {:class "debug-keyword"}
+   (if-let [ns (namespace k)]
+     [:<>
+      [:span (str ":" ns "/")]
+      [:span (name k)]]
+     [:span (str k)])])
+
+(defmethod debug-value :default
+  [x]
+  [:div (str x)])
+
+(defn- debug-refs
+  [refs]
+  [:div {:class "debug-refs"}
+   [debug-value refs]])
+
+(defn- debug-context
+  [refs]
+  [:div {:class "debug-map-data"}
+    (map-indexed
+     (fn [i [k ref]]
+       [:div {:key i}
+        [debug-value k]
+        [debug-value ref]])
+     refs)])
 
 (defn- debug-node
   [target-el refs]
   [:<>
    [:div {:class "debug-node"}
-    [:div {:class "debug-node-content"}
-     (map-indexed
-      (fn [i [k ref]]
-        ^{:key i} [:div
-                   [:div (str k)]
-                   [debug-ref ref]])
-      refs)]]
+    [debug-refs refs]
+    [debug-context refs]]
    [:div]])
 
 (defn- debug-node-group

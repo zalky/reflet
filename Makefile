@@ -26,5 +26,5 @@ nuke:
 clean:
 	@echo "Cleaning target and resources"
 	@rm -rf target
-	@find resources -not -path "resources/audio*" -not -name index.html  -mindepth 1 -prune -exec rm -rf {} \;
+	@find resources -not -path "resources/audio*" -not -path "resources/svg*" -not -name index.html  -mindepth 1 -prune -exec rm -rf {} \;
 

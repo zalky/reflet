@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink"
+     xml:space="preserve"
+     xmlns:serif="http://www.serif.com/">
+    <svg id="brace1" viewBox="0 0 16 10">
+      <path d="M16,1Q6,1,6,10"
+            vector-effect="non-scaling-stroke"
+            style="fill:transparent;stroke:currentColor;stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;"/>
+    </svg>
+    <svg id="brace2" viewBox="0 0 16 20">
+      <path d="M6,0Q6,7.5,1,10Q6,12.5,6,20"
+            vector-effect="non-scaling-stroke"
+            style="fill:transparent;stroke:currentColor;stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;"/>
+    </svg>
+    <svg id="brace3" viewBox="0 0 16 10">
+      <path d="M6,0Q6,9,16,9"
+            vector-effect="non-scaling-stroke"
+            style="fill:transparent;stroke:currentColor;stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;"/>
+    </svg>
+</svg>

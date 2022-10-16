@@ -2,7 +2,15 @@
 $node-radius: 8px;
 $node-border: 4px;
 $nodes-border: 2px;
-$node-color: color.adjust($blue, $alpha: -0.5);
+$node-color: color.adjust($blue, $alpha: -0.2);
+
+$node-open-border: 1px solid color.adjust($blue, $alpha: -0.91);
+$node-open-drop-shadow-color: color.adjust($blue, $alpha: -0.65);
+
+$syntax-keyword-namespace: #9167db;
+$syntax-keyword-name: #cb49f1;
+$syntax-ref: $blue;
+
 
 @mixin node {
     position: absolute;
@@ -19,28 +27,14 @@ $node-color: color.adjust($blue, $alpha: -0.5);
     border-bottom: $nodes-border solid $node-color;
 }
 
+.debug-tap {
+    display: none;
+}
+
 .debug-node-group {
     position: fixed;
     height: 2 * $node-radius;
     width:  2 * $node-radius;
-
-    > .debug-node {
-        position: absolute;
-        bottom: $node-border;
-        right: $node-border;
-        height: 2 * ($node-radius - $node-border);
-        width:  2 * ($node-radius - $node-border);
-        border-radius: $node-radius - $node-border;
-        background: $body-color;
-        z-index: 2;
-    }
-
-    > .debug-node + div {
-        @include node;
-        bottom: 0;
-        right: 0;
-        background: $node-color;
-    }
 
     > :nth-child(3) {
         @include nodes;
@@ -53,46 +47,106 @@ $node-color: color.adjust($blue, $alpha: -0.5);
     }
 
     &.open {
-        > .debug-node {
-            height: 200px;
-            width: 250px;
-            border: 1px solid color.adjust($blue, $alpha: -0.91);
-            box-shadow: 0 0 80px rgba(0, 0, 0, 0.07);
-        }
-
-        > .debug-node + div {
-            height: 200px;
-            width: 250px;
-            background: color.adjust($blue, $alpha: -0.65);
-        }
-
-        > :nth-child(3) {
-            display: none;
-        }
-
-        > :nth-child(4) {
+        > :nth-child(3), > :nth-child(4) {
             display: none;
         }
     }
 }
 
-.debug-node-content {
+.debug-node {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    bottom: $node-border;
+    right: $node-border;
+    height: 2 * ($node-radius - $node-border);
+    width:  2 * ($node-radius - $node-border);
+    border-radius: $node-radius - $node-border;
+    background: $body-color;
+    z-index: 2;
+
+    .open & {
+        height: 200px;
+        width: 250px;
+        border: $node-open-border;
+        box-shadow: 0 0 80px rgba(0, 0, 0, 0.07);
+    }
+
+    + div {
+        @include node;
+        bottom: 0;
+        right: 0;
+        background: $node-color;
+
+        .open & {
+            height: 200px;
+            width: 250px;
+            background: $node-open-drop-shadow-color;
+        }
+    }
+
+    > * {
+        padding: 1rem;
+
+        :not(.open) > & {
+            display: none;
+        }
+    }
+
+    > :not(:first-child) {
+        border-top: $node-open-border;
+    }
+}
+
+.debug-map {
     display: grid;
+    grid-template-columns: 14px auto 14px;
+    margin: 0 -0.35rem;
+
+    > .debug-map-data {
+        padding: 0 0.25rem;
+    }
+
+    > :nth-child(3) {
+        transform: scaleX(-100%);
+    }
+}
+
+.debug-map-brace {
+    display: flex;
+    flex-direction: column;
+    color: $blue;
+
+    > :nth-child(2), > :nth-child(4) {
+        flex: 1;
+        width: 6.5px;
+        border-right: 1px solid $blue;
+    }
+}
+
+.debug-map-data {
+    display: grid;
+    position: relative;
     grid-template-columns: 1fr auto;
-    overflow: hidden;
-    margin: 1rem;
     font-family: $font-family-monospace;
     font-size: $font-size-xs;
 
     > div {
         display: contents;
+        overflow: hidden;
     }
 }
 
 .debug-ref {
-    color: $blue;
+    color: $syntax-ref;
 }
 
-.debug-tap {
-    display: none;
+.debug-keyword {
+    > :first-child {
+        color: $syntax-keyword-namespace;
+    }
+
+    > :last-child {
+        color: $syntax-keyword-name;
+    }
 }
