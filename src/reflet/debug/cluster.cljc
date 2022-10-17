@@ -32,7 +32,7 @@
   (sqrt (+ (pow (- x2 x1) 2)
            (pow (- y2 y1) 2))))
 
-(defn neigh
+(defn get-neigh
   [db id]
   (get-in db [:neighbours id]))
 
@@ -48,7 +48,7 @@
               (if (<= d eps)
                 (update n q conj p)
                 n)))]
-    (if-not (neigh db q)
+    (if-not (get-neigh db q)
       (->> (keys points)
            (reduce f (assoc n q #{}))
            (assoc db :neighbours))
@@ -62,7 +62,8 @@
        (distinct)))
 
 (defn grow-neigh
-  [db seed g]
+  [{{:keys [min-points]} :opts
+    :as                  db} seed g]
   (loop [db         db
          done       #{}
          [q & more] seed]
@@ -75,12 +76,9 @@
             (recur db done* more)
             (let [db     (set-group db q g)
                   db     (index-neigh db q)
-                  minp   (:min-points (:opts db))
-                  grow-n (neigh db q)]
-              (if (<= minp (count grow-n))
-                (->> done*
-                     (grow more grow-n)
-                     (recur db done*))
+                  grow-n (get-neigh db q)]
+              (if (<= min-points (count grow-n))
+                (recur db done* (grow more grow-n done*))
                 (recur db done* more))))))
       db)))
 
@@ -90,27 +88,27 @@
 
   This may not be the most ideal clustering algorithm for UI
   applications, since it can produce clusters that are arbitrarily
-  large as long as they are densly connected. However, given that UI
-  elements also possess a high degree of geometric regularity, with a
-  correctly tuned `:epsilon` parameter it should still be able to
-  produce good results in almost any context."
-  [db]
+  large as long as they are densly connected. However, it is easy to
+  implement, and given that UI elements also possess a high degree of
+  geometric regularity, with a correctly tuned `:epsilon` parameter it
+  should still be able to produce great results in almost any
+  context."
+  [{{:keys [min-points]} :opts
+    :as                  db}]
   (loop [db         db
          g          0
          [p & more] (points db)]
     (if p
       (if (get-group db p)
         (recur db g more)
-        (let [db   (index-neigh db p)
-              n    (neigh db p)
-              minp (:min-points (:opts db))]
-          (if (< (count n) minp)
-            (-> (set-group db p :noise)
-                (recur g more))
+        (let [db (index-neigh db p)
+              n  (get-neigh db p)]
+          (if (< (count n) min-points)
+            (recur (set-group db p :noise) g more)
             (let [g    (inc g)
-                  db   (set-group db p g)
                   seed (disj n p)]
-              (-> (grow-neigh db seed g)
+              (-> (set-group db p g)
+                  (grow-neigh seed g)
                   (recur g more))))))
       db)))
 
