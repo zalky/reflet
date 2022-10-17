@@ -5,6 +5,7 @@
             [reflet.db :as db]
             [reflet.db.normalize :as norm]
             [reflet.debugger.cluster :as c]
+            [reflet.debugger.glyphs :as g]
             [reflet.interop :as i])
   (:require-macros [reflet.debugger :refer [with-ref]]))
 
@@ -25,8 +26,8 @@
            t :top}    target-rect
           {w :width
            h :height} (rect el)]
-      {:left (max (+ (- l w)) 0)
-       :top  (max (+ (- t h)) 0)})))
+      {:left (max (- l w) 0)
+       :top  (max (- t h) 0)})))
 
 (defn ref?
   "Returns true if x is an entity reference."
@@ -53,37 +54,10 @@
   [:div {:class "debug-string"}
    (str \" s \")])
 
-(def path-opts
-  {:vector-effect "non-scaling-stroke"
-   :style         {:fill              "transparent"
-                   :stroke            "currentColor"
-                   :stroke-width      "1px"
-                   :stroke-linecap    "round"
-                   :stroke-linejoin   "round"
-                   :stroke-miterlimit "1.5"}})
-
-(defn brace
-  []
-  [:div {:class "debug-map-brace"}
-   [:svg {:width    14
-          :height   10
-          :view-box "0 0 14 10"}
-    [:path (merge {:d "M 12,1 Q 6,1 6,10"} path-opts)]]
-   [:div]
-   [:svg  {:width    14
-           :height   20
-           :view-box "0 0 14 20"}
-    [:path (merge {:d "M 6,0 Q 6,7.5 1,10 Q 6,12.5 6,20"} path-opts)]]
-   [:div]
-   [:svg  {:width    14
-           :height   10
-           :view-box "0 0 14 10"}
-    [:path (merge {:d "M 6,0 Q 6,9 12,9"} path-opts)]]])
-
 (defmethod debug-value ::map
   [m]
   [:div {:class "debug-map"}
-   [brace]
+   [g/brace]
    [:div {:class "debug-map-data"}
     (map-indexed
      (fn [i [k ref]]
@@ -91,7 +65,7 @@
         [debug-value k]
         [debug-value ref]])
      m)]
-   [brace]])
+   [g/brace]])
 
 (defmethod debug-value Keyword
   [k]
@@ -144,8 +118,7 @@
       [:div {:ref   (i/node! node)
              :class "debug-node group"
              :style (shift @r node)}
-       [:div]
-       [:div]])))
+       [g/node-icon {:stack true}]])))
 
 (defn- body-el
   []
@@ -171,7 +144,7 @@
     (if-not @target
       [:div {:class "debug-tap"
              :ref   (partial tap id target)}]
-      (-> [debug-panel id refs]
+      (-> [debug-node id refs]
           (r/as-element)
           (react-dom/createPortal body)))))
 
