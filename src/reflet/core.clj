@@ -115,7 +115,7 @@
            [:<> (d# {:id   id#
                      :name ~(component-name)
                      :refs (deref ~refs)})
-            ~@body]
+            (do ~@body)]
            (do ~@body)))
        ~(with-ref-cleanup refs))))
 
