@@ -114,6 +114,22 @@
                   (recur g more))))))
       db)))
 
+(defn grid
+  "Dead simple grid clustering."
+  [{{[quant-x
+      quant-y] :quant} :opts
+    :as                db}]
+  {:pre [quant-x quant-y]}
+  (reduce
+   (fn [db p]
+     (let [x (get-in db [:points p :x])
+           y (get-in db [:points p :y])
+           g [(quot x quant-x)
+              (quot y quant-y)]]
+       (set-group db p g)))
+   db
+   (points db)))
+
 (defn create-db
   [points {{id-f :id
             x-f  :x

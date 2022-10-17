@@ -116,6 +116,38 @@
                          7 :noise}
             :opts       {:min-points 2 :epsilon 2}}))))
 
+
+(deftest cluster-test
+  (testing "clustering api"
+    (testing "dbscan"
+      (is (= (c/cluster test-points {:min-points 2 :epsilon 2})
+             {1      [{:id 1 :x 1 :y 0}
+                      {:id 2 :x 1 :y 0}
+                      {:id 3 :x 1 :y 2}
+                      {:id 4 :x 2 :y 2}]
+              2      [{:id 5 :x 5 :y 7}
+                      {:id 6 :x 6 :y 7}]
+              :noise [{:id 7 :x 30 :y 40}]})))
+
+    (testing "grid"
+      (is (= (c/cluster test-points {:algo c/grid :quant [3 3]})
+             {[0 0]   [{:id 1 :x 1 :y 0}
+                       {:id 2 :x 1 :y 0}
+                       {:id 3 :x 1 :y 2}
+                       {:id 4 :x 2 :y 2}]
+              [1 2]   [{:id 5 :x 5 :y 7}]
+              [2 2]   [{:id 6 :x 6 :y 7}]
+              [10 13] [{:id 7 :x 30 :y 40}]}))
+
+      (is (= (c/cluster test-points {:algo c/grid :quant [4 4]})
+             {[0 0]  [{:id 1 :x 1 :y 0}
+                      {:id 2 :x 1 :y 0}
+                      {:id 3 :x 1 :y 2}
+                      {:id 4 :x 2 :y 2}]
+              [1 1]  [{:id 5 :x 5 :y 7}
+                      {:id 6 :x 6 :y 7}]
+              [7 10] [{:id 7 :x 30 :y 40}]})))))
+
 (defn points-gen
   []
   (->> (gen/let [x  (gen/choose -100 100)
