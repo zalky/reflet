@@ -144,11 +144,13 @@
     (if-not @target
       [:div {:class "debug-tap"
              :ref   (partial tap id target)}]
-      (-> [debug-node id refs]
+      (-> [(if (contains? refs :player/self)
+             debug-panel
+             debug-node) id refs]
           (r/as-element)
           (react-dom/createPortal body)))))
 
 (f/reg-event-fx ::set
   (fn [db [_ debugger]]
-    (reset! f/debugger debugger)
+    (reset! db/debugger debugger)
     nil))

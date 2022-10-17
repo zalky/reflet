@@ -231,11 +231,6 @@
   (fn [e]
     (.preventDefault e)))
 
-;; Debugger
-
-(defonce debugger
-  (r/atom nil))
-
 ;;;; Debounced dispatch
 
 (defonce debounced-events

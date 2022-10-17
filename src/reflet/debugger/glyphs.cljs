@@ -40,8 +40,8 @@
       [:path
        (stroke
         {:d     "M 3,20 A 11,11 0 0 0 17,20"
-         :style {:stroke-width "2px"}})]
+         :style {:stroke-width "1.5px"}})]
       [:path
        (stroke
         {:d     "M 3,25 A 13,13 0 0 0 17,25"
-         :style {:stroke-width "2px"}})]])])
+         :style {:stroke-width "1.5px"}})]])])

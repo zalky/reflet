@@ -101,7 +101,7 @@
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs refs parsed env opts))
-         (if-let [d# (deref debugger)]
+         (if-let [d# (deref db/debugger)]
            [:<> (d# id# (deref ~refs)) ~@body]
            (do ~@body)))
        ~(with-ref-cleanup refs))))

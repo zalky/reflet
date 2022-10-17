@@ -725,7 +725,10 @@
 
 ;;;; Debugger
 
-(def event-queue-size
+(defonce debugger
+  (r/atom nil))
+
+(def debugger-queue-size
   "Number of events to tap per query. This should eventually be
   dynamic."
   50)
@@ -741,7 +744,7 @@
   [{qs  ::touched-queries
     :as index} event]
   (if qs
-    (letfn [(rf [m q] (update m q qonj event-queue-size event))
+    (letfn [(rf [m q] (update m q qonj debugger-queue-size event))
             (f [m] (reduce rf m qs))]
       (update index ::q->event f))
     index))
@@ -750,7 +753,7 @@
   [{{event :event} :coeffects
     {db :db}       :effects
     :as            context}]
-  (if db
+  (if (and (.-state debugger) db)
     (update-in context
                [:effects :db ::index]
                update-debug-index
