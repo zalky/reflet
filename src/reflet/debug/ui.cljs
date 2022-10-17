@@ -4,6 +4,7 @@
             [reflet.core :as f]
             [reflet.debug.cluster :as c]
             [reflet.debug.glyphs :as g]
+            [reflet.debug.ui.impl :as impl]
             [reflet.interop :as i]
             [reflet.debug :as d]))
 
@@ -83,40 +84,26 @@
   [:div {:class "debug-refs"}
    [debug-value refs]])
 
-(defn- debug-context
-  [{:keys [refs]}]
-  )
-
-(f/reg-sub ::rect
-  (fn [db [_ id]]
-    (get-in db [::debug id ::rect])))
-
 (defn- debug-panel
   [{:keys [id name] :as props}]
-  (f/with-ref {:dom/uuid [debug/node debug/content]}
-    (let [r (f/subscribe [::rect id])]
+  (f/with-ref {:dom/uuid [debug/node]}
+    (let [r (f/subscribe [::impl/rect id])]
       [:div {:ref   (i/node! node)
              :class "debug-panel"
              :style (shift @r node)}
-       [:div {:ref   (i/node! content)
-              :class "debug-content"}
+       [:div {:class "debug-content"}
         [:div {:class "debug-header"} name]
-        [debug-refs props]
-        [debug-context props]]
+        [debug-refs props]]
        [:div]])))
 
 (defn- debug-node
   [{:keys [id]}]
   (f/with-ref {:dom/uuid [debug/node]}
-    (let [r (f/subscribe [::rect id])]
+    (let [r (f/subscribe [::impl/rect id])]
       [:div {:ref   (i/node! node)
              :class "debug-node group"
              :style (shift @r node)}
        [g/node-icon {:stack true}]])))
-
-(f/reg-event-db ::tap
-  (fn [db [_ id r]]
-    (assoc-in db [::debug id ::rect] r)))
 
 (defn- tap
   [id target tap-el]
@@ -124,7 +111,7 @@
            (.-nextSibling)
            (reset! target)
            (rect)
-           (vector ::tap id)
+           (vector ::impl/tap id)
            (f/dispatch)))
 
 (defn- body-el
