@@ -1,15 +1,13 @@
-(ns reflet.debugger
+(ns reflet.debug.ui
   (:require [react-dom :as react-dom]
             [reagent.core :as r]
             [reflet.core :as f]
-            [reflet.db :as db]
-            [reflet.db.normalize :as norm]
-            [reflet.debugger.cluster :as c]
-            [reflet.debugger.glyphs :as g]
-            [reflet.interop :as i])
-  (:require-macros [reflet.debugger :refer [with-ref]]))
+            [reflet.debug.cluster :as c]
+            [reflet.debug.glyphs :as g]
+            [reflet.interop :as i]
+            [reflet.debug :as d]))
 
-(defn- rect
+(defn rect
   [el & [selectors]]
   (let [r (.getBoundingClientRect el)]
     {:top    (.-top r)
@@ -19,7 +17,7 @@
      :width  (.-width r)
      :height (.-height r)}))
 
-(defn- shift
+(defn shift
   [target-rect node-r]
   (when-let [el (i/grab node-r)]
     (let [{l :left
@@ -81,52 +79,44 @@
   [:div (str x)])
 
 (defn- debug-refs
-  [refs]
+  [{:keys [refs]}]
   [:div {:class "debug-refs"}
    [debug-value refs]])
 
 (defn- debug-context
-  [refs]
-  [:div {:class "debug-map-data"}
-    (map-indexed
-     (fn [i [k ref]]
-       [:div {:key i}
-        [debug-value k]
-        [debug-value ref]])
-     refs)])
+  [{:keys [refs]}]
+  )
 
 (f/reg-sub ::rect
   (fn [db [_ id]]
-    (get-in db [::debugger id ::rect])))
+    (get-in db [::debug id ::rect])))
 
 (defn- debug-panel
-  [id refs]
-  (with-ref {:dom/uuid [debug/node]}
+  [{:keys [id name] :as props}]
+  (f/with-ref {:dom/uuid [debug/node debug/content]}
     (let [r (f/subscribe [::rect id])]
       [:div {:ref   (i/node! node)
              :class "debug-panel"
              :style (shift @r node)}
-       [:div {:class "debug-content"}
-        [debug-refs refs]
-        [debug-context refs]]
+       [:div {:ref   (i/node! content)
+              :class "debug-content"}
+        [:div {:class "debug-header"} name]
+        [debug-refs props]
+        [debug-context props]]
        [:div]])))
 
 (defn- debug-node
-  [id refs]
-  (with-ref {:dom/uuid [debug/node]}
+  [{:keys [id]}]
+  (f/with-ref {:dom/uuid [debug/node]}
     (let [r (f/subscribe [::rect id])]
       [:div {:ref   (i/node! node)
              :class "debug-node group"
              :style (shift @r node)}
        [g/node-icon {:stack true}]])))
 
-(defn- body-el
-  []
-  (.querySelector js/document "body"))
-
 (f/reg-event-db ::tap
   (fn [db [_ id r]]
-    (assoc-in db [::debugger id ::rect] r)))
+    (assoc-in db [::debug id ::rect] r)))
 
 (defn- tap
   [id target tap-el]
@@ -137,20 +127,25 @@
            (vector ::tap id)
            (f/dispatch)))
 
-(defn debugger
-  [id refs]
+(defn- body-el
+  []
+  (.querySelector js/document "body"))
+
+(defn debug
+  [{:keys [id refs] :as props}]
   (r/with-let [target (r/atom nil)
                body   (body-el)]
     (if-not @target
       [:div {:class "debug-tap"
              :ref   (partial tap id target)}]
-      (-> [(if (contains? refs :player/self)
-             debug-panel
-             debug-node) id refs]
-          (r/as-element)
-          (react-dom/createPortal body)))))
+      (binding [d/*debug* false]
+        (-> [(if (contains? refs :player/self)
+               debug-panel
+               debug-node) props]
+            (r/as-element)
+            (react-dom/createPortal body))))))
 
-(f/reg-event-fx ::set
-  (fn [db [_ debugger]]
-    (reset! db/debugger debugger)
+(f/reg-event-fx ::activate
+  (fn [db [_ debug-fn]]
+    (set! d/*debug* debug-fn)
     nil))

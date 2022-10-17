@@ -4,7 +4,7 @@
             [reflet.client.boot :as boot]
             [reflet.client.ui :as ui]
             [reflet.core :as f]
-            [reflet.debugger :as debug]
+            [reflet.debug.ui :as debug]
 
             ;; Require for use.
             [reflet.log]))
@@ -19,5 +19,5 @@
 (defn init!
   []
   (f/dispatch-sync [::boot/boot])
-  (f/dispatch-sync [::debug/set debug/debugger])
+  (f/dispatch-sync [::debug/activate debug/debug])
   (render!))

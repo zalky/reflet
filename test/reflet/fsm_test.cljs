@@ -8,12 +8,13 @@
             [reagent.ratom :as r]
             [reflet.core :as f]
             [reflet.db :as db]
+            [reflet.debug :as debug]
             [reflet.fsm :as fsm]
             [reflet.interceptors :as itor]))
 
 (def interceptors
   [db/inject-query-index
-   db/debugger-tap-events
+   debug/debug-tap-events
    itor/add-global-interceptors
    fsm/fsm-lifecycle-interceptor])
 

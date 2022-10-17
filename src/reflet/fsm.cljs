@@ -206,6 +206,7 @@
             [re-frame.registrar :as reg]
             [reagent.ratom :as r]
             [reflet.db :as db]
+            [reflet.debug :as debug]
             [reflet.interceptors :as i]
             [reflet.trie :as t]))
 
@@ -420,7 +421,7 @@
 
 (f/reg-event-fx ::timeout
   [db/inject-query-index
-   db/debugger-tap-events
+   debug/debug-tap-events
    i/add-global-interceptors]
   (constantly nil))
 

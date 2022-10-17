@@ -1,4 +1,4 @@
-(ns reflet.debugger.cluster
+(ns reflet.debug.cluster
   "Simple DBSCAN implementation.
 
   See https://en.wikipedia.org/wiki/DBSCAN"

@@ -83,6 +83,16 @@
              ;; so prefer regular dispatch.
              (f/dispatch [::with-ref-cleanup ref#])))))
 
+(defn component-name
+  []
+  `(reagent.impl.component/component-name
+    (r/current-component)))
+
+(defn debug-id
+  []
+  `(when reflet.debug/*debug*
+     (db/random-ref :debug/id)))
+
 (defn get-opts
   [bindings]
   (util/split-keys bindings [:in :meta]))
@@ -97,12 +107,15 @@
         refs            (gensym)
         env             &env]
     `(r/with-let [~refs (volatile! {})
-                  id#   (db/random-ref :debug/id)]
+                  id#   ~(debug-id)]
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs refs parsed env opts))
-         (if-let [d# (deref db/debugger)]
-           [:<> (d# id# (deref ~refs)) ~@body]
+         (if-let [d# reflet.debug/*debug*]
+           [:<> (d# {:id   id#
+                     :name ~(component-name)
+                     :refs (deref ~refs)})
+            ~@body]
            (do ~@body)))
        ~(with-ref-cleanup refs))))
 

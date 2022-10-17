@@ -1,7 +1,9 @@
 
 $debug-color: color.adjust($blue, $alpha: -0.2);
 $debug-radius: 8px;
-$debug-panel-border: 1px solid color.adjust($blue, $alpha: -0);
+$debug-border-thickness: 2px;
+$debug-panel-border: $debug-border-thickness solid color.adjust($blue, $alpha: -0);
+$debug-panel-inner-border: 1px solid color.adjust($blue, $alpha: -0);
 $debug-panel-drop-shadow-color: color.adjust($blue, $alpha: -0.65);
 
 $syntax-keyword-namespace: #9167db;
@@ -26,15 +28,16 @@ $syntax-ref: $blue;
 
 .debug-panel {
     position: fixed;
-    height: 200px;
     width: 250px;
     border: $debug-panel-border;
     border-radius: $debug-radius;
     box-shadow: 0 0 80px rgba(0, 0, 0, 0.07);
-    background: $body-color;
     transform-style: preserve-3d;
+    background: $body-color;
+    color: $blue;
+    font-size: $font-size-xs;
 
-    $shadow-offset: 4px;
+    $shadow-offset: 4px + $debug-border-thickness;
 
     > :last-child {
         position: absolute;
@@ -48,18 +51,40 @@ $syntax-ref: $blue;
     }
 }
 
+.debug-header {
+    padding: 0.25rem 1rem;
+    position: sticky;
+    top: 0;
+    left: 0;
+    border-top-left-radius: $debug-radius;
+    border-top-right-radius: $debug-radius;
+    border-bottom: $debug-panel-inner-border;
+    background: $body-color;
+    z-index: 1;
+}
+
+.debug-refs {
+    display: flex;
+    flex-direction: column;
+}
+
 .debug-content {
     display: flex;
     flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow-y: scroll;
 
-    > * {
+    > *:not(.debug-header) {
         padding: 1rem;
     }
 
-    > :not(:first-child) {
-        border-top: $debug-panel-border;
+    > :not(:first-child, :nth-child(2)) {
+        border-top: $debug-panel-inner-border;
     }
 }
+
+// Data formatting
 
 .debug-map {
     display: grid;
@@ -79,7 +104,6 @@ $syntax-ref: $blue;
 .debug-map-brace {
     display: flex;
     flex-direction: column;
-    color: $blue;
     align-self: stretch;
 
     > :nth-child(2), > :nth-child(4) {
@@ -94,7 +118,6 @@ $syntax-ref: $blue;
     position: relative;
     grid-template-columns: 1fr auto;
     font-family: $font-family-monospace;
-    font-size: $font-size-xs;
 
     > div {
         display: contents;

@@ -1,4 +1,4 @@
-(ns reflet.debugger.glyphs
+(ns reflet.debug.glyphs
   (:require [cinch.core :as util]))
 
 (def path-opts
