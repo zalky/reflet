@@ -58,7 +58,7 @@
           (destroy obj))
         (swap! db dissoc ref)))))
 
-(defn node
+(defn node!
   "Returns a react callback for initializing a node ref and putting it
   into the dom node db.
 

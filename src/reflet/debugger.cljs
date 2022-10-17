@@ -129,7 +129,7 @@
   [id refs]
   (with-ref {:dom/uuid [debug/node]}
     (let [r (f/subscribe [::rect id])]
-      [:div {:ref   (i/node node)
+      [:div {:ref   (i/node! node)
              :class "debug-panel"
              :style (shift @r node)}
        [:div {:class "debug-content"}
@@ -141,7 +141,7 @@
   [id refs]
   (with-ref {:dom/uuid [debug/node]}
     (let [r (f/subscribe [::rect id])]
-      [:div {:ref   (i/node node)
+      [:div {:ref   (i/node! node)
              :class "debug-node group"
              :style (shift @r node)}
        [:div]
@@ -171,7 +171,7 @@
     (if-not @target
       [:div {:class "debug-tap"
              :ref   (partial tap id target)}]
-      (-> [debug-node id refs]
+      (-> [debug-panel id refs]
           (r/as-element)
           (react-dom/createPortal body)))))
 
