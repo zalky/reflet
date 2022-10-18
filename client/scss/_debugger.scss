@@ -1,14 +1,14 @@
 
-$debug-color: color.adjust($blue, $alpha: -0.2);
-$debug-radius: 8px;
-$debug-border-thickness: 2px;
-$debug-panel-border: $debug-border-thickness solid color.adjust($blue, $alpha: -0);
-$debug-panel-inner-border: 1px solid color.adjust($blue, $alpha: -0);
+$debug-color:                   color.adjust($blue, $alpha: -0.2);
+$debug-radius:                  8px;
+$debug-border-thickness:        2px;
+$debug-panel-border:            $debug-border-thickness solid color.adjust($blue, $alpha: -0);
+$debug-panel-inner-border:      1px solid color.adjust($blue, $alpha: -0);
 $debug-panel-drop-shadow-color: color.adjust($blue, $alpha: -0.65);
 
-$syntax-keyword-namespace: #9167db;
-$syntax-keyword-name: #cb49f1;
-$syntax-ref: $blue;
+$syntax-keyword-namespace:      #9167db;
+$syntax-keyword-name:           #cb49f1;
+$syntax-ref:                    $blue;
 
 .debug-tap {
     display: none;
@@ -20,9 +20,13 @@ $syntax-ref: $blue;
     height: 16px;
     width:  16px;
     transform: translate(8px, 8px);
+    cursor: pointer;
+    transition: all 0.3s ease;
 
-    &:not(.group) > * {
-        display: none;
+    &:hover {
+        height: 20px;
+        width:  20px;
+        transform: translate(6px, 6px);
     }
 }
 
@@ -61,6 +65,12 @@ $syntax-ref: $blue;
     border-bottom: $debug-panel-inner-border;
     background: $body-color;
     z-index: 1;
+    cursor: default;
+    user-select: none;
+
+    &.dragging {
+        cursor: grabbing;
+    }
 }
 
 .debug-refs {
@@ -76,7 +86,7 @@ $syntax-ref: $blue;
     overflow-y: scroll;
 
     > *:not(.debug-header) {
-        padding: 1rem;
+        padding: 0.75rem;
     }
 
     > :not(:first-child, :nth-child(2)) {
@@ -89,11 +99,11 @@ $syntax-ref: $blue;
 .debug-map {
     display: grid;
     grid-template-columns: 14px auto 14px;
-    margin: 0 -0.35rem;
+    margin: 0 -0.25rem;
     align-items: center;
 
     > .debug-map-data {
-        padding: 0 0.25rem;
+        padding: 0 0.1rem;
     }
 
     > :nth-child(3) {

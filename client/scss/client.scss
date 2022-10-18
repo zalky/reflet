@@ -23,7 +23,7 @@ body {
 
 * {
     &:focus, &:hover, &:active {
-        outline: none;
+        outline: none !important;
     }
 }
 

@@ -237,7 +237,10 @@
 
 (def default-unique-attributes
   #{:system/uuid
-    :component/uuid})
+    :component/uuid
+    :debug/uuid
+    :js/uuid
+    :el/uuid})
 
 (defn new-db
   "Returns a new db, optionally with initial data and unique id

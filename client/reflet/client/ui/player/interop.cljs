@@ -4,13 +4,13 @@
 
 (defn create-context
   "Idempotent constructor."
-  [{node-r    :player/node
+  [{el-r      :player/el
     context-r :player/context
     source-r  :player/source}]
   (when-not (i/grab context-r)
     (let [context (js/AudioContext.)
-          node    (i/grab node-r)
-          source  (.createMediaElementSource context node)]
+          el      (i/grab el-r)
+          source  (.createMediaElementSource context el)]
       (.connect source (.-destination context))
       (i/reg context-r context)
       (i/reg source-r source))))
@@ -24,12 +24,12 @@
   state. Checks that we have recieved user input, via
   the :player/state. The browser will complain if we start an audio
   context without first having had user input."
-  [_ {state  :player/state
-      node-r :player/node
-      :as    props}]
+  [_ {state :player/state
+      el-r  :player/el
+      :as   props}]
   (when (running? state)
-    (let [node (i/grab node-r)]
+    (let [el (i/grab el-r)]
       (create-context props)
       (case state
-        ::impl/playing (.play node)
-        ::impl/paused  (.pause node)))))
+        ::impl/playing (.play el)
+        ::impl/paused  (.pause el)))))

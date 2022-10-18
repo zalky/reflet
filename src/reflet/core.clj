@@ -5,6 +5,7 @@
             [re-frame.core :as f]
             [reagent.core :as r]
             [reflet.db :as db]
+            [reflet.debug :as d]
             [reflet.ref-spec :as rs]))
 
 (defn throw-parse-err!
@@ -34,9 +35,9 @@
 (defn mounted-random-ref
   [refs k id-attr {:keys [meta]}]
   `(let [m#   ~(parse-meta meta)
-         ref# (reflet.db/random-ref ~id-attr m# ~k)]
+         ref# (db/random-ref ~id-attr m# ~k)]
      (vswap! ~refs assoc ~k ref#)
-     (reflet.db/mount-ref! ref#)
+     (db/mount-ref! ref#)
      ref#))
 
 (defn get-refs
@@ -75,9 +76,9 @@
         `(doseq [ref# (->> ~refs
                            (deref)
                            (vals)
-                           (filter reflet.db/transient?))]
+                           (filter db/transient?))]
            (when ref#
-             (reflet.db/unmount-ref! ref#)
+             (db/unmount-ref! ref#)
              ;; Note: dispatch-sync causes errors in Karma test
              ;; runners. However, app state can be cleaned up async,
              ;; so prefer regular dispatch.
@@ -90,12 +91,24 @@
 
 (defn debug-id
   []
-  `(when reflet.debug/*debug*
-     (db/random-ref :debug/id)))
+  `(when d/*debug*
+     (db/random-ref :debug/uuid)))
 
 (defn get-opts
   [bindings]
-  (util/split-keys bindings [:in :meta]))
+  (util/split-keys bindings [:in :meta :debug]))
+
+(defn wrap-debug
+  [refs d-id body {:keys [debug] :or {debug true}}]
+  `(if (and ~debug d/*debug*)
+     [:<> (d/*debug*
+           {:debug/id   ~d-id
+            :debug/uuid (second ~d-id)
+            :debug/name ~(component-name)
+            :debug/refs (deref ~refs)})
+      (do ~@body)]
+     (binding [d/*debug* false]
+       (do ~@body))))
 
 (defmacro with-ref
   "Generates entity references. Optionally rebinds props attributes,
@@ -105,18 +118,14 @@
   (let [[opts unparsed] (get-opts bindings)
         parsed          (s/conform ::rs/bindings unparsed)
         refs            (gensym)
+        d-id            (gensym)
         env             &env]
     `(r/with-let [~refs (volatile! {})
-                  id#   ~(debug-id)]
+                  ~d-id ~(debug-id)]
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs refs parsed env opts))
-         (if-let [d# reflet.debug/*debug*]
-           [:<> (d# {:id   id#
-                     :name ~(component-name)
-                     :refs (deref ~refs)})
-            (do ~@body)]
-           (do ~@body)))
+         ~(wrap-debug refs d-id body opts))
        ~(with-ref-cleanup refs))))
 
 (defn no-eval-keywords
@@ -139,3 +148,7 @@
      (fn ~bindings ~@(no-eval-keywords spec)))
    (when result-fn [result-fn])))
 
+(defmacro once
+  [forms & body]
+  `(r/with-let [_ parsed]
+     ~@body))

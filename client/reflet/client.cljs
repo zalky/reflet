@@ -12,6 +12,7 @@
 (defn ^:dev/after-load render!
   []
   (f/clear-subscription-cache!)
+  (debug/load-debugger! debug/debug)
   (some->> "container"
            (.getElementById js/document)
            (dom/render [ui/app])))
@@ -19,5 +20,4 @@
 (defn init!
   []
   (f/dispatch-sync [::boot/boot])
-  (f/dispatch-sync [::debug/activate debug/debug])
   (render!))

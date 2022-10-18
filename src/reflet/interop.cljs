@@ -16,26 +16,32 @@
 (s/def ::ref
   (s/tuple qualified-keyword? uuid?))
 
+(f/reg-sub ::grab
+  ;; Subscription for accessing objects in reactive contexts. You
+  ;; generally want to avoid this except in specific circumstances,
+  ;; like when you need to perform reactive style computations based
+  ;; on properties of the underlying dom node.
+  ;; are
+  (constantly db)
+  (fn [db [_ ref]]
+    (:obj (get db ref))))
+
 (defn grab
-  "The preferred function for getting objects in effect handlers.
-  Accepts the corresponding object DB as first argument, ref as
-  second. In an event handler, the DB is typically obtained by
-  injecting the coeffect: (f/inject-cofx ::db)"
+  "The preferred function for accessing objects in non-reactive
+  contexts. We do not bother with co-effects. Operations on the dom or
+  on js objects are inherently mutable, and not pure."
   [ref]
-  (:obj (get @db ref)))
+  (if (r/reactive?)
+    (-> "Do not use reflet.interop/grab in reactive context, prefer sub"
+        (ex-info {:ref ref})
+        (throw))
+    (:obj (get (.-state db) ref))))
 
 (defn update!
   "Semantics like `clojure.core/update`, mutates the object in db by
   running the function with existing object as parameter."
   [ref f & args]
   (apply swap! db update-in [ref :obj] f args))
-
-(f/reg-sub ::grab
-  ;; Subscription for use in components and other subscriptions
-  ;; Usage `(f/subscribe [::grab node-ref])`
-  (constantly db)
-  (fn [db [_ ref]]
-    (:obj (get db ref))))
 
 (defn reg
   "Stores the interop oobject in the object DB. Optionally accepts a

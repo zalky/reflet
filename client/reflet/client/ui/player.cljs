@@ -72,7 +72,7 @@
   [props]
   (f/with-ref {:component/uuid [player/self]
                :js/uuid        [player/context player/source]
-               :dom/uuid       [player/node]
+               :el/uuid        [player/el]
                :in             props}
     (let [m          (f/subscribe [::impl/materialized self])
           selecting? (f/subscribe [::impl/selecting? self])]
