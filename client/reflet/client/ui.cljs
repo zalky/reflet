@@ -19,8 +19,8 @@
 
 (defn app
   []
-  (f/with-ref {:component/uuid [app/self]
-               :in             props}
+  (f/with-ref {:cmp/uuid [app/self]
+               :in       props}
     [:div {:class "app"}
      [:div
       [header]

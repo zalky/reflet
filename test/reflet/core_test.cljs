@@ -59,61 +59,61 @@
     (is (= (f/with-ref {:system/uuid [self target]}
              [self target])
            [[:system/uuid :self] [:system/uuid :target]]))
-    (is (= (f/with-ref {:system/uuid    [self target]
-                        :component/uuid [local]}
+    (is (= (f/with-ref {:system/uuid [self target]
+                        :cmp/uuid    [local]}
              [self target local])
-           [[:system/uuid :self] [:system/uuid :target] [:component/uuid :local]]))
-    (is (= (f/with-ref {:system/uuid    [self target]
-                        :component/uuid [local]}
+           [[:system/uuid :self] [:system/uuid :target] [:cmp/uuid :local]]))
+    (is (= (f/with-ref {:system/uuid [self target]
+                        :cmp/uuid    [local]}
              [self target local])
-           [[:system/uuid :self] [:system/uuid :target] [:component/uuid :local]]))
-    (is (= (f/with-ref {:system/uuid    [search/self search/target]
-                        :component/uuid [:search/local]}
+           [[:system/uuid :self] [:system/uuid :target] [:cmp/uuid :local]]))
+    (is (= (f/with-ref {:system/uuid [search/self search/target]
+                        :cmp/uuid    [:search/local]}
              [self target local])
            [[:system/uuid :search/self]
             [:system/uuid :search/target]
-            [:component/uuid :search/local]])))
+            [:cmp/uuid :search/local]])))
 
   (let [props {}]
     (testing "props local re-binding"
       (is (= (f/with-ref {:system/uuid [self] :in props}
                [self props])
              [[:system/uuid :self] {:self [:system/uuid :self]}]))
-      (is (= (f/with-ref {:system/uuid    [self target]
-                          :component/uuid [local]
-                          :in             props}
+      (is (= (f/with-ref {:system/uuid [self target]
+                          :cmp/uuid    [local]
+                          :in          props}
                [self target local props])
              [[:system/uuid :self]
               [:system/uuid :target]
-              [:component/uuid :local]
+              [:cmp/uuid :local]
               {:self   [:system/uuid :self]
                :target [:system/uuid :target]
-               :local  [:component/uuid :local]}]))
-      (is (= (f/with-ref {:system/uuid    [search/self search/target]
-                          :component/uuid [:search/local ::state]
-                          :in             props}
+               :local  [:cmp/uuid :local]}]))
+      (is (= (f/with-ref {:system/uuid [search/self search/target]
+                          :cmp/uuid    [:search/local ::state]
+                          :in          props}
                [self target local state props])
              [[:system/uuid :search/self]
               [:system/uuid :search/target]
-              [:component/uuid :search/local]
-              [:component/uuid ::state]
+              [:cmp/uuid :search/local]
+              [:cmp/uuid ::state]
               {:search/self   [:system/uuid :search/self]
                :search/target [:system/uuid :search/target]
-               :search/local  [:component/uuid :search/local]
-               ::state        [:component/uuid ::state]}]))))
+               :search/local  [:cmp/uuid :search/local]
+               ::state        [:cmp/uuid ::state]}]))))
 
   (testing "props external re-binding"
     (let [props {:search/self "external"}]
-      (is (= (f/with-ref {:system/uuid    [search/self search/target]
-                          :component/uuid [:search/local]
-                          :in             props}
+      (is (= (f/with-ref {:system/uuid [search/self search/target]
+                          :cmp/uuid    [:search/local]
+                          :in          props}
                [self target local props])
              ["external"
               [:system/uuid :search/target]
-              [:component/uuid :search/local]
+              [:cmp/uuid :search/local]
               {:search/self   "external"
                :search/target [:system/uuid :search/target]
-               :search/local  [:component/uuid :search/local]}]))))
+               :search/local  [:cmp/uuid :search/local]}]))))
 
   (testing "props local fresh binding"
     ;; Note that unlike the previous two tests, props is not being
@@ -125,12 +125,12 @@
 
 (deftest random-ref-cofx-test
   (let [f (reg/get-handler :cofx :random-ref)]
-    (is (= (f {:db {}} {:system/uuid    [:search/self :search/target]
-                        :component/uuid [:search/local]})
+    (is (= (f {:db {}} {:system/uuid [:search/self :search/target]
+                        :cmp/uuid    [:search/local]})
            {:db         {}
             :random-ref {:search/self   [:system/uuid :search/self]
                          :search/target [:system/uuid :search/target]
-                         :search/local  [:component/uuid :search/local]}}))))
+                         :search/local  [:cmp/uuid :search/local]}}))))
 
 (deftest reg-pull-test
   (fix/run-test-sync

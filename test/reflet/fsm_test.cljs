@@ -32,7 +32,7 @@
 
      (f/reg-no-op ::advance)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state (f/subscribe [::no-op self])]
          (is (nil? @state))
          (f/dispatch [::advance self])
@@ -50,7 +50,7 @@
 
      (f/reg-no-op ::do-not-advance ::advance)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state (f/subscribe [::test self])]
          (is (nil? @state))
          (f/dispatch [::do-not-advance])
@@ -66,7 +66,7 @@
          {:ref self
           :fsm {nil nil}}))
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (letfn [(get-handler []
                  (reg/get-handler :global-interceptor [::idempotent self]))]
 
@@ -104,7 +104,7 @@
 
      (f/reg-no-op ::do-not-advance ::advance)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (f/dispatch [::fsm/start [::lifecycle self]])
        (is (fsm/started? [::lifecycle self]))
        (f/dispatch [::advance self])
@@ -129,7 +129,7 @@
 
      (f/reg-no-op ::event)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state (f/subscribe [::initial-dispatch self])]
          ;; Note in run-test-sync, all dispatches are via
          ;; dispatch-sync. Under normal conditions, you would not
@@ -158,7 +158,7 @@
 
      (f/reg-no-op ::do-not-advance ::advance)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state  (f/subscribe [::test self])
              effect (f/subscribe [::effect])]
          (is (nil? @state))
@@ -192,7 +192,7 @@
 
      (f/reg-no-op ::advance)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state  (f/subscribe [::test self])
              effect (f/subscribe [::effect])]
          (is (nil? @state))
@@ -224,7 +224,7 @@
 
      (f/reg-no-op ::advance)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state  (f/subscribe [::test self])
              effect (f/subscribe [::effect])]
          (is (nil? @state))
@@ -268,7 +268,7 @@
 
      (f/reg-no-op ::advance ::stop)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [s1 (f/subscribe [::stop-one self])
              s2 (f/subscribe [::stop-vec self])
              s3 (f/subscribe [::stop-set self])
@@ -296,7 +296,7 @@
 
      (f/reg-no-op ::advance ::stop ::error ::reset)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state (f/subscribe [::stop-fsm self])]
          (is (reg/get-handler :global-interceptor [::stop-fsm self]))
          (is (nil? @state))
@@ -352,7 +352,7 @@
          [[:votes :elected]
           ref]))
 
-     (f/with-ref {:component/uuid [fsm/self]
+     (f/with-ref {:cmp/uuid [fsm/self]
                   :system/uuid    [test/candidate]}
        (let [state (f/subscribe [::election self candidate])
              c     (f/subscribe [::candidate candidate])]
@@ -405,7 +405,7 @@
        (fn [self]
          [::n self]))
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state (f/subscribe [::number self])
              n     (f/subscribe [::n self])]
          (is (nil? @n))
@@ -444,7 +444,7 @@
 
      (f/reg-no-op ::advance ::timeout-success)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state (f/subscribe [::timeout-fsm self])]
          (is (nil? @state))
          (f/dispatch-sync [::advance self])
@@ -470,7 +470,7 @@
 
      (f/reg-no-op ::advance ::timeout-success)
 
-     (f/with-ref {:component/uuid [fsm/self]}
+     (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state (f/subscribe [::timeout-fsm self])]
          (is (nil? @state))
          (f/dispatch-sync [::advance self])

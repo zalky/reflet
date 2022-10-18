@@ -237,7 +237,7 @@
 
 (def default-unique-attributes
   #{:system/uuid
-    :component/uuid
+    :cmp/uuid
     :debug/uuid
     :js/uuid
     :el/uuid})
