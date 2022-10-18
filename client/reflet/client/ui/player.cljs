@@ -64,8 +64,8 @@
 
     :reagent-render
     (fn [{{uri :kr.track/uri} :player/track
-          node                :player/node}]
-      [:audio {:ref (i/node! node)
+          el                  :player/el}]
+      [:audio {:ref (i/el! el)
                :src uri}])}))
 
 (defn player

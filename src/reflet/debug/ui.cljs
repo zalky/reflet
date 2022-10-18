@@ -86,9 +86,9 @@
 
 (defn- debug-panel
   [{:keys [id name] :as props}]
-  (f/with-ref {:dom/uuid [debug/node]}
+  (f/with-ref {:dom/uuid [debug/el]}
     (let [r (f/subscribe [::impl/rect id])]
-      [:div {:ref   (i/node! node)
+      [:div {:ref   (i/el! el)
              :class "debug-panel"
              :style (shift @r node)}
        [:div {:class "debug-content"}
@@ -98,9 +98,9 @@
 
 (defn- debug-node
   [{:keys [id]}]
-  (f/with-ref {:dom/uuid [debug/node]}
+  (f/with-ref {:dom/uuid [debug/el]}
     (let [r (f/subscribe [::impl/rect id])]
-      [:div {:ref   (i/node! node)
+      [:div {:ref   (i/el! el)
              :class "debug-node group"
              :style (shift @r node)}
        [g/node-icon {:stack true}]])))

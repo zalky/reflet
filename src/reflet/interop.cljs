@@ -58,9 +58,9 @@
           (destroy obj))
         (swap! db dissoc ref)))))
 
-(defn node!
-  "Returns a react callback for initializing a node ref and putting it
-  into the dom node db.
+(defn el!
+  "Returns a react callback for initializing a dom element ref and
+  putting it into the interop db.
 
   Signal is only initialized once. Can optionally flush reagent ratom
   queue for immediate computation, or provide a callback for when the
@@ -68,13 +68,13 @@
   special case where you don't have access to the component's
   lifecycle."
   [ref & {:keys [flush cb]}]
-  (fn [node]
+  (fn [el]
     (when-not (grab ref)
-      (reg ref node)
-      (when cb (cb node))
+      (reg ref el)
+      (when cb (cb el))
       (when flush (r/flush!)))))
 
 (defn id
-  "Node ids cannot start with a number."
+  "Dom element ids cannot start with a number."
   [ref]
   (str "id-" (second ref)))
