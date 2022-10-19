@@ -44,8 +44,7 @@
        [:div {:key i}
         [debug-value k]
         [debug-value ref]])
-     m)]
-   [g/brace]])
+     m)]])
 
 (defmethod debug-value Keyword
   [k]

@@ -98,7 +98,7 @@ $syntax-ref:                    $blue;
 
 .debug-map {
     display: grid;
-    grid-template-columns: 14px auto 14px;
+    grid-template-columns: 10px auto;
     margin: 0 -0.25rem;
     align-items: center;
 
@@ -115,10 +115,12 @@ $syntax-ref:                    $blue;
     display: flex;
     flex-direction: column;
     align-self: stretch;
+    font-family: $font-family-monospace;
+    font-weight: 700;
 
     > :nth-child(2), > :nth-child(4) {
         flex: 1;
-        width: 6.5px;
+        width: 4.5px;
         border-right: 1px solid $blue;
     }
 }

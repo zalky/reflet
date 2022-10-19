@@ -17,16 +17,16 @@
 (defn brace
   []
   [:div {:class "debug-map-brace"}
-   [:svg {:view-box "0 0 14 6"}
-    [:path (stroke {:d "M 12,1 Q 6,1 6,6"})]]
+   [:svg {:view-box "0 0 10 6"}
+    [:path (stroke {:d "M 9,1 Q 4,1 4,6"})]]
    [:div]
    [:svg {:height                "10"
-          :view-box              "0 0 14 20"
+          :view-box              "0 0 10 20"
           :preserve-aspect-ratio "none"}
-    [:path (stroke {:d "M 6,0 Q 6,7.5 2,10 Q 6,12.5 6,20"})]]
+    [:path (stroke {:d "M 4,0 Q 4,7.5 1,10 Q 4,12.5 4,20"})]]
    [:div]
-   [:svg {:view-box "0 0 14 6"}
-    [:path (stroke {:d "M 6,0 Q 6,5 12,5"})]]])
+   [:svg {:view-box "0 0 10 6"}
+    [:path (stroke {:d "M 4,0 Q 4,5 9,5"})]]])
 
 (defn mark-icon
   [& [{:keys [group]}]]
