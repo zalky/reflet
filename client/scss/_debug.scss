@@ -96,32 +96,18 @@ $syntax-ref:                    $blue;
 
 // Data formatting
 
-.debug-map {
+.debug-map, .debug-vec, .debug-set {
     display: grid;
-    grid-template-columns: 10px auto;
-    margin: 0 -0.25rem;
+    grid-template-columns: 6px auto;
     align-items: center;
 
-    > .debug-map-data {
-        padding: 0 0.1rem;
-    }
-
-    > :nth-child(3) {
-        transform: scaleX(-100%);
-    }
-}
-
-.debug-map-brace {
-    display: flex;
-    flex-direction: column;
-    align-self: stretch;
-    font-family: $font-family-monospace;
-    font-weight: 700;
-
-    > :nth-child(2), > :nth-child(4) {
-        flex: 1;
-        width: 4.5px;
-        border-right: 1px solid $blue;
+    &::before {
+        display: flex;
+        justify-self: right;
+        align-self: start;
+        font-family: $font-family-monospace;
+        font-weight: 700;
+        white-space: nowrap;
     }
 }
 
@@ -129,12 +115,25 @@ $syntax-ref:                    $blue;
     display: grid;
     position: relative;
     grid-template-columns: 1fr auto;
+    padding: 0 0.1rem;
     font-family: $font-family-monospace;
 
     > div {
         display: contents;
         overflow: hidden;
     }
+}
+
+.debug-map::before {
+    content: "{";
+}
+
+.debug-vec::before {
+    content: "[";
+}
+
+.debug-set::before {
+    content: "\#{";
 }
 
 .debug-ref {

@@ -37,13 +37,13 @@
 (defmethod debug-value ::map
   [m]
   [:div {:class "debug-map"}
-   [g/brace]
    [:div {:class "debug-map-data"}
     (map-indexed
      (fn [i [k ref]]
-       [:div {:key i}
-        [debug-value k]
-        [debug-value ref]])
+       (when (not= k ::f/debug)
+         [:div {:key i}
+          [debug-value k]
+          [debug-value ref]]))
      m)]])
 
 (defmethod debug-value Keyword

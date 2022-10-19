@@ -14,20 +14,6 @@
   [el]
   (util/merge-deep path-opts el))
 
-(defn brace
-  []
-  [:div {:class "debug-map-brace"}
-   [:svg {:view-box "0 0 10 6"}
-    [:path (stroke {:d "M 9,1 Q 4,1 4,6"})]]
-   [:div]
-   [:svg {:height                "10"
-          :view-box              "0 0 10 20"
-          :preserve-aspect-ratio "none"}
-    [:path (stroke {:d "M 4,0 Q 4,7.5 1,10 Q 4,12.5 4,20"})]]
-   [:div]
-   [:svg {:view-box "0 0 10 6"}
-    [:path (stroke {:d "M 4,0 Q 4,5 9,5"})]]])
-
 (defn mark-icon
   [& [{:keys [group]}]]
   [:svg {:view-box "0 0 20 30"}
