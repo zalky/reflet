@@ -1,12 +1,13 @@
 (ns reflet.debug.ui.impl
-  (:require [cinch.core :as util]
-            [reflet.core :as f]
+  (:require [reflet.core :as f]
             [reflet.db :as db]
+            [reflet.debug :as d]
             [reflet.debug.cluster :as c]
-            [reflet.fsm :as fsm]
-            [reflet.interop :as i]))
+            [reflet.fsm :as fsm]))
 
 (defn rect
+  "Keep in mind that .getBoundingClientRect will return zeros during
+  certain phases of the react lifecycle. Use it wisely."
   [el & [selectors]]
   (let [r (.getBoundingClientRect el)]
     {:top    (.-top r)
@@ -59,22 +60,6 @@
 
 (f/reg-no-op ::toggle)
 
-;;;; Debug tap
-
-(f/reg-event-db ::tap
-  (fn [db [_ props r]]
-    (-> db
-        (update ::taps util/conjs props)
-        (db/mergen props))))
-
-(f/reg-event-db ::clear-taps
-  (fn [db _]
-    (dissoc db ::taps)))
-
-(f/reg-sub ::taps
-  (fn [db _]
-    (get db ::taps)))
-
 (def cluster-opts
   {:attrs      {:id :debug/id
                 :x  #(get-in % [:debug/rect :left])
@@ -97,9 +82,9 @@
 
 (f/reg-sub ::taps-grouped
   (fn [_]
-    (f/subscribe [::taps]))
+    (f/subscribe [::d/taps]))
   (fn [tapped _]
-    (let [g      (c/cluster tapped cluster-opts)
+    (let [g      (c/cluster (vals tapped) cluster-opts)
           marks  (map create-mark (:noise g))
           groups (map create-group (vals (dissoc g :noise)))]
       (concat marks groups))))

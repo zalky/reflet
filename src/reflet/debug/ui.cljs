@@ -3,11 +3,10 @@
             [reagent.core :as r]
             [reagent.dom :as dom]
             [reflet.core :as f]
-            [reflet.debug.cluster :as c]
+            [reflet.debug :as d]
             [reflet.debug.glyphs :as g]
             [reflet.debug.ui.impl :as impl]
-            [reflet.interop :as i]
-            [reflet.debug :as d]))
+            [reflet.interop :as i]))
 
 (defn ref?
   "Returns true if x is an entity reference."
@@ -158,7 +157,7 @@
            (reset! target)
            (impl/rect)
            (assoc props :debug/rect)
-           (vector ::impl/tap)
+           (vector ::d/tap)
            (f/dispatch)))
 
 (defn debug-tap
@@ -180,7 +179,6 @@
 
 (defn load-debugger!
   []
-  (f/dispatch-sync [::impl/clear-taps])
   (set! d/*debug* debug-tap)
   (->> (upsert-loader-el!)
        (dom/render [debug-marks])))

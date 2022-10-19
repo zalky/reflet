@@ -1,7 +1,9 @@
 (ns reflet.debug
-  (:require [clojure.string :as str]
+  (:require [cinch.core :as util]
+            [clojure.string :as str]
             [reagent.core :as r]
-            [re-frame.core :as f]))
+            [re-frame.core :as f]
+            [reflet.db :as db]))
 
 (defonce ^:dynamic *debug*
   nil)
@@ -49,6 +51,22 @@
                update-debug-index
                event)
     context))
+
+(f/reg-event-db ::tap
+  (fn [db [_ {id  :debug/id
+              :as props}]]
+    {:pre [id]}
+    (-> db
+        (assoc-in [::taps id] props)
+        (db/mergen props))))
+
+(f/reg-sub ::taps
+  (fn [db _]
+    (get db ::taps)))
+
+(f/reg-event-db ::tap-cleanup
+  (fn [db [_ ref]]
+    (update db ::taps dissoc ref)))
 
 (def debug-tap-events
   (f/->interceptor

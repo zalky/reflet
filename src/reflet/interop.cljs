@@ -75,7 +75,7 @@
   lifecycle."
   [ref & {:keys [flush cb]}]
   (fn [el]
-    (when-not (grab ref)
+    (when (and el (not (grab ref)))
       (reg ref el)
       (when cb (cb el))
       (when flush (r/flush!)))))

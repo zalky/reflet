@@ -72,17 +72,17 @@
 (defn- with-ref-cleanup
   "Clean up clause."
   [refs]
-  (list 'finally
-        `(doseq [ref# (->> ~refs
-                           (deref)
-                           (vals)
-                           (filter db/transient?))]
-           (when ref#
-             (db/unmount-ref! ref#)
-             ;; Note: dispatch-sync causes errors in Karma test
-             ;; runners. However, app state can be cleaned up async,
-             ;; so prefer regular dispatch.
-             (f/dispatch [::with-ref-cleanup ref#])))))
+  (list
+   'finally
+   `(doseq [[k# ref#] (deref ~refs)]
+      (when (and ref# (db/transient? ref#))
+        (db/unmount-ref! ref#)
+        ;; Note: dispatch-sync causes errors in Karma test
+        ;; runners. However, app state can be cleaned up async,
+        ;; so prefer regular dispatch.
+        (f/dispatch [::with-ref-cleanup ref#])
+        (when (= k# ::debug-id)
+          (f/dispatch [::d/tap-cleanup ref#]))))))
 
 (defn- component-name
   []
@@ -98,7 +98,7 @@
   [refs opts]
   `(when ~(debug? opts)
      (let [r# (db/random-ref :debug/uuid {:transient true})]
-       (vswap! ~refs assoc ::debug r#)
+       (vswap! ~refs assoc ::debug-id r#)
        (db/mount-ref! r#)
        r#)))
 
@@ -161,5 +161,5 @@
 
 (defmacro once
   [forms & body]
-  `(r/with-let [_ parsed]
+  `(r/with-let [_# ~forms]
      ~@body))
