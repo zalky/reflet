@@ -99,39 +99,37 @@
           [debug-refs props]]
          [:div]]))))
 
-(defmulti debug-node
+(defmulti debug-mark
   :debug/type)
 
-(defmethod debug-node :default
+(defmethod debug-mark :debug.type/mark
   [{:debug/keys [id]}]
   (f/with-ref {:el/uuid [debug/el]
                :debug   false}
-    (let [geo (f/subscribe [::impl/node-geo id])
-          cb  #(f/dispatch [::impl/init-node id %])]
+    (let [geo (f/subscribe [::impl/mark-geo id])
+          cb  #(f/dispatch [::impl/init-mark id %])]
       [:div {:ref      (i/el! el :cb cb)
-             :class    "debug-node"
+             :class    "debug-mark"
              :style    @geo
              :on-click #(f/dispatch [::impl/toggle id])}
-       [g/node-icon]])))
+       [g/mark-icon]])))
 
-(defmethod debug-node :group
-  [{:debug/keys [id]}]
-  (f/with-ref {:el/uuid [debug/el]
-               :debug   false}
-    (let [geo (f/subscribe [::impl/node-geo id])
-          cb  #(f/dispatch [::impl/init-node id %])]
-      [:div {:ref      (i/el! el :cb cb)
-             :class    "debug-node group"
-             :style    @geo
-             :on-click #(f/dispatch [::impl/toggle id])}
-       [g/node-icon {:stack true}]])))
+(defmethod debug-mark :debug.type/group
+  [{:debug/keys [group centroid]}]
+  (f/with-ref {:cmp/uuid [debug/self]
+               :debug    false}
+    [:div {:class    "debug-mark group"
+           :style    {:left (:x centroid)
+                      :top  (:y centroid)}
+           :on-click #(f/dispatch [::impl/toggle self])}
+     [g/mark-icon {:group true}]]))
 
-(defn debug-loader
+(defn debug-marks
   []
   [:div
    (for [{:keys [debug/uuid]
-          :as   props} @(f/subscribe [::impl/tapped])]
-     ^{:key uuid} [debug-node props])])
+          :as   props} @(f/subscribe [::impl/taps-grouped])]
+     ^{:key uuid} [debug-mark props])])
 
 (defn- body-el
   []
@@ -141,25 +139,37 @@
   []
   (.querySelector js/document "#reflet-debug-loader"))
 
+(defn- find-tap-point
+  "Search siblings for first element that is not a debug tap. If no
+  siblings, choose parent. An example of where there could be no
+  sibling is if a component returns an empty fragment."
+  [tap-el]
+  (loop [el (.-nextSibling tap-el)]
+    (if el
+      (let [c (.-className el)]
+        (if (= c "debug-tap")
+          (recur (.-nextSibling el))
+          el))
+      (.-parentElement tap-el))))
+
 (defn- tap
   [props target tap-el]
   (some->> tap-el
-           (.-nextSibling)
+           (find-tap-point)
            (reset! target)
            (impl/rect)
            (assoc props :debug/rect)
            (vector ::impl/tap)
            (f/dispatch)))
 
-(defn debug
-  [props]
-  (r/with-let [target (r/atom nil)]
-    (if-not @target
-      [:div {:class "debug-tap"
-             :ref   (partial tap props target)}]
-      (-> [debug-panel props]
-          (r/as-element)
-          (react-dom/createPortal (body-el))))))
+(defn debug-tap
+  [target props]
+  (if-not @target
+    [:div {:class "debug-tap"
+           :ref   (partial tap props target)}]
+    (-> [debug-panel props]
+        (r/as-element)
+        (react-dom/createPortal (body-el)))))
 
 (defn upsert-loader-el!
   []
@@ -170,7 +180,8 @@
         el)))
 
 (defn load-debugger!
-  [debug-fn]
-  (set! d/*debug* debug-fn)
+  []
+  (f/dispatch-sync [::impl/clear-taps])
+  (set! d/*debug* debug-tap)
   (->> (upsert-loader-el!)
-       (dom/render [debug-loader])))
+       (dom/render [debug-marks])))

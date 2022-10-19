@@ -28,14 +28,14 @@
    [:svg {:view-box "0 0 14 6"}
     [:path (stroke {:d "M 6,0 Q 6,5 12,5"})]]])
 
-(defn node-icon
-  [& [{:keys [stack]}]]
+(defn mark-icon
+  [& [{:keys [group]}]]
   [:svg {:view-box "0 0 20 30"}
    [:circle {:cx    10
              :cy    10
              :r     9
              :style {:fill "currentColor"}}]
-   (when stack
+   (when group
      [:<>
       [:path
        (stroke

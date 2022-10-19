@@ -91,8 +91,7 @@
   large as long as they are densly connected. However, it is easy to
   implement, and given that UI elements also possess a high degree of
   geometric regularity, with a correctly tuned `:epsilon` parameter it
-  should still be able to produce great results in almost any
-  context."
+  should still be able to produce good results."
   [{{:keys [min-points]} :opts
     :as                  db}]
   (loop [db         db
@@ -142,15 +141,30 @@
              (as-> {} %
                (assoc % :x (x-f p))
                (assoc % :y (y-f p))
+               (assoc % :id (id-f p))
                (assoc db (id-f p) %)))
            {}
            points)})
 
 (defn cluster
-  [points {:keys [algo]
+  [points {{id-f :id
+            :or  {id-f :id}} :attrs
+
+           :keys [algo]
            :or   {algo dbscan}
            :as   opts}]
   (let [db (create-db points opts)
         r  (algo db)]
-    (group-by (comp (:group r) :id) points)))
+    (group-by (comp (:group r) id-f) points)))
 
+(defn centroid
+  [group {{x-f :x
+           y-f :y
+           :or {x-f :x
+                y-f :y}} :attrs}]
+  (letfn [(u [f]
+            (-> (transduce (map f) + group)
+                (/ (count group))
+                (float)))]
+    {:x (u x-f)
+     :y (u y-f)}))

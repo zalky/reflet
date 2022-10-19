@@ -93,13 +93,13 @@
     (is (= (-> test-points
                (c/create-db {:min-points 2 :epsilon 2})
                (c/dbscan))
-           {:points     {1 {:x 1 :y 0}
-                         2 {:x 1 :y 0}
-                         3 {:x 1 :y 2}
-                         4 {:x 2 :y 2}
-                         5 {:x 5 :y 7}
-                         6 {:x 6 :y 7}
-                         7 {:x 30 :y 40}}
+           {:points     {1 {:id 1 :x 1 :y 0}
+                         2 {:id 2 :x 1 :y 0}
+                         3 {:id 3 :x 1 :y 2}
+                         4 {:id 4 :x 2 :y 2}
+                         5 {:id 5 :x 5 :y 7}
+                         6 {:id 6 :x 6 :y 7}
+                         7 {:id 7 :x 30 :y 40}}
             :neighbours {1 #{1 3 2}
                          3 #{1 4 3 2}
                          2 #{1 3 2}

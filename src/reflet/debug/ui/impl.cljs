@@ -2,6 +2,7 @@
   (:require [cinch.core :as util]
             [reflet.core :as f]
             [reflet.db :as db]
+            [reflet.debug.cluster :as c]
             [reflet.fsm :as fsm]
             [reflet.interop :as i]))
 
@@ -25,11 +26,11 @@
       {:left (max (- l w) 0)
        :top  (max (- t h) 0)})))
 
-(f/reg-event-db ::init-node
+(f/reg-event-db ::init-mark
   (fn [db [_ id el]]
     (->> (db/get-inn db [id :debug/rect])
          (position el)
-         (db/assoc-inn db [id :debug.node/rect]))))
+         (db/assoc-inn db [id :debug.mark/rect]))))
 
 (f/reg-event-db ::init-panel
   (fn [db [_ id el]]
@@ -37,9 +38,9 @@
          (position el)
          (db/assoc-inn db [id :debug.panel/rect]))))
 
-(f/reg-pull ::node-geo
+(f/reg-pull ::mark-geo
   (fn [id]
-    [:debug.node/rect id])
+    [:debug.mark/rect id])
   (fn [rect]
     (select-keys rect [:left :top])))
 
@@ -58,15 +59,50 @@
 
 (f/reg-no-op ::toggle)
 
+;;;; Debug tap
+
 (f/reg-event-db ::tap
   (fn [db [_ props r]]
     (-> db
-        (update ::tapped util/conjs props)
+        (update ::taps util/conjs props)
         (db/mergen props))))
 
-(f/reg-sub ::tapped
+(f/reg-event-db ::clear-taps
   (fn [db _]
-    (get db ::tapped)))
+    (dissoc db ::taps)))
+
+(f/reg-sub ::taps
+  (fn [db _]
+    (get db ::taps)))
+
+(def cluster-opts
+  {:attrs      {:id :debug/id
+                :x  #(get-in % [:debug/rect :left])
+                :y  #(get-in % [:debug/rect :top])}
+   :min-points 2
+   :epsilon    50})
+
+(defn create-mark
+  [m]
+  (assoc m :debug/type :debug.type/mark))
+
+(defn create-group
+  [xs]
+  (let [id (db/random-ref :debug/uuid)]
+    {:debug/type     :debug.type/group
+     :debug/id       id
+     :debug/uuid     (second id)
+     :debug/group    (map create-mark xs)
+     :debug/centroid (c/centroid xs cluster-opts)}))
+
+(f/reg-sub ::taps-grouped
+  (fn [_]
+    (f/subscribe [::taps]))
+  (fn [tapped _]
+    (let [g      (c/cluster tapped cluster-opts)
+          marks  (map create-mark (:noise g))
+          groups (map create-group (vals (dissoc g :noise)))]
+      (concat marks groups))))
 
 ;;;; Dragging
 

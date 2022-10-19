@@ -12,7 +12,7 @@
 (defn ^:dev/after-load render!
   []
   (f/clear-subscription-cache!)
-  (debug/load-debugger! debug/debug)
+  (debug/load-debugger!)
   (some->> "container"
            (.getElementById js/document)
            (dom/render [ui/app])))

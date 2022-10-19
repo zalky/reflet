@@ -8,14 +8,14 @@
             [reflet.debug :as d]
             [reflet.ref-spec :as rs]))
 
-(defn throw-parse-err!
+(defn- throw-parse-err!
   [unparsed]
   (throw
    (ex-info
     (s/explain ::rs/binding-map unparsed)
     unparsed)))
 
-(defn bound-local?
+(defn- bound-local?
   [env sym]
   (let [{:keys [locals]} env]
     (->> sym
@@ -23,7 +23,7 @@
          (symbol)
          (contains? locals))))
 
-(defn parse-meta
+(defn- parse-meta
   "All newly created refs are transient by default."
   [meta]
   `(not-empty
@@ -32,7 +32,7 @@
       (dissoc ~meta :transient)
       (assoc ~meta :transient true))))
 
-(defn mounted-random-ref
+(defn- mounted-random-ref
   [refs k id-attr {:keys [meta]}]
   `(let [m#   ~(parse-meta meta)
          ref# (db/random-ref ~id-attr m# ~k)]
@@ -40,7 +40,7 @@
      (db/mount-ref! ref#)
      ref#))
 
-(defn get-refs
+(defn- get-refs
   [props-sym refs keys id-attrs opts]
   (let [k       (gensym)
         id-attr (gensym)]
@@ -53,7 +53,7 @@
           ~keys
           ~id-attrs)))
 
-(defn bind-refs
+(defn- bind-refs
   "Two sets of symbols are bound, the symbols given by the bindings, and
   a set guaranteed to be unique in order to properly bound
   props."
@@ -69,7 +69,7 @@
      props-sym   `(->> ~(zipmap keys unique-syms)
                        (merge ~props-sym))]))
 
-(defn with-ref-cleanup
+(defn- with-ref-cleanup
   "Clean up clause."
   [refs]
   (list 'finally
@@ -84,29 +84,38 @@
              ;; so prefer regular dispatch.
              (f/dispatch [::with-ref-cleanup ref#])))))
 
-(defn component-name
+(defn- component-name
   []
   `(reagent.impl.component/component-name
     (r/current-component)))
 
-(defn debug-id
-  []
-  `(when d/*debug*
-     (db/random-ref :debug/uuid)))
+(defn- debug?
+  [{:keys [debug]
+    :or   {debug true}}]
+  `(and ~debug d/*debug*))
 
-(defn get-opts
+(defn- debug-id
+  [refs opts]
+  `(when ~(debug? opts)
+     (let [r# (db/random-ref :debug/uuid {:transient true})]
+       (vswap! ~refs assoc ::debug r#)
+       (db/mount-ref! r#)
+       r#)))
+
+(defn- get-opts
   [bindings]
   (util/split-keys bindings [:in :meta :debug]))
 
-(defn wrap-debug
-  [refs d-id body {:keys [debug] :or {debug true}}]
-  `(if (and ~debug d/*debug*)
-     [:<> (d/*debug*
-           {:debug/id   ~d-id
-            :debug/uuid (second ~d-id)
-            :debug/name ~(component-name)
-            :debug/refs (deref ~refs)})
-      (do ~@body)]
+(defn- wrap-debug
+  [refs target d-id body opts]
+  `(if ~(debug? opts)
+     (let [p# {:debug/id   ~d-id
+               :debug/uuid (second ~d-id)
+               :debug/name ~(component-name)
+               :debug/refs (deref ~refs)}]
+       [:<>
+        (d/*debug* ~target p#)
+        (do ~@body)])
      (binding [d/*debug* false]
        (do ~@body))))
 
@@ -119,16 +128,18 @@
         parsed          (s/conform ::rs/bindings unparsed)
         refs            (gensym)
         d-id            (gensym)
+        target          (gensym)
         env             &env]
-    `(r/with-let [~refs (volatile! {})
-                  ~d-id ~(debug-id)]
+    `(r/with-let [~refs   (volatile! {})
+                  ~d-id   ~(debug-id refs opts)
+                  ~target (r/atom nil)]
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs refs parsed env opts))
-         ~(wrap-debug refs d-id body opts))
+         ~(wrap-debug refs target d-id body opts))
        ~(with-ref-cleanup refs))))
 
-(defn no-eval-keywords
+(defn- no-eval-keywords
   [expr]
   (w/postwalk
    (fn [x]

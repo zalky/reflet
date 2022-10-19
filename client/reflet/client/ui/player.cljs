@@ -78,7 +78,7 @@
           selecting? (f/subscribe [::impl/selecting? self])]
       [:div {:class ["player" (when @selecting? "selecting")]}
        [player-inner (merge props @m)]
-       [b/button-toolbar 
+       [b/button-toolbar
         [b/button-group [controls props]]
         [b/button-group [selector props]]]
        [track-list props]])))
