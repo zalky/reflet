@@ -60,13 +60,13 @@
         (assoc-in [::taps id] props)
         (db/mergen props))))
 
+(f/reg-event-db ::untap
+  (fn [db [_ ref]]
+    (update db ::taps dissoc ref)))
+
 (f/reg-sub ::taps
   (fn [db _]
     (get db ::taps)))
-
-(f/reg-event-db ::tap-cleanup
-  (fn [db [_ ref]]
-    (update db ::taps dissoc ref)))
 
 (def debug-tap-events
   (f/->interceptor

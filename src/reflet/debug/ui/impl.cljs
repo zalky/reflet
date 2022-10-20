@@ -28,32 +28,32 @@
        :top  (max (- t h) 0)})))
 
 (f/reg-event-db ::init-mark
-  (fn [db [_ id el]]
+  (fn [db [_ self id el]]
     (->> (db/get-inn db [id :debug/rect])
          (position el)
-         (db/assoc-inn db [id :debug.mark/rect]))))
+         (db/assoc-inn db [self :debug.mark/rect]))))
 
 (f/reg-event-db ::init-panel
-  (fn [db [_ id el]]
+  (fn [db [_ self id el]]
     (->> (db/get-inn db [id :debug/rect])
          (position el)
-         (db/assoc-inn db [id :debug.panel/rect]))))
+         (db/assoc-inn db [self :debug.panel/rect]))))
 
 (f/reg-pull ::mark-geo
-  (fn [id]
-    [:debug.mark/rect id])
+  (fn [self]
+    [:debug.mark/rect self])
   (fn [rect]
     (select-keys rect [:left :top])))
 
 (f/reg-pull ::panel-geo
-  (fn [id]
-    [:debug.panel/rect id])
+  (fn [self]
+    [:debug.panel/rect self])
   (fn [rect]
     (select-keys rect [:left :top])))
 
 (fsm/reg-fsm ::panel
-  (fn [id]
-    {:ref  id
+  (fn [self id]
+    {:ref  self
      :attr :debug.panel/state
      :fsm  {nil    {[::toggle id] ::open}
             ::open {[::toggle id] nil}}}))
@@ -80,11 +80,11 @@
      :debug/group    (map create-mark xs)
      :debug/centroid (c/centroid xs cluster-opts)}))
 
-(f/reg-sub ::taps-grouped
+(f/reg-sub ::overlay-nodes
   (fn [_]
     (f/subscribe [::d/taps]))
-  (fn [tapped _]
-    (let [g      (c/cluster (vals tapped) cluster-opts)
+  (fn [taps _]
+    (let [g      (c/cluster (vals taps) cluster-opts)
           marks  (map create-mark (:noise g))
           groups (map create-group (vals (dissoc g :noise)))]
       (concat marks groups))))

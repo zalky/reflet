@@ -39,7 +39,7 @@
    [:div {:class "debug-map-data"}
     (map-indexed
      (fn [i [k ref]]
-       (when (not= k ::f/debug)
+       (when (not= k ::f/debug-id)
          [:div {:key i}
           [debug-value k]
           [debug-value ref]]))
@@ -73,9 +73,9 @@
     s))
 
 (defn- debug-header
-  [{:debug/keys [name id]}]
+  [{:debug/keys [name self]}]
   (let [dragging (f/subscribe [::impl/dragging])
-        on-md    #(f/dispatch-sync [::impl/drag! % id])]
+        on-md    #(f/dispatch-sync [::impl/drag! % self])]
     [:div {:on-mouse-down on-md
            :class         ["debug-header"
                            (when @dragging "dragging")]}
@@ -83,11 +83,13 @@
 
 (defn- debug-panel
   [{:debug/keys [id] :as props}]
-  (f/with-ref {:el/uuid [debug/el]
-               :debug   false}
-    (let [state (f/subscribe [::impl/panel id])
-          geo   (f/subscribe [::impl/panel-geo id])
-          cb    #(f/dispatch [::impl/init-panel id %])]
+  (f/with-ref {:cmp/uuid [debug/self]
+               :el/uuid  [debug/el]
+               :in       props
+               :debug    false}
+    (let [state (f/subscribe [::impl/panel self id])
+          geo   (f/subscribe [::impl/panel-geo self])
+          cb    #(f/dispatch [::impl/init-panel self id %])]
       (when @state
         [:div {:ref   (i/el! el :cb cb)
                :class "debug-panel"
@@ -97,22 +99,23 @@
           [debug-refs props]]
          [:div]]))))
 
-(defmulti debug-mark
+(defmulti render
   :debug/type)
 
-(defmethod debug-mark :debug.type/mark
+(defmethod render :debug.type/mark
   [{:debug/keys [id]}]
-  (f/with-ref {:el/uuid [debug/el]
-               :debug   false}
-    (let [geo (f/subscribe [::impl/mark-geo id])
-          cb  #(f/dispatch [::impl/init-mark id %])]
+  (f/with-ref {:cmp/uuid [debug/self]
+               :el/uuid  [debug/el]
+               :debug    false}
+    (let [geo (f/subscribe [::impl/mark-geo self])
+          cb  #(f/dispatch [::impl/init-mark self id %])]
       [:div {:ref      (i/el! el :cb cb)
              :class    "debug-mark"
              :style    @geo
              :on-click #(f/dispatch [::impl/toggle id])}
        [g/mark-icon]])))
 
-(defmethod debug-mark :debug.type/group
+(defmethod render :debug.type/group
   [{:debug/keys [group centroid]}]
   (f/with-ref {:cmp/uuid [debug/self]
                :debug    false}
@@ -122,20 +125,22 @@
            :on-click #(f/dispatch [::impl/toggle self])}
      [g/mark-icon {:group true}]]))
 
-(defn debug-marks
+(defn overlay
   []
-  [:div
-   (for [{:keys [debug/uuid]
-          :as   props} @(f/subscribe [::impl/taps-grouped])]
-     ^{:key uuid} [debug-mark props])])
+  (let [nodes (f/subscribe [::impl/overlay-nodes])]
+    [:div
+     (doall
+      (for [{id  :debug/uuid
+             :as n} @nodes]
+        ^{:key id} [render n]))]))
 
 (defn- body-el
   []
   (.querySelector js/document "body"))
 
-(defn- loader-el
+(defn- overlay-el
   []
-  (.querySelector js/document "#reflet-debug-loader"))
+  (.querySelector js/document "#reflet-debug-overlay"))
 
 (defn- find-tap-point
   "Search siblings for first element that is not a debug tap. If no
@@ -169,16 +174,16 @@
         (r/as-element)
         (react-dom/createPortal (body-el)))))
 
-(defn upsert-loader-el!
+(defn upsert-overlay-el!
   []
-  (or (loader-el)
+  (or (overlay-el)
       (let [el (.createElement js/document "div")]
-        (.setAttribute el "id" "reflet-debug-loader")
+        (.setAttribute el "id" "reflet-debug-overlay")
         (.appendChild (body-el) el)
         el)))
 
 (defn load-debugger!
   []
   (set! d/*debug* debug-tap)
-  (->> (upsert-loader-el!)
-       (dom/render [debug-marks])))
+  (->> (upsert-overlay-el!)
+       (dom/render [overlay])))

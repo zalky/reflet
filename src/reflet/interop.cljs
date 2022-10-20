@@ -74,11 +74,12 @@
   special case where you don't have access to the component's
   lifecycle."
   [ref & {:keys [flush cb]}]
-  (fn [el]
-    (when (and el (not (grab ref)))
-      (reg ref el)
-      (when cb (cb el))
-      (when flush (r/flush!)))))
+  (when-not (:obj (get (.-state db) ref))
+    (fn [el]
+      (when el
+        (reg ref el)
+        (when cb (cb el))
+        (when flush (r/flush!))))))
 
 (defn id
   "Dom element ids cannot start with a number."

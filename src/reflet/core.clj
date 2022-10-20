@@ -70,19 +70,33 @@
                        (merge ~props-sym))]))
 
 (defn- with-ref-cleanup
-  "Clean up clause."
+  "Clean up clause.
+
+  This runs during :component-will-unmount, which technically happens
+  before the :component-did-mount of subsequent lifecycles. However,
+  the first render of the next cycle happens
+  before :component-will-unmount is run, and in order for this to
+  happen, the first props must be computed
+  before :component-will-unmount. This means that the initial props
+  that :component-did-mount sees can never actually see these cleanup
+  changes regardless of whether they are dispatched asynchronously or
+  synchronously. Because of these concurrency considerations there are
+  two golden rules of using transient refs:
+
+  1. Do not use transient refs as joins (map values or link values)
+     in db writes
+
+  2. Do not pass them to contexts outside of the `with-ref` in which
+     they were made"
   [refs]
   (list
    'finally
    `(doseq [[k# ref#] (deref ~refs)]
       (when (and ref# (db/transient? ref#))
         (db/unmount-ref! ref#)
-        ;; Note: dispatch-sync causes errors in Karma test
-        ;; runners. However, app state can be cleaned up async,
-        ;; so prefer regular dispatch.
         (f/dispatch [::with-ref-cleanup ref#])
         (when (= k# ::debug-id)
-          (f/dispatch [::d/tap-cleanup ref#]))))))
+          (f/dispatch [::d/untap ref#]))))))
 
 (defn- component-name
   []
