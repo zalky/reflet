@@ -174,8 +174,10 @@
 
 (defn debug-tap
   [target props]
-  [:div {:class "debug-tap"
-         :ref   (partial tap props target)}])
+  (if-not @target
+    [:div {:class "debug-tap"
+           :ref   (partial tap props target)}]
+    [:<>]))
 
 (defn upsert-overlay-el!
   []

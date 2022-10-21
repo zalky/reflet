@@ -398,6 +398,19 @@
           (assocn* (norm/like tx refs))
           db)))))
 
+(defn valid-updaten?
+  [{::keys [id-attrs]} attr tx]
+  (and (keyword? attr)
+       (every? #(norm/ref? % id-attrs) tx)))
+
+(defn updaten
+  "Updates a normalized link at the given attribute."
+  [db attr f tx]
+  {:pre [(valid-updaten? db attr tx)]}
+  (-> db
+      (update-in [::data attr] f tx)
+      (update ::index touch-queries attr)))
+
 (defn- normalize-and-filter
   [tx data opts]
   (->> tx
