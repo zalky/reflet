@@ -398,11 +398,11 @@
           (assocn* (norm/like tx refs))
           db)))))
 
-(defn- throw-dissocn-error
-  [tx]
-  (-> "dissocn tx must be either all refable, or all links"
-      (ex-info {:tx tx})
-      (throw)))
+(defn- normalize-and-filter
+  [tx data opts]
+  (->> tx
+       (map #(or (norm/refer-one % opts) %))
+       (filter #(contains? data %))))
 
 (defn dissocn
   "Removes the list of entities, refs, or links from the db, touches any
@@ -412,9 +412,7 @@
   (let [opts (get-opts db)]
     (loop [data         (transient (::data db {}))
            index        (transient (::index db {}))
-           [ref & more] (or (norm/refer-many tx opts)
-                            (when (every? keyword? tx) tx)
-                            (throw-dissocn-error tx))]
+           [ref & more] (normalize-and-filter tx data opts)]
       (if ref
         (recur (dissoc! data ref)
                (touch-queries! index ref)
@@ -783,7 +781,7 @@
   (let [result-v (get-result-v query-v)]
     (traced-reaction result-v
       (fn []
-        (->> result-v
+        (->> (rest result-v)
              (map maybe-deref)
              (apply result-fn @input-r))))))
 

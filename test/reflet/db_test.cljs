@@ -104,13 +104,15 @@
                   [:system/uuid 3] {:system/uuid 3
                                     :a [[:system/uuid 1]]}}))))))
 
+
 (deftest remove-test
   (testing "remove normalized entities"
     (testing "nil"
-      (is (thrown? js/Error (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
-                                (db/dissocn nil))))
-      (is (thrown? js/Error (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
-                                (db/dissocn [])))))
+      (is (= (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
+                 (db/dissocn nil))
+             (db {[:system/uuid 1] {:system/uuid 1, :a "a"}})))
+      (is (= (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
+                 (db/dissocn [])))))
 
     (testing "valid"
       (is (= (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
