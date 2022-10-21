@@ -53,12 +53,12 @@
     context))
 
 (f/reg-event-db ::tap
-  (fn [db [_ {id  :debug/id
-              :as props}]]
-    {:pre [id]}
+  (fn [db [_ {id  :debug/uuid
+              :as tap}]]
+    {:pre [(uuid? id)]}
     (-> db
-        (assoc-in [::taps id] props)
-        (db/mergen props))))
+        (assoc-in [::taps [:debug/uuid id]] tap)
+        (db/mergen tap))))
 
 (f/reg-event-db ::untap
   (fn [db [_ ref]]

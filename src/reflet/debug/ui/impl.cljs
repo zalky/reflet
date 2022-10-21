@@ -27,41 +27,39 @@
       {:left (max (- l w) 0)
        :top  (max (- t h) 0)})))
 
-(f/reg-event-db ::init-mark
-  (fn [db [_ self id el]]
-    (->> (db/get-inn db [id :debug/rect])
+(defn rect-attr
+  [debug-type]
+  (-> "debug."
+      (str (name type))
+      (keyword "rect")))
+
+(f/reg-event-db ::init-node
+  (fn [db [_ [_ self] {tap :debug/tap
+                       :as props} el]]
+    (->> (db/get-inn db [tap :debug/rect])
          (position el)
-         (db/assoc-inn db [self :debug.mark/rect]))))
+         (assoc props :cmp/uuid self :debug/rect)
+         (db/mergen db))))
 
-(f/reg-event-db ::init-panel
-  (fn [db [_ self id el]]
-    (->> (db/get-inn db [id :debug/rect])
-         (position el)
-         (db/assoc-inn db [self :debug.panel/rect]))))
-
-(f/reg-pull ::mark-geo
+(f/reg-pull ::rect
   (fn [self]
-    [:debug.mark/rect self])
-  (fn [rect]
-    (select-keys rect [:left :top])))
-
-(f/reg-pull ::panel-geo
-  (fn [self]
-    [:debug.panel/rect self])
+    [:debug/rect self])
   (fn [rect]
     (select-keys rect [:left :top])))
 
 (fsm/reg-fsm ::panel
-  (fn [self id]
+  (fn [self tap]
     {:ref  self
      :attr :debug.panel/state
-     :fsm  {nil    {[::toggle id] ::open}
-            ::open {[::toggle id] nil}}}))
+     :fsm  {nil       {[::toggle tap] ::open}
+            ::open    {[::toggle tap]  nil
+                       [::d/untap tap] ::unmount}
+            ::unmount {[::toggle tap] nil}}}))
 
 (f/reg-no-op ::toggle)
 
 (def cluster-opts
-  {:attrs      {:id :debug/id
+  {:attrs      {:id #(find % :debug/uuid)
                 :x  #(get-in % [:debug/rect :left])
                 :y  #(get-in % [:debug/rect :top])}
    :min-points 2
@@ -69,25 +67,54 @@
 
 (defn create-mark
   [m]
-  (assoc m :debug/type :debug.type/mark))
+  {:debug/type :debug.type/mark
+   :debug/tap  (find m :debug/uuid)})
+
+(defn create-props
+  [m]
+  {:debug/type :debug.type/props
+   :debug/tap  (find m :debug/uuid)})
 
 (defn create-group
   [xs]
-  (let [id (db/random-ref :debug/uuid)]
-    {:debug/type     :debug.type/group
-     :debug/id       id
-     :debug/uuid     (second id)
-     :debug/group    (map create-mark xs)
-     :debug/centroid (c/centroid xs cluster-opts)}))
+  {:debug/type  :debug.type/group
+   :debug/group (map create-mark xs)
+   :debug/pos   (c/centroid xs cluster-opts)})
 
+(f/reg-pull ::props
+  (fn [self]
+    [{:debug/tap
+      [:debug/type
+       :debug/name
+       :debug/refs]}
+     self]))
+ 
+(f/reg-pull ::overlay-panels
+  (fn []
+    [{::overlay-panels
+      [:cmp/uuid
+       :debug/type
+       :debug/tap]}]))
+ 
 (f/reg-sub ::overlay-nodes
   (fn [_]
     (f/subscribe [::d/taps]))
   (fn [taps _]
-    (let [g      (c/cluster (vals taps) cluster-opts)
+    (let [t      (vals taps)
+          g      (c/cluster t cluster-opts)
           marks  (map create-mark (:noise g))
+          props  (map create-props t)
           groups (map create-group (vals (dissoc g :noise)))]
-      (concat marks groups))))
+      (concat marks groups props))))
+
+(f/reg-sub ::overlay
+  (fn [_]
+    [(f/subscribe [::overlay-nodes])
+     (f/subscribe [::overlay-panels])])
+  (fn [[nodes panels] _]
+    (concat nodes panels)))
+
+(f/reg-sub ::render)
 
 ;;;; Dragging
 
@@ -117,7 +144,7 @@
                   (or (.-innerHeight js/window) 0))}))
 
 (f/reg-event-fx ::drag
-  (fn [{db :db} [_ e-drag id dx dy w h]]
+  (fn [{db :db} [_ e-drag ref dx dy w h]]
     (let [{vw :width
            vh :height} (viewport-size)
 
@@ -128,14 +155,14 @@
           t   (-> (max (- y dy) 0)
                   (min (- vh h)))
           pos {:left l :top t}]
-      {:db (db/update-inn db [id :debug.panel/rect] merge pos)})))
+      {:db (db/update-inn db [ref :debug/rect] merge pos)})))
 
 (defn drag-listener!
-  [e-mouse-down db id]
+  [e-mouse-down db ref]
   (let [{l :left
          t :top
          w :width
-         h :height} (db/get-inn db [id :debug.panel/rect])
+         h :height} (db/get-inn db [ref :debug/rect])
 
         x  (.-clientX e-mouse-down)
         y  (.-clientY e-mouse-down)
@@ -144,7 +171,7 @@
     (.preventDefault e-mouse-down)
     (fn [e-drag]
       (.preventDefault e-drag)
-      (f/dispatch-sync [::drag e-drag id dx dy w h]))))
+      (f/dispatch-sync [::drag e-drag ref dx dy w h]))))
 
 (defn drag-unlistener!
   [listener]
@@ -154,8 +181,8 @@
     (f/dispatch-sync [::drag-stop!])))
 
 (f/reg-event-fx ::drag!
-  (fn [{db :db} [_ e-mouse-down id]]
-    (let [listener   (drag-listener! e-mouse-down db id)
+  (fn [{db :db} [_ e-mouse-down ref]]
+    (let [listener   (drag-listener! e-mouse-down db ref)
           unlistener (drag-unlistener! listener)]
       (.addEventListener js/document "mousemove" listener)
       (.addEventListener js/document "mouseup" unlistener)

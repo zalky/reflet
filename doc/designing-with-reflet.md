@@ -53,3 +53,7 @@ unmounts:
    2. Do not pass them to contexts outside of the `with-ref` in which
       they were made
 
+4. Careful with where you supply refs and where you supply uuids.
+
+5. Careful not to confuse props attributes with unique attributes,
+   especially when merging.

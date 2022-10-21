@@ -107,12 +107,10 @@
 (deftest remove-test
   (testing "remove normalized entities"
     (testing "nil"
-      (is (= (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
-                 (db/dissocn nil))
-             (db {[:system/uuid 1] {:system/uuid 1, :a "a"}})))
-      (is (= (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
-                 (db/dissocn []))
-             (db {[:system/uuid 1] {:system/uuid 1, :a "a"}}))))
+      (is (thrown? js/Error (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
+                                (db/dissocn nil))))
+      (is (thrown? js/Error (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
+                                (db/dissocn [])))))
 
     (testing "valid"
       (is (= (-> (db {[:system/uuid 1] {:system/uuid 1, :a "a"}} :tick 0)
@@ -172,14 +170,14 @@
              (db {:attr [[:system/uuid 1]]})))
       (is (= (db/assocn (db) :attr {:system/uuid 1})
              (db {[:system/uuid 1] {:system/uuid 1}
-                  :attr [:system/uuid 1]})))      
+                  :attr            [:system/uuid 1]})))      
       (is (= (db/assocn (db) :attr [{:system/uuid 1}])
              (db {[:system/uuid 1] {:system/uuid 1}
-                  :attr [[:system/uuid 1]]})))
+                  :attr            [[:system/uuid 1]]})))
       (is (= (db/assocn (db) :attr [{:system/uuid 1} {:system/uuid 2}])
              (db {[:system/uuid 2] {:system/uuid 2}
                   [:system/uuid 1] {:system/uuid 1}
-                  :attr [[:system/uuid 1] [:system/uuid 2]]}))))))
+                  :attr            [[:system/uuid 1] [:system/uuid 2]]}))))))
 
 (deftest pull-test
   (let [dbv (db {[:system/uuid "name"]     {:system/uuid    "name"

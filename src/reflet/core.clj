@@ -123,7 +123,7 @@
 (defn- wrap-debug
   [refs target d-id body opts]
   `(if ~(debug? opts)
-     (let [p# {:debug/id   ~d-id
+     (let [p# {:debug/type :debut.type/tap
                :debug/uuid (second ~d-id)
                :debug/name ~(component-name)
                :debug/refs (deref ~refs)}]

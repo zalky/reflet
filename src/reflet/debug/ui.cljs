@@ -58,10 +58,37 @@
   [x]
   [:div (str x)])
 
+(defmulti render
+  :debug/type)
+
+(defmethod render :debug.type/mark
+  [{:debug/keys [tap] :as props}]
+  (f/with-ref {:cmp/uuid [debug/self]
+               :el/uuid  [debug/el]
+               :debug    false}
+    (let [rect (f/subscribe [::impl/rect self])
+          cb   #(f/dispatch [::impl/init-node self props %])]
+      [:div {:ref      (i/el! el :cb cb)
+             :class    "debug-mark"
+             :style    @rect
+             :on-click #(f/dispatch [::impl/toggle tap])}
+       [g/mark-icon]])))
+
+(defmethod render :debug.type/group
+  [{:debug/keys [group pos]}]
+  (f/with-ref {:cmp/uuid [debug/self]
+               :debug    false}
+    [:div {:class    "debug-mark group"
+           :style    {:left (:x pos)
+                      :top  (:y pos)}
+           :on-click #(f/dispatch [::impl/toggle self])}
+     [g/mark-icon {:group true}]]))
+
 (defn- debug-refs
-  [{:debug/keys [refs]}]
-  [:div {:class "debug-refs"}
-   [debug-value refs]])
+  [{:debug/keys [self]}]
+  (when-let [props @(f/subscribe [::impl/props self])]
+    [:div {:class "debug-refs"}
+     [debug-value (:debug/refs props)]]))
 
 (def component-name-re
   #"(.*)\.([^.]+)+")
@@ -73,66 +100,46 @@
     s))
 
 (defn- debug-header
-  [{:debug/keys [name self]}]
-  (let [dragging (f/subscribe [::impl/dragging])
+  [{:debug/keys [self]}]
+  (let [props    (f/subscribe [::impl/props self])
+        dragging (f/subscribe [::impl/dragging])
         on-md    #(f/dispatch-sync [::impl/drag! % self])]
-    [:div {:on-mouse-down on-md
-           :class         ["debug-header"
-                           (when @dragging "dragging")]}
-     (component-name name)]))
+    [:div {:class ["debug-header" (when @dragging "dragging")]
+           :on-mouse-down on-md}
+     (some-> @props
+             (:debug/name)
+             (component-name))]))
 
-(defn- debug-panel
-  [{:debug/keys [id] :as props}]
+(defmethod render :debug.type/props
+  [{:debug/keys [tap] :as props}]
   (f/with-ref {:cmp/uuid [debug/self]
-               :el/uuid  [debug/el]
                :in       props
                :debug    false}
-    (let [state (f/subscribe [::impl/panel self id])
-          geo   (f/subscribe [::impl/panel-geo self])
-          cb    #(f/dispatch [::impl/init-panel self id %])]
-      (when @state
-        [:div {:ref   (i/el! el :cb cb)
-               :class "debug-panel"
-               :style @geo}
-         [:div {:class "debug-content"}
-          [debug-header props]
-          [debug-refs props]]
-         [:div]]))))
+    (f/with-ref {:el/uuid [debug/el]}
+      (let [state (f/subscribe [::impl/panel self tap])
+            rect  (f/subscribe [::impl/rect self])
+            cb    #(f/dispatch [::impl/init-node self props %])]
+        (when @state
+          [:div {:ref   (i/el! el :cb cb)
+                 :class "debug-panel"
+                 :style @rect}
+           [:div {:class "debug-content"}
+            [debug-header props]
+            [debug-refs props]]
+           [:div]])))))
 
-(defmulti render
-  :debug/type)
-
-(defmethod render :debug.type/mark
-  [{:debug/keys [id]}]
-  (f/with-ref {:cmp/uuid [debug/self]
-               :el/uuid  [debug/el]
-               :debug    false}
-    (let [geo (f/subscribe [::impl/mark-geo self])
-          cb  #(f/dispatch [::impl/init-mark self id %])]
-      [:div {:ref      (i/el! el :cb cb)
-             :class    "debug-mark"
-             :style    @geo
-             :on-click #(f/dispatch [::impl/toggle id])}
-       [g/mark-icon]])))
-
-(defmethod render :debug.type/group
-  [{:debug/keys [group centroid]}]
-  (f/with-ref {:cmp/uuid [debug/self]
-               :debug    false}
-    [:div {:class    "debug-mark group"
-           :style    {:left (:x centroid)
-                      :top  (:y centroid)}
-           :on-click #(f/dispatch [::impl/toggle self])}
-     [g/mark-icon {:group true}]]))
+(defn overlay-id
+  [{tap :debug/tap
+    t   :debug/type}]
+  (str t (second tap)))
 
 (defn overlay
   []
-  (let [nodes (f/subscribe [::impl/overlay-nodes])]
+  (let [nodes (f/subscribe [::impl/overlay])]
     [:div
      (doall
-      (for [{id  :debug/uuid
-             :as n} @nodes]
-        ^{:key id} [render n]))]))
+      (for [n @nodes]
+        ^{:key (overlay-id n)} [render n]))]))
 
 (defn- body-el
   []
@@ -167,12 +174,8 @@
 
 (defn debug-tap
   [target props]
-  (if-not @target
-    [:div {:class "debug-tap"
-           :ref   (partial tap props target)}]
-    (-> [debug-panel props]
-        (r/as-element)
-        (react-dom/createPortal (body-el)))))
+  [:div {:class "debug-tap"
+         :ref   (partial tap props target)}])
 
 (defn upsert-overlay-el!
   []

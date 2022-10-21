@@ -398,17 +398,23 @@
           (assocn* (norm/like tx refs))
           db)))))
 
+(defn- throw-dissocn-error
+  [tx]
+  (-> "dissocn tx must be either all refable, or all links"
+      (ex-info {:tx tx})
+      (throw)))
+
 (defn dissocn
-  "Removes the list of entities from the db, touches any queries
-  tracking those entities in the index, and increments the db and
-  index ticks. Does not remove any nested entities in tx."
+  "Removes the list of entities, refs, or links from the db, touches any
+  queries tracking those entities in the index, and increments the db
+  and index ticks. Does not remove any nested entities in tx."
   [db & tx]
   (let [opts (get-opts db)]
     (loop [data         (transient (::data db {}))
            index        (transient (::index db {}))
            [ref & more] (or (norm/refer-many tx opts)
-                            (when (every? keyword? tx)
-                              tx))]
+                            (when (every? keyword? tx) tx)
+                            (throw-dissocn-error tx))]
       (if ref
         (recur (dissoc! data ref)
                (touch-queries! index ref)
