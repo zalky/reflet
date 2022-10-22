@@ -67,7 +67,8 @@
                :el/uuid  [debug/el]
                :debug    false}
     (let [rect (f/subscribe [::impl/rect self])
-          cb   #(f/dispatch [::impl/init-node self props %])]
+          cb   #(do (f/dispatch [::impl/set-rect self tap el])
+                    (f/dispatch [::impl/init-node self props]))]
       [:div {:ref      (i/el! el :cb cb)
              :class    "debug-mark"
              :style    @rect
@@ -102,7 +103,7 @@
   [{:debug/keys [self]}]
   (let [props    (f/subscribe [::impl/props self])
         dragging (f/subscribe [::impl/dragging])
-        on-md    #(f/dispatch-sync [::impl/drag! % self])]
+        on-md    #(f/dispatch-sync [::impl/drag! self %])]
     [:div {:class ["debug-header" (when @dragging "dragging")]
            :on-mouse-down on-md}
      (some-> @props props-name)]))
@@ -113,10 +114,10 @@
                :in       props
                :debug    false}
     (f/with-ref {:el/uuid [debug/el]}
-      (let [state (f/subscribe [::impl/panel self tap])
+      (let [state (f/subscribe [::impl/panel self tap el])
             rect  (f/subscribe [::impl/rect self])
-            cb    #(f/dispatch [::impl/init-node self props %])]
-        (when @state
+            cb    #(f/dispatch [::impl/init-node self props])]
+        (when (isa? impl/state-h @state ::impl/display)
           [:div {:ref   (i/el! el :cb cb)
                  :class "debug-panel"
                  :style @rect}
@@ -166,7 +167,7 @@
            (reset! target)
            (impl/rect)
            (assoc props :debug/rect)
-           (vector ::d/tap)
+           (vector ::d/tap (find props :debug/id))
            (f/dispatch)))
 
 (defn debug-tap

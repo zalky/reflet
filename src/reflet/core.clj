@@ -181,6 +181,10 @@
    (when result-fn [result-fn])))
 
 (defmacro once
-  [forms & body]
-  `(r/with-let [_# ~forms]
-     ~@body))
+  [& forms]
+  (let [conditional (if (second forms) (first forms) true)
+        expr        (or (second forms) (first forms))]
+    `(r/with-let [r# (volatile! true)]
+       (when (and ~conditional (deref r#))
+         (vreset! r# false)
+         ~expr))))

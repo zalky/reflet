@@ -1,9 +1,11 @@
 (ns reflet.debug.ui.impl
-  (:require [reflet.core :as f]
+  (:require [cinch.core :as util]
+            [reflet.core :as f]
             [reflet.db :as db]
             [reflet.debug :as d]
             [reflet.debug.cluster :as c]
-            [reflet.fsm :as fsm]))
+            [reflet.fsm :as fsm]
+            [reflet.interop :as i]))
 
 (defn rect
   "Keep in mind that .getBoundingClientRect will return zeros during
@@ -34,12 +36,15 @@
       (keyword "rect")))
 
 (f/reg-event-db ::init-node
-  (fn [db [_ [_ self] {tap :debug/tap
-                       :as props} el]]
-    (->> (db/get-inn db [tap :debug/rect])
-         (position el)
-         (assoc props :cmp/uuid self :debug/rect)
+  (fn [db [_ self props]]
+    (->> (apply assoc props self)
          (db/mergen db))))
+
+(f/reg-event-db ::set-rect
+  (fn [db [_ self tap el]]
+    (->> (db/get-inn db [tap :debug/rect])
+         (position (i/grab el))
+         (db/assoc-inn db [self :debug/rect]))))
 
 (f/reg-pull ::rect
   (fn [self]
@@ -47,12 +52,19 @@
   (fn [rect]
     (select-keys rect [:left :top])))
 
+(def state-h
+  (util/derive-pairs
+   [[::mount ::open] ::display]))
+
 (fsm/reg-fsm ::panel
-  (fn [self tap]
+  (fn [self tap el]
     {:ref  self
      :attr :debug.panel/state
-     :fsm  {nil       {[::toggle tap] ::open}
-            ::open    {[::toggle tap]  nil
+     :fsm  {nil       {[::toggle tap] ::mount}
+            ::mount   {[::init-node self] {:to ::open :dispatch [::set-rect self tap el]}}
+            ::open    {[::toggle tap]  ::closed
+                       [::d/untap tap] ::unmount}
+            ::closed  {[::toggle tap]  ::open
                        [::d/untap tap] ::unmount}
             ::unmount {[::toggle tap] nil}}}))
 
@@ -95,14 +107,14 @@
        :debug/line
        :debug/refs]}
      self]))
- 
+
 (f/reg-pull ::overlay-panels
   (fn []
     [{::overlay-panels
       [:cmp/uuid
        :debug/type
        :debug/tap]}]))
- 
+
 (f/reg-sub ::overlay-nodes
   (fn [_]
     (f/subscribe [::d/taps]))
@@ -165,7 +177,7 @@
       {:db (db/update-inn db [ref :debug/rect] merge pos)})))
 
 (defn drag-listener!
-  [e-mouse-down db ref]
+  [db ref e-mouse-down]
   (let [{l :left
          t :top
          w :width
@@ -188,8 +200,8 @@
     (f/dispatch-sync [::drag-stop!])))
 
 (f/reg-event-fx ::drag!
-  (fn [{db :db} [_ e-mouse-down ref]]
-    (let [listener   (drag-listener! e-mouse-down db ref)
+  (fn [{db :db} [_ ref e-mouse-down]]
+    (let [listener   (drag-listener! db ref e-mouse-down)
           unlistener (drag-unlistener! listener)]
       (.addEventListener js/document "mousemove" listener)
       (.addEventListener js/document "mouseup" unlistener)

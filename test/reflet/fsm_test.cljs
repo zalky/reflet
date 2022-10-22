@@ -56,6 +56,25 @@
          (f/dispatch [::do-not-advance])
          (is (nil? @state))
          (f/dispatch [::advance self])
+         (is (= ::stop @state))))))
+
+  (t/testing "Advance stem match"
+    (fix/run-test-sync
+
+     (fsm/reg-fsm ::test
+       (fn [self]
+         {:ref  self
+          :stop ::stop
+          :fsm  {nil {[::advance self] ::stop}}}))
+
+     (f/reg-no-op ::do-not-advance ::advance)
+
+     (f/with-ref {:cmp/uuid [fsm/self]}
+       (let [state (f/subscribe [::test self])]
+         (is (nil? @state))
+         (f/dispatch [::do-not-advance])
+         (is (nil? @state))
+         (f/dispatch [::advance self "more"])
          (is (= ::stop @state)))))))
 
 (t/deftest idempotent-lifecycles-test

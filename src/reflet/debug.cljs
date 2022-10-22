@@ -58,11 +58,10 @@
   ;; the `:ref` callback, or the `:component-did-mount` phase of the
   ;; component lifecycle. Must not dispatch in a `with-let`, where it
   ;; will happen during the first render.
-  (fn [db [_ tap]]
-    (let [id (find tap :debug/id)]
-      (-> db
-          (assoc-in [::taps id] tap)
-          (db/mergen tap)))))
+  (fn [db [_ ref tap]]
+    (-> db
+        (assoc-in [::taps ref] tap)
+        (db/mergen tap))))
 
 (f/reg-event-fx ::untap
   (fn [{db :db} [_ ref]]
