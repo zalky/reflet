@@ -4,6 +4,7 @@
             [clojure.walk :as w]
             [re-frame.core :as f]
             [reagent.core :as r]
+            [reagent.ratom :as r*]
             [reflet.db :as db]
             [reflet.debug :as d]
             [reflet.ref-spec :as rs]))
@@ -92,11 +93,11 @@
   (list
    'finally
    `(doseq [[k# ref#] (deref ~refs)]
+      (when (= k# ::debug-id)
+        (f/dispatch [::d/untap ref#]))
       (when (and ref# (db/transient? ref#))
         (db/unmount-ref! ref#)
-        (f/dispatch [::with-ref-cleanup ref#])
-        (when (= k# ::debug-id)
-          (f/dispatch [::d/untap ref#]))))))
+        (f/dispatch [::with-ref-cleanup ref#])))))
 
 (defn- component-name
   []
@@ -106,12 +107,18 @@
 (defn- debug?
   [{:keys [debug]
     :or   {debug true}}]
-  `(and ~debug d/*debug*))
+  `(and (r*/reactive?) ~debug d/*debug*))
 
 (defn- debug-id
+  "Produces a debug id that is unique within a dom tree, but not across
+  trees with the same topology."
   [refs opts]
   `(when ~(debug? opts)
-     (let [r# (db/random-ref :debug/uuid {:transient true})]
+     (let [^clj c# r*/*ratom-context*
+           g#      (or (.-withRefGeneration c#) 0)
+           id#     (keyword ~(component-name) g#)
+           r#      (vector :debug/id id#)]
+       (set! (.-withRefGeneration c#) (inc g#))
        (vswap! ~refs assoc ::debug-id r#)
        (db/mount-ref! r#)
        r#)))
@@ -121,11 +128,11 @@
   (util/split-keys bindings [:in :meta :debug]))
 
 (defn- wrap-debug
-  [refs target d-id body opts]
+  [refs target d-id env body opts]
   `(if ~(debug? opts)
      (let [p# {:debug/type :debut.type/tap
-               :debug/uuid (second ~d-id)
-               :debug/name ~(component-name)
+               :debug/id   (second ~d-id)
+               :debug/line ~(:line env)
                :debug/refs (deref ~refs)}]
        [:<>
         (d/*debug* ~target p#)
@@ -150,7 +157,7 @@
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs refs parsed env opts))
-         ~(wrap-debug refs target d-id body opts))
+         ~(wrap-debug refs target d-id env body opts))
        ~(with-ref-cleanup refs))))
 
 (defn- no-eval-keywords

@@ -93,11 +93,10 @@
 (def component-name-re
   #"(.*)\.([^.]+)+")
 
-(defn- component-name
-  [s]
-  (if-let [[_ ns n] (re-find component-name-re s)]
-    (str ns "/" n)
-    s))
+(defn- props-name
+  [{:debug/keys [id line]}]
+  (if-let [[_ ns n] (re-find component-name-re (namespace id))]
+    [:span (str ns "/" n  " : L" line)]))
 
 (defn- debug-header
   [{:debug/keys [self]}]
@@ -106,9 +105,7 @@
         on-md    #(f/dispatch-sync [::impl/drag! % self])]
     [:div {:class ["debug-header" (when @dragging "dragging")]
            :on-mouse-down on-md}
-     (some-> @props
-             (:debug/name)
-             (component-name))]))
+     (some-> @props props-name)]))
 
 (defmethod render :debug.type/props
   [{:debug/keys [tap] :as props}]
@@ -139,7 +136,7 @@
     [:div
      (doall
       (for [n @nodes]
-        ^{:key (overlay-id n)} [render n]))]))
+        ^{:key (:overlay/id n)} [render n]))]))
 
 (defn- body-el
   []
@@ -173,6 +170,11 @@
            (f/dispatch)))
 
 (defn debug-tap
+  "::d/tap must happen after the ::d/untap of the previous react
+  lifecycle. To guarantee this, ::d/tap must be invoked in either the
+  `:ref` callback, or the `:component-did-mount` phase of the
+  component lifecycle. Must not dispatch ::d/tap in a `with-let`,
+  where it will happen during the first render."
   [target props]
   (if-not @target
     [:div {:class "debug-tap"

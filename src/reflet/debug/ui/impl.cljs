@@ -59,7 +59,7 @@
 (f/reg-no-op ::toggle)
 
 (def cluster-opts
-  {:attrs      {:id #(find % :debug/uuid)
+  {:attrs      {:id #(find % :debug/id)
                 :x  #(get-in % [:debug/rect :left])
                 :y  #(get-in % [:debug/rect :top])}
    :min-points 2
@@ -67,25 +67,32 @@
 
 (defn create-mark
   [m]
-  {:debug/type :debug.type/mark
-   :debug/tap  (find m :debug/uuid)})
+  (let [ref (find m :debug/id)]
+    {:debug/type :debug.type/mark
+     :overlay/id (str "mark" (second ref))
+     :debug/tap  ref}))
 
 (defn create-props
   [m]
-  {:debug/type :debug.type/props
-   :debug/tap  (find m :debug/uuid)})
+  (let [ref (find m :debug/id)]
+    {:debug/type :debug.type/props
+     :overlay/id (str "props" (second ref))
+     :debug/tap  ref}))
 
 (defn create-group
   [xs]
-  {:debug/type  :debug.type/group
-   :debug/group (map create-mark xs)
-   :debug/pos   (c/centroid xs cluster-opts)})
+  (let [pos (c/centroid xs cluster-opts)]
+    {:debug/type  :debug.type/group
+     :overlay/id  (str "group" pos)
+     :debug/group (map create-mark xs)
+     :debug/pos   pos}))
 
 (f/reg-pull ::props
   (fn [self]
     [{:debug/tap
       [:debug/type
-       :debug/name
+       :debug/id
+       :debug/line
        :debug/refs]}
      self]))
  
