@@ -3,7 +3,7 @@
             [cljs.spec.alpha :as s]
             [cljs.test :as t :refer [is]]
             [day8.re-frame.test :as rft]
-            [re-frame.db :as fdb]
+            [re-frame.db :as dbr]
             [re-frame.registrar :as reg]
             [reagent.ratom :as r]
             [reflet.core :as f]
@@ -101,7 +101,7 @@
                ;; We would normally not call fsm/start! outside an
                ;; animation frame, but these tests are synchronous so
                ;; we are ok.
-               (fsm/start! @fdb/app-db [::idempotent self])
+               (fsm/start! @dbr/app-db [::idempotent self])
                (is (fsm/started? [::idempotent self]))
                (is (= handler (get-handler))))
 
@@ -111,7 +111,7 @@
                (is (nil? (get-handler)))))))))))
 
 (t/deftest fsm-lifecycle-test
-  (t/testing "Start and stop fx"
+  (t/testing "Start and stop events"
     (fix/run-test-sync
 
      (fsm/reg-fsm ::lifecycle
@@ -134,6 +134,23 @@
          (f/dispatch [::advance self])
          (is (= ::started @state))
          (is (not= ::failed-to-stop @state)))))))
+
+(t/deftest fsm-start-in-state-test
+  (t/testing "Start in state"
+    (fix/run-test-sync
+
+     (fsm/reg-fsm ::start-in-state
+       (fn [self]
+         {:ref self
+          :to  ::starting
+          :fsm {nil        nil
+                ::starting {[::advance self] ::started}}}))
+
+     (f/reg-no-op ::advance)
+
+     (f/with-ref {:cmp/uuid [fsm/self]}
+       (let [state (f/subscribe [::start-in-state self])]
+         (is (= ::starting @state)))))))
 
 (t/deftest fsm-initial-dispatch-test
   (t/testing "FSM initial dispatch"

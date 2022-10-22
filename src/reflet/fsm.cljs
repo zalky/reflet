@@ -201,7 +201,7 @@
             [clojure.set :as set]
             [clojure.spec.alpha :as s]
             [re-frame.core :as f]
-            [re-frame.db :as fdb]
+            [re-frame.db :as dbr]
             [re-frame.fx :as fx]
             [re-frame.registrar :as reg]
             [reagent.ratom :as r]
@@ -325,7 +325,7 @@
 
 (s/def ::fsm
   (s/keys :req-un [::ref :state-map/fsm]
-          :opt-un [::stop ::dispatch ::dispatch-later]))
+          :opt-un [::stop ::to ::dispatch ::dispatch-later]))
 
 (defn- parse
   [fsm]
@@ -436,28 +436,40 @@
                 (assoc :fsm-v fsm-v))
         (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
-(defn- set-first-timeout!
-  [{:keys [ref attr]
+(f/reg-event-db ::advance
+  [db/inject-query-index
+   debug/debug-tap-events
+   i/add-global-interceptors]
+  (fn [db [_ fsm-v to]]
+    (let [{:keys [ref attr]} (fsm-spec fsm-v)]
+      (db/assoc-inn db [ref attr] to))))
+
+(defn- init!
+  [{:keys [ref attr fsm-v]
     :as   fsm} timeout db]
   (->> (db/get-inn db [ref attr])
-       (set-timeout! fsm timeout)))
+       (set-timeout! fsm timeout))
+  (when (contains? fsm :to)
+    (f/dispatch [::advance fsm-v (:to fsm)])))
 
 (defn started?
   [fsm-v]
   (i/global-interceptor-registered? fsm-v))
 
 (defn- start!
+  "Do not use directly. Prefer ::start event or subscription."
   [db fsm-v]
   (let [fsm (parse (fsm-spec fsm-v))]
     (when-not (started? fsm-v)
       (let [timeout (atom nil)]
-        (set-first-timeout! fsm timeout db)
+        (init! fsm timeout db)
         (->> (partial advance fsm timeout)
              (f/enrich)
              (i/reg-global-interceptor fsm-v))
         (fsm-dispatch! fsm)))))
 
 (defn- stop!
+  "Do not use directly. Prefer ::stop event or subscription."
   [fsm-v]
   (when (i/same-cycle? fsm-v)
     (i/clear-global-interceptor fsm-v)))
@@ -492,23 +504,29 @@
    :id :add-global-interceptors
    :after fsm-lifecycle-interceptor*))
 
-(f/reg-fx ::start
-  (fn [[db fsm-v]]
-    (start! db fsm-v)))
+(f/reg-fx ::start-not-safe
+  ;; Do not use these directly, prefer events
+  (fn [fsm-v]
+    (start! (.-state dbr/app-db) fsm-v)))
 
-(f/reg-fx ::stop
-  (fn [[_ fsm-v]]
+(f/reg-fx ::stop-not-safe
+  ;; Do not use these directly, prefer events
+  (fn [fsm-v]
     (stop! fsm-v)))
 
-(f/reg-event-fx ::start
-  fsm-lifecycle-interceptor
-  (fn [_ [_ fsm-v]]
-    {::start fsm-v}))
+ (f/reg-event-fx ::start
+   ;; Stopping and starting FSMs during the event phase is only safe
+   ;; is that is the only thing that is happening.
+   fsm-lifecycle-interceptor
+   (fn [_ [_ fsm-v]]
+     {::start-not-safe fsm-v}))
 
 (f/reg-event-fx ::stop
+   ;; Stopping and starting FSMs during the event phase is only safe
+   ;; is that is the only thing that is happening.
   fsm-lifecycle-interceptor
   (fn [_ [_ fsm-v]]
-    {::stop fsm-v}))
+    {::stop-not-safe fsm-v}))
 
 ;;;; Subs
 

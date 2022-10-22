@@ -35,10 +35,11 @@
       (str (name type))
       (keyword "rect")))
 
-(f/reg-event-db ::init-node
+(f/reg-event-db ::init-props
   (fn [db [_ self props]]
-    (->> (apply assoc props self)
-         (db/mergen db))))
+    (as-> (apply assoc props self) %
+      (dissoc % :debug/el)
+      (db/mergen db %))))
 
 (f/reg-event-db ::set-rect
   (fn [db [_ self tap el]]
@@ -61,14 +62,14 @@
     {:ref  self
      :attr :debug.panel/state
      :fsm  {nil       {[::toggle tap] ::mount}
-            ::mount   {[::init-node self] {:to ::open :dispatch [::set-rect self tap el]}}
+            ::mount   {[::props-ready self] {:to ::open :dispatch [::set-rect self tap el]}}
             ::open    {[::toggle tap]  ::closed
                        [::d/untap tap] ::unmount}
             ::closed  {[::toggle tap]  ::open
                        [::d/untap tap] ::unmount}
             ::unmount {[::toggle tap] nil}}}))
 
-(f/reg-no-op ::toggle)
+(f/reg-no-op ::toggle ::props-ready)
 
 (def cluster-opts
   {:attrs      {:id #(find % :debug/id)

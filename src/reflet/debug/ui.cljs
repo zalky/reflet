@@ -63,12 +63,11 @@
 
 (defmethod render :debug.type/mark
   [{:debug/keys [tap] :as props}]
-  (f/with-ref {:cmp/uuid [debug/self]
-               :el/uuid  [debug/el]
-               :debug    false}
+  (f/with-ref* {:cmp/uuid [debug/self]
+                :el/uuid  [debug/el]}
     (let [rect (f/subscribe [::impl/rect self])
           cb   #(do (f/dispatch [::impl/set-rect self tap el])
-                    (f/dispatch [::impl/init-node self props]))]
+                    (f/dispatch [::impl/init-props self props]))]
       [:div {:ref      (i/el! el :cb cb)
              :class    "debug-mark"
              :style    @rect
@@ -77,8 +76,7 @@
 
 (defmethod render :debug.type/group
   [{:debug/keys [group pos]}]
-  (f/with-ref {:cmp/uuid [debug/self]
-               :debug    false}
+  (f/with-ref* {:cmp/uuid [debug/self]}
     [:div {:class    "debug-mark group"
            :style    {:left (:x pos)
                       :top  (:y pos)}
@@ -87,9 +85,13 @@
 
 (defn- debug-refs
   [{:debug/keys [self]}]
-  (when-let [props @(f/subscribe [::impl/props self])]
-    [:div {:class "debug-refs"}
-     [debug-value (:debug/refs props)]]))
+  (f/with-ref* {:el/uuid [el]}
+    (let [props (f/subscribe [::impl/props self])
+          cb    #(f/dispatch [::impl/props-ready self])]
+      (when @props
+        [:div {:class "debug-refs"
+               :ref   (i/el! el :cb cb)}
+         [debug-value (:debug/refs @props)]]))))
 
 (def component-name-re
   #"(.*)\.([^.]+)+")
@@ -110,21 +112,20 @@
 
 (defmethod render :debug.type/props
   [{:debug/keys [tap] :as props}]
-  (f/with-ref {:cmp/uuid [debug/self]
-               :in       props
-               :debug    false}
-    (f/with-ref {:el/uuid [debug/el]}
-      (let [state (f/subscribe [::impl/panel self tap el])
-            rect  (f/subscribe [::impl/rect self])
-            cb    #(f/dispatch [::impl/init-node self props])]
-        (when (isa? impl/state-h @state ::impl/display)
-          [:div {:ref   (i/el! el :cb cb)
-                 :class "debug-panel"
-                 :style @rect}
-           [:div {:class "debug-content"}
-            [debug-header props]
-            [debug-refs props]]
-           [:div]])))))
+  (f/with-ref* {:cmp/uuid [debug/self]
+                :el/uuid  [debug/el]
+                :in       props}
+    (let [state (f/subscribe [::impl/panel self tap el])
+          rect  (f/subscribe [::impl/rect self])
+          cb    #(f/dispatch [::impl/init-props self props])]
+      (when (isa? impl/state-h @state ::impl/display)
+        [:div {:ref   (i/el! el :cb cb)
+               :class "debug-panel"
+               :style @rect}
+         [:div {:class "debug-content"}
+          [debug-header props]
+          [debug-refs props]]
+         [:div]]))))
 
 (defn overlay-id
   [{tap :debug/tap
@@ -133,11 +134,10 @@
 
 (defn overlay
   []
-  (let [nodes (f/subscribe [::impl/overlay])]
-    [:div
-     (doall
-      (for [n @nodes]
-        ^{:key (:overlay/id n)} [render n]))]))
+  [:div
+   (doall
+    (for [n @(f/subscribe [::impl/overlay])]
+      ^{:key (:overlay/id n)} [render n]))])
 
 (defn- body-el
   []

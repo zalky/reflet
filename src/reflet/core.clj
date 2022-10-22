@@ -137,8 +137,7 @@
        [:<>
         (d/*debug* ~target p#)
         (do ~@body)])
-     (binding [d/*debug* false]
-       (do ~@body))))
+     (do ~@body)))
 
 (defmacro with-ref
   "Generates entity references. Optionally rebinds props attributes,
@@ -159,6 +158,12 @@
                (bind-refs refs parsed env opts))
          ~(wrap-debug refs target d-id env body opts))
        ~(with-ref-cleanup refs))))
+
+(defmacro with-ref*
+  "Like with-ref but debug disabled. For implementing the debug UI."
+  [bindings & body]
+  `(with-ref ~(assoc bindings :debug false)
+     ~@body))
 
 (defn- no-eval-keywords
   [expr]
