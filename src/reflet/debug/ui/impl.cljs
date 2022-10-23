@@ -55,19 +55,16 @@
 
 (def state-h
   (util/derive-pairs
-   [[::mount ::open] ::display]))
+   [[::mounted ::open] ::display]))
 
 (fsm/reg-fsm ::panel
   (fn [self tap el]
     {:ref  self
      :attr :debug.panel/state
-     :fsm  {nil       {[::toggle tap] ::mount}
-            ::mount   {[::props-ready self] {:to ::open :dispatch [::set-rect self tap el]}}
-            ::open    {[::toggle tap]  ::closed
-                       [::d/untap tap] ::unmount}
-            ::closed  {[::toggle tap]  ::open
-                       [::d/untap tap] ::unmount}
-            ::unmount {[::toggle tap] nil}}}))
+     :fsm  {nil       {[::toggle tap] ::mounted}
+            ::mounted {[::props-ready self] {:to ::open :dispatch [::set-rect self tap el]}}
+            ::open    {[::toggle tap] ::closed}
+            ::closed  {[::toggle tap] ::open}}}))
 
 (f/reg-no-op ::toggle ::props-ready)
 

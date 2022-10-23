@@ -320,8 +320,32 @@
          ::max-one-entity-transition
          (s/conformer compile-transitions)))
 
+(defn distribute-transitions
+  [fsm]
+  (letfn [(r2 [transitions]
+            (fn [acc k m]
+              (->> transitions
+                   (merge m)
+                   (assoc acc k))))
+
+          (r1 [acc [t form] transitions]
+            (case t
+              :state (assoc acc form transitions)
+              :fsm   (->> form
+                          (reduce-kv (r2 transitions) {})
+                          (merge acc))))]
+    (reduce-kv r1 {} fsm)))
+
+(s/def :parse-recursive/fsm
+  (s/and (s/map-of (s/or :state ::state
+                         :fsm   :parse-recursive/fsm)
+                   (s/nilable map?)
+                   :conform-keys true)
+         (s/conformer distribute-transitions)))
+
 (s/def :state-map/fsm
-  (s/map-of ::state (s/nilable ::transitions)))
+  (s/and :parse-recursive/fsm
+         (s/map-of ::state (s/nilable ::transitions))))
 
 (s/def ::fsm
   (s/keys :req-un [::ref :state-map/fsm]

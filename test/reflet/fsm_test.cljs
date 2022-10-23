@@ -513,3 +513,49 @@
          (is (= ::middle @state))
          (rft/wait-for [::timeout-success]
            (is (= ::finish @state))))))))
+
+(t/deftest recursive-fsm-test
+  (t/testing "Recursive FSM definition"
+    (fix/run-test-sync
+
+     (fsm/reg-fsm ::recursive
+       (fn [self]
+         {:ref  self
+          :stop ::stop
+          :fsm  {{nil  {[::advance self] ::s1}
+                  ::s1 {[::advance self] ::s2}
+                  ::s2 {[::advance self] ::s3}} {[::restart self] nil}
+
+                 ::s3 {[::advance self] ::stop}}}))
+
+     (f/reg-no-op ::advance ::restart)
+
+     (f/with-ref {:cmp/uuid [fsm/self]}
+       (let [state (f/subscribe [::recursive self])]
+         (is (nil? @state))
+         (f/dispatch [::restart self])
+         (is (nil? @state))
+
+         (f/dispatch [::advance self])
+         (is (= ::s1 @state))
+         (f/dispatch [::restart self])
+         (is (nil? @state))
+
+         (f/dispatch [::advance self])
+         (is (= ::s1 @state))
+         (f/dispatch [::advance self])
+         (is (= ::s2 @state))
+         (f/dispatch [::restart self])
+         (is (nil? @state))
+
+         (f/dispatch [::advance self])
+         (is (= ::s1 @state))
+         (f/dispatch [::advance self])
+         (is (= ::s2 @state))
+         (f/dispatch [::advance self])
+         (is (= ::s3 @state))
+         (f/dispatch [::restart self])
+         (is (= ::s3 @state))
+         (f/dispatch [::advance self])
+         (is (= ::stop @state))
+         (is (not (fsm/started? [::recursive self]))))))))
