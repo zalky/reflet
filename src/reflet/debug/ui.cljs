@@ -85,13 +85,10 @@
 
 (defn- debug-refs
   [{:debug/keys [self]}]
-  (f/with-ref* {:el/uuid [el]}
-    (let [props (f/subscribe [::impl/props self])
-          cb    #(f/dispatch [::impl/props-ready self])]
-      (when @props
-        [:div {:class "debug-refs"
-               :ref   (i/el! el :cb cb)}
-         [debug-value (:debug/refs @props)]]))))
+  (when-let [p @(f/subscribe [::impl/props self])]
+    (f/once (f/dispatch [::impl/props-ready self]))
+    [:div {:class "debug-refs"}
+     [debug-value (:debug/refs p)]]))
 
 (def component-name-re
   #"(.*)\.([^.]+)+")
@@ -116,10 +113,10 @@
                 :el/uuid  [debug/el]
                 :in       props}
     (let [state (f/subscribe [::impl/panel self tap el])
-          rect  (f/subscribe [::impl/rect self])
-          cb    #(f/dispatch [::impl/init-props self props])]
+          rect  (f/subscribe [::impl/rect self])]
+      (f/once (f/dispatch [::impl/init-props self props]))
       (when (isa? impl/state-h @state ::impl/display)
-        [:div {:ref   (i/el! el :cb cb)
+        [:div {:ref   (i/el! el)
                :class "debug-panel"
                :style @rect}
          [:div {:class "debug-content"}
