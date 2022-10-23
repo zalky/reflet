@@ -19,5 +19,5 @@
 
 (defn init!
   []
-  (f/dispatch-sync [::boot/boot])
+  (f/disp-sync [::boot/boot])
   (render!))

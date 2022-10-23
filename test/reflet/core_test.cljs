@@ -162,7 +162,7 @@
        (db/update-inn db [id :kr/name] str " updated")))
 
    (f/with-ref {:system/uuid [id join n1 n2 n3]}
-     (f/dispatch [::init id join n1 n2 n3])
+     (f/disp [::init id join n1 n2 n3])
 
      (testing "Simple join"
        (f/reg-pull ::join
@@ -175,7 +175,7 @@
                         :kr/label]}]
             id]))
 
-       (let [r (f/subscribe [::join id])]
+       (let [r (f/sub [::join id])]
          (is (= @r
                 {:system/uuid    (second id)
                  :kr/name        "name"
@@ -189,7 +189,7 @@
          (fn [id]
            [:kr/name id]))
 
-       (let [r (f/subscribe [::attr id])]
+       (let [r (f/sub [::attr id])]
          (is (= @r "name"))))
 
      (testing "Wildcard query"
@@ -199,7 +199,7 @@
               {:kr/join [*]}]
             id]))
 
-       (let [r (f/subscribe [::wildcard id join])]
+       (let [r (f/sub [::wildcard id join])]
          (is (= @r
                 {:system/uuid    (second id)
                  :kr/name        "name"
@@ -214,7 +214,7 @@
          (fn []
            [{::link [:system/uuid :kr/name]}]))
 
-       (let [r (f/subscribe [::link-q])]
+       (let [r (f/sub [::link-q])]
          (is (= @r
                 {:system/uuid (second id)
                  :kr/name     "name"}))))
@@ -227,7 +227,7 @@
              {:kr/join '...}]
             id]))
 
-       (let [r (f/subscribe [::recursive... id])]
+       (let [r (f/sub [::recursive... id])]
          (is (= @r
                 {:kr/name        "name"
                  :kr/description "description"
@@ -245,7 +245,7 @@
              {:kr/join 2}]
             id]))
 
-       (let [r (f/subscribe [::recursive-2 id])]
+       (let [r (f/sub [::recursive-2 id])]
          (is (= @r
                 {:kr/name        "name"
                  :kr/description "description"
@@ -261,7 +261,7 @@
               {:kr/join ...}]
             id]))
 
-       (let [r (f/subscribe [::recursive-* id])]
+       (let [r (f/sub [::recursive-* id])]
          (is (= @r
                 {:system/uuid    (second id)
                  :kr/name        "name"
@@ -289,12 +289,12 @@
                label :kr/label}]
            (str id name label)))
 
-       (let [r (f/subscribe [::result-fn join])]
+       (let [r (f/sub [::result-fn join])]
          (is (= @r ":joinjoinlabel"))))
 
      (testing "Pull query updates"
-       (f/dispatch [::update-name join])
-       (let [r (f/subscribe [::join id])]
+       (f/disp [::update-name join])
+       (let [r (f/sub [::join id])]
          (is (= @r
                 {:system/uuid    (second id)
                  :kr/name        "name"
@@ -303,7 +303,7 @@
                                   :kr/name     "join updated"
                                   :kr/label    "label"}})))
 
-       (let [r (f/subscribe [::result-fn join])]
+       (let [r (f/sub [::result-fn join])]
          (is (= @r ":joinjoin updatedlabel")))))))
 
 (deftest reg-comp-test
@@ -332,8 +332,8 @@
                                     :kr/name     "join"}})))
 
    (f/with-ref {:system/uuid [id join]}
-     (f/dispatch [::init id join])
-     (let [r (f/subscribe [::reg-comp id])]
+     (f/disp [::init id join])
+     (let [r (f/sub [::reg-comp id])]
        (is (= {:system/uuid (second join)
                :kr/name     "join"}
               @r))))))

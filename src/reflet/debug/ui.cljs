@@ -65,13 +65,13 @@
   [{:debug/keys [tap] :as props}]
   (f/with-ref* {:cmp/uuid [debug/self]
                 :el/uuid  [debug/el]}
-    (let [rect (f/subscribe [::impl/rect self])
-          cb   #(do (f/dispatch [::impl/set-rect self tap el])
-                    (f/dispatch [::impl/init-props self props]))]
+    (let [rect (f/sub [::impl/rect self])
+          cb   #(do (f/disp [::impl/set-rect self tap el])
+                    (f/disp [::impl/init-props self props]))]
       [:div {:ref      (i/el! el :cb cb)
              :class    "debug-mark"
              :style    @rect
-             :on-click #(f/dispatch [::impl/toggle tap])}
+             :on-click #(f/disp [::impl/toggle tap])}
        [g/mark-icon]])))
 
 (defmethod render :debug.type/group
@@ -80,13 +80,13 @@
     [:div {:class    "debug-mark group"
            :style    {:left (:x pos)
                       :top  (:y pos)}
-           :on-click #(f/dispatch [::impl/toggle self])}
+           :on-click #(f/disp [::impl/toggle self])}
      [g/mark-icon {:group true}]]))
 
 (defn- debug-refs
   [{:debug/keys [self]}]
-  (when-let [p @(f/subscribe [::impl/props self])]
-    (f/once (f/dispatch [::impl/props-ready self]))
+  (when-let [p @(f/sub [::impl/props self])]
+    (f/once (f/disp [::impl/props-ready self]))
     [:div {:class "debug-refs"}
      [debug-value (:debug/refs p)]]))
 
@@ -100,9 +100,9 @@
 
 (defn- debug-header
   [{:debug/keys [self]}]
-  (let [props    (f/subscribe [::impl/props self])
-        dragging (f/subscribe [::impl/dragging])
-        on-md    #(f/dispatch-sync [::impl/drag! self %])]
+  (let [props    (f/sub [::impl/props self])
+        dragging (f/sub [::impl/dragging])
+        on-md    #(f/disp-sync [::impl/drag! self %])]
     [:div {:class ["debug-header" (when @dragging "dragging")]
            :on-mouse-down on-md}
      (some-> @props props-name)]))
@@ -112,9 +112,9 @@
   (f/with-ref* {:cmp/uuid [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [state (f/subscribe [::impl/panel self tap el])
-          rect  (f/subscribe [::impl/rect self])]
-      (f/once (f/dispatch [::impl/init-props self props]))
+    (let [state (f/sub [::impl/panel self tap el])
+          rect  (f/sub [::impl/rect self])]
+      (f/once (f/disp [::impl/init-props self props]))
       (when (isa? impl/state-h @state ::impl/display)
         [:div {:ref   (i/el! el)
                :class "debug-panel"
@@ -133,7 +133,7 @@
   []
   [:div
    (doall
-    (for [n @(f/subscribe [::impl/overlay])]
+    (for [n @(f/sub [::impl/overlay])]
       ^{:key (:overlay/id n)} [render n]))])
 
 (defn- body-el
@@ -165,7 +165,7 @@
            (impl/rect)
            (assoc props :debug/rect)
            (vector ::d/tap (find props :debug/id))
-           (f/dispatch)))
+           (f/disp)))
 
 (defn debug-tap
   "::d/tap must happen after the ::d/untap of the previous react

@@ -33,9 +33,9 @@
      (f/reg-no-op ::advance)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::no-op self])]
+       (let [state (f/sub [::no-op self])]
          (is (nil? @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (nil? @state)))))))
 
 (t/deftest event-fsm-test
@@ -51,11 +51,11 @@
      (f/reg-no-op ::do-not-advance ::advance)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::test self])]
+       (let [state (f/sub [::test self])]
          (is (nil? @state))
-         (f/dispatch [::do-not-advance])
+         (f/disp [::do-not-advance])
          (is (nil? @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::stop @state))))))
 
   (t/testing "Advance stem match"
@@ -70,11 +70,11 @@
      (f/reg-no-op ::do-not-advance ::advance)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::test self])]
+       (let [state (f/sub [::test self])]
          (is (nil? @state))
-         (f/dispatch [::do-not-advance])
+         (f/disp [::do-not-advance])
          (is (nil? @state))
-         (f/dispatch [::advance self "more"])
+         (f/disp [::advance self "more"])
          (is (= ::stop @state)))))))
 
 (t/deftest idempotent-lifecycles-test
@@ -92,7 +92,7 @@
          (t/testing "start"
            (is (not (fsm/started? [::idempotent self])))
            (is (nil? (get-handler)))
-           (let [state (f/subscribe [::idempotent self])]
+           (let [state (f/sub [::idempotent self])]
              (is (fsm/started? [::idempotent self]))
              (is (get-handler))
              (is (nil? @state))
@@ -124,14 +124,14 @@
      (f/reg-no-op ::do-not-advance ::advance)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (f/dispatch [::fsm/start [::lifecycle self]])
+       (f/disp [::fsm/start [::lifecycle self]])
        (is (fsm/started? [::lifecycle self]))
-       (f/dispatch [::advance self])
-       (let [state (f/subscribe [::lifecycle self])]
+       (f/disp [::advance self])
+       (let [state (f/sub [::lifecycle self])]
          (is (= ::started @state))
-         (f/dispatch [::fsm/stop [::lifecycle self]])
+         (f/disp [::fsm/stop [::lifecycle self]])
          (is (not (fsm/started? [::lifecycle self])))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::started @state))
          (is (not= ::failed-to-stop @state)))))))
 
@@ -149,7 +149,7 @@
      (f/reg-no-op ::advance)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::start-in-state self])]
+       (let [state (f/sub [::start-in-state self])]
          (is (= ::starting @state)))))))
 
 (t/deftest fsm-initial-dispatch-test
@@ -166,7 +166,7 @@
      (f/reg-no-op ::event)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::initial-dispatch self])]
+       (let [state (f/sub [::initial-dispatch self])]
          ;; Note in run-test-sync, all dispatches are via
          ;; dispatch-sync. Under normal conditions, you would not
          ;; immediately see the state transition to ::stop.
@@ -195,14 +195,14 @@
      (f/reg-no-op ::do-not-advance ::advance)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state  (f/subscribe [::test self])
-             effect (f/subscribe [::effect])]
+       (let [state  (f/sub [::test self])
+             effect (f/sub [::effect])]
          (is (nil? @state))
          (is (nil? @effect))
-         (f/dispatch [::do-not-advance])
+         (f/disp [::do-not-advance])
          (is (nil? @state))
          (is (nil? @effect))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::stop @state))
          (is (= @effect [::effect self])))))))
 
@@ -229,8 +229,8 @@
      (f/reg-no-op ::advance)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state  (f/subscribe [::test self])
-             effect (f/subscribe [::effect])]
+       (let [state  (f/sub [::test self])
+             effect (f/sub [::effect])]
          (is (nil? @state))
          (is (nil? @effect))
          (rft/wait-for [::effect]
@@ -261,11 +261,11 @@
      (f/reg-no-op ::advance)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state  (f/subscribe [::test self])
-             effect (f/subscribe [::effect])]
+       (let [state  (f/sub [::test self])
+             effect (f/sub [::effect])]
          (is (nil? @state))
          (is (nil? @effect))
-         (f/dispatch-sync [::advance self])
+         (f/disp-sync [::advance self])
          (is (= ::stop @state))
          (rft/wait-for [::effect]
            (is (= @effect [::effect self]))))))))
@@ -305,16 +305,16 @@
      (f/reg-no-op ::advance ::stop)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [s1 (f/subscribe [::stop-one self])
-             s2 (f/subscribe [::stop-vec self])
-             s3 (f/subscribe [::stop-set self])
-             s4 (f/subscribe [::stop-list self])]
-         (f/dispatch [::advance self])
+       (let [s1 (f/sub [::stop-one self])
+             s2 (f/sub [::stop-vec self])
+             s3 (f/sub [::stop-set self])
+             s4 (f/sub [::stop-list self])]
+         (f/disp [::advance self])
          (is (= ::stop @s1))
          (is (= ::stop @s2))
          (is (= ::stop @s3))
          (is (= ::stop @s4))
-         (f/dispatch [::advance self])))))
+         (f/disp [::advance self])))))
 
   (t/testing "Stop FSM"
     (fix/run-test-sync
@@ -333,24 +333,24 @@
      (f/reg-no-op ::advance ::stop ::error ::reset)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::stop-fsm self])]
+       (let [state (f/sub [::stop-fsm self])]
          (is (reg/get-handler :global-interceptor [::stop-fsm self]))
          (is (nil? @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s1 @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s2 @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s1 @state))
-         (f/dispatch [::reset self])
+         (f/disp [::reset self])
          (is (nil? @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s1 @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s2 @state))
-         (f/dispatch [::stop self])
+         (f/disp [::stop self])
          (is (= ::stop @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::stop @state))
          (is (not (reg/get-handler :global-interceptor [::stop-fsm self]))))))))
 
@@ -390,16 +390,16 @@
 
      (f/with-ref {:cmp/uuid [fsm/self]
                   :system/uuid    [test/candidate]}
-       (let [state (f/subscribe [::election self candidate])
-             c     (f/subscribe [::candidate candidate])]
+       (let [state (f/sub [::election self candidate])
+             c     (f/sub [::candidate candidate])]
          (is (nil? @state))
-         (f/dispatch [::kick-off self])
+         (f/disp [::kick-off self])
          (is (= ::running @state))
-         (f/dispatch [::vote candidate])
+         (f/disp [::vote candidate])
          (is (= ::running @state))
-         (f/dispatch [::vote candidate])
+         (f/disp [::vote candidate])
          (is (= ::running @state))
-         (f/dispatch [::vote candidate])
+         (f/disp [::vote candidate])
          (is (= ::done @state)))))))
 
 (s/def ::even
@@ -442,26 +442,26 @@
          [::n self]))
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::number self])
-             n     (f/subscribe [::n self])]
+       (let [state (f/sub [::number self])
+             n     (f/sub [::n self])]
          (is (nil? @n))
          (is (nil? @state))
-         (f/dispatch [::set self 1])
+         (f/disp [::set self 1])
          (is (= @n 1))         
          (is (= ::odd @state))
-         (f/dispatch [::set self 2])
+         (f/disp [::set self 2])
          (is (= @n 2))
          (is (= ::even @state))
-         (f/dispatch [::set self 3])
+         (f/disp [::set self 3])
          (is (= @n 3))
          (is (= ::odd @state))
-         (f/dispatch [::set self 4])
+         (f/disp [::set self 4])
          (is (= @n 4))
          (is (= ::done @state))
-         (f/dispatch [::set self 4])
+         (f/disp [::set self 4])
          (is (= @n 4))
          (is (= ::done @state))
-         (f/dispatch [::set self 5])
+         (f/disp [::set self 5])
          (is (= @n 5))
          (is (= ::done @state)))))))
 
@@ -481,9 +481,9 @@
      (f/reg-no-op ::advance ::timeout-success)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::timeout-fsm self])]
+       (let [state (f/sub [::timeout-fsm self])]
          (is (nil? @state))
-         (f/dispatch-sync [::advance self])
+         (f/disp-sync [::advance self])
          (is (= ::middle @state))
          (rft/wait-for [::timeout-success]
            (is (= ::finish @state))))))))
@@ -507,9 +507,9 @@
      (f/reg-no-op ::advance ::timeout-success)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::timeout-fsm self])]
+       (let [state (f/sub [::timeout-fsm self])]
          (is (nil? @state))
-         (f/dispatch-sync [::advance self])
+         (f/disp-sync [::advance self])
          (is (= ::middle @state))
          (rft/wait-for [::timeout-success]
            (is (= ::finish @state))))))))
@@ -531,31 +531,31 @@
      (f/reg-no-op ::advance ::restart)
 
      (f/with-ref {:cmp/uuid [fsm/self]}
-       (let [state (f/subscribe [::recursive self])]
+       (let [state (f/sub [::recursive self])]
          (is (nil? @state))
-         (f/dispatch [::restart self])
-         (is (nil? @state))
-
-         (f/dispatch [::advance self])
-         (is (= ::s1 @state))
-         (f/dispatch [::restart self])
+         (f/disp [::restart self])
          (is (nil? @state))
 
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s1 @state))
-         (f/dispatch [::advance self])
+         (f/disp [::restart self])
+         (is (nil? @state))
+
+         (f/disp [::advance self])
+         (is (= ::s1 @state))
+         (f/disp [::advance self])
          (is (= ::s2 @state))
-         (f/dispatch [::restart self])
+         (f/disp [::restart self])
          (is (nil? @state))
 
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s1 @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s2 @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::s3 @state))
-         (f/dispatch [::restart self])
+         (f/disp [::restart self])
          (is (= ::s3 @state))
-         (f/dispatch [::advance self])
+         (f/disp [::advance self])
          (is (= ::stop @state))
          (is (not (fsm/started? [::recursive self]))))))))

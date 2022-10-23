@@ -87,6 +87,10 @@
 (def add-post-event-callback    f/add-post-event-callback)
 (def remove-post-event-callback f/remove-post-event-callback)
 
+(def sub                        subscribe)
+(def disp                       dispatch)
+(def disp-sync                  dispatch-sync)
+
 ;;;; Reflet API
 
 (def ^:dynamic *force-persistent-refs*

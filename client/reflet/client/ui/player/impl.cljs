@@ -65,6 +65,6 @@
 
 (f/reg-sub ::selecting?
   (fn [[_ self]]
-    (f/subscribe [::selector-fsm self]))
+    (f/sub [::selector-fsm self]))
   (fn [state _]
     (= state ::open)))

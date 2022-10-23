@@ -8,7 +8,7 @@
 
 (defn dispatch-player-fsm
   [{:player/keys [self]}]
-  @(f/subscribe [::impl/player-fsm self]))
+  @(f/sub [::impl/player-fsm self]))
 
 (defmulti controls
   dispatch-player-fsm
@@ -22,34 +22,34 @@
 (defmethod controls ::impl/playing
   [{:player/keys [self]}]
   [b/button {:color    :primary
-             :on-click #(f/dispatch [::impl/pause self])}
+             :on-click #(f/disp [::impl/pause self])}
    "Pause"])
 
 (defmethod controls ::impl/paused
   [{:player/keys [self]}]
   [b/button {:color    :primary
-             :on-click #(f/dispatch [::impl/play self])}
+             :on-click #(f/disp [::impl/play self])}
    "Play"])
 
 (defn selector
   [{:player/keys [self]}]
-  (let [on-click #(f/dispatch [::impl/toggle self])
-        info     (f/subscribe [::impl/track-info self])]
+  (let [on-click #(f/disp [::impl/toggle self])
+        info     (f/sub [::impl/track-info self])]
     [b/button {:color    :secondary
                :on-click on-click}
      (:kr.track/name @info "Select Track")]))
 
 (defn track-list
   [{:player/keys [self]}]
-  (let [tracks (f/subscribe [::impl/track-list])]
+  (let [tracks (f/sub [::impl/track-list])]
     [:div {:class "player-track-list mt-2"}
      (doall
       (for [{id     :system/uuid
              artist :kr.track/artist
              name   :kr.track/name} @tracks]
         (let [ref      [:system/uuid id]
-              duration @(f/subscribe [::impl/track-duration ref])
-              on-click #(f/dispatch [::impl/selected self ref])]
+              duration @(f/sub [::impl/track-duration ref])
+              on-click #(f/disp [::impl/selected self ref])]
           ^{:key id}
           [:div {:on-click on-click}
            [:div artist]
@@ -74,8 +74,8 @@
                :js/uuid  [player/context player/source]
                :el/uuid  [player/el]
                :in       props}
-    (let [m          (f/subscribe [::impl/materialized self])
-          selecting? (f/subscribe [::impl/selecting? self])]
+    (let [m          (f/sub [::impl/materialized self])
+          selecting? (f/sub [::impl/selecting? self])]
       [:div {:class ["player" (when @selecting? "selecting")]}
        [player-inner (merge props @m)]
        [b/button-toolbar

@@ -115,7 +115,7 @@
 
 (f/reg-sub ::overlay-nodes
   (fn [_]
-    (f/subscribe [::d/taps]))
+    (f/sub [::d/taps]))
   (fn [taps _]
     (let [t      (vals taps)
           g      (c/cluster t cluster-opts)
@@ -126,8 +126,8 @@
 
 (f/reg-sub ::overlay
   (fn [_]
-    [(f/subscribe [::overlay-nodes])
-     (f/subscribe [::overlay-panels])])
+    [(f/sub [::overlay-nodes])
+     (f/sub [::overlay-panels])])
   (fn [[nodes panels] _]
     (concat nodes panels)))
 
@@ -188,14 +188,14 @@
     (.preventDefault e-mouse-down)
     (fn [e-drag]
       (.preventDefault e-drag)
-      (f/dispatch-sync [::drag e-drag ref dx dy w h]))))
+      (f/disp-sync [::drag e-drag ref dx dy w h]))))
 
 (defn drag-unlistener!
   [listener]
   (fn anon [_]
     (.removeEventListener js/document "mousemove" listener)
     (.removeEventListener js/document "mouseup" anon)
-    (f/dispatch-sync [::drag-stop!])))
+    (f/disp-sync [::drag-stop!])))
 
 (f/reg-event-fx ::drag!
   (fn [{db :db} [_ ref e-mouse-down]]

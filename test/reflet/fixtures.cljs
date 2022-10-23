@@ -24,5 +24,5 @@
                 i/db                      (r/atom {})
                 f/debounced-events        (r/atom {})]
     (binding [f/*force-persistent-refs* true]
-      (f/dispatch-sync [::internals])
+      (f/disp-sync [::internals])
       (f))))
