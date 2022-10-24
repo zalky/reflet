@@ -228,15 +228,13 @@
     (.preventDefault e)
     (f e)))
 
-(reg-fx :stop-prop
+(reg-fx ::stop-prop
   (fn [e]
     (.stopPropagation e)))
 
-(reg-fx :prevent-default
+(reg-fx ::prevent-default
   (fn [e]
     (.preventDefault e)))
-
-;;;; Debounced dispatch
 
 (defonce debounced-events
   (atom {}))
@@ -252,7 +250,7 @@
       (swap! debounced-events assoc event-id debounce-id)
       (interop/set-timeout! dispatch-debounced ms))))
 
-(f/reg-fx :dispatch-debounced
+(f/reg-fx ::dispatch-debounced
   dispatch-debounced)
 
 (defn props-did-update-handler

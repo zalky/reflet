@@ -138,8 +138,9 @@
   []
   [:div
    (doall
-    (for [n @(f/sub [::impl/overlay])]
-      ^{:key (:overlay/id n)} [render n]))])
+    (for [{id  :overlay/id
+           :as n} @(f/sub [::impl/overlay])]
+      ^{:key id} [render n]))])
 
 (defn- body-el
   []
