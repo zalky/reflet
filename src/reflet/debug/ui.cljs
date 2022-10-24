@@ -25,18 +25,18 @@
 
 (defmethod debug-value ::ref
   [[attr uuid]]
-  [:div {:class "debug-ref"}
+  [:div {:class "reflet-ref"}
    "@" (subs (str uuid) 0 6)])
 
 (defmethod debug-value ::string
   [s]
-  [:div {:class "debug-string"}
+  [:div {:class "reflet-string"}
    (str \" s \")])
 
 (defmethod debug-value ::map
   [m]
-  [:div {:class "debug-map"}
-   [:div {:class "debug-map-data"}
+  [:div {:class "reflet-map"}
+   [:div {:class "reflet-map-data"}
     (map-indexed
      (fn [i [k ref]]
        (when (not= k ::f/debug-id)
@@ -47,7 +47,7 @@
 
 (defmethod debug-value Keyword
   [k]
-  [:div {:class "debug-keyword"}
+  [:div {:class "reflet-keyword"}
    (if-let [ns (namespace k)]
      [:<>
       [:span (str ":" ns "/")]
@@ -69,7 +69,7 @@
           cb   #(do (f/disp [::impl/set-rect self tap el])
                     (f/disp [::impl/init-props self props]))]
       [:div {:ref      (i/el! el :cb cb)
-             :class    "debug-mark"
+             :class    "reflet-mark"
              :style    @rect
              :on-click #(f/disp [::impl/toggle tap])}
        [g/mark-icon]])))
@@ -77,7 +77,7 @@
 (defmethod render :debug.type/group
   [{:debug/keys [group pos]}]
   (f/with-ref* {:cmp/uuid [debug/self]}
-    [:div {:class    "debug-mark group"
+    [:div {:class    "reflet-mark reflet-group"
            :style    {:left (:x pos)
                       :top  (:y pos)}
            :on-click #(f/disp [::impl/toggle self])}
@@ -87,7 +87,7 @@
   [{:debug/keys [self]}]
   (when-let [p @(f/sub [::impl/props self])]
     (f/once (f/disp [::impl/props-ready self]))
-    [:div {:class "debug-refs"}
+    [:div {:class "reflet-refs"}
      [debug-value (:debug/refs p)]]))
 
 (def component-name-re
@@ -99,13 +99,16 @@
     [:span (str ns "/" n  " : L" line)]))
 
 (defn- debug-header
-  [{:debug/keys [self]}]
+  [{:debug/keys [self tap]}]
   (let [props    (f/sub [::impl/props self])
         dragging (f/sub [::impl/dragging])
-        on-md    #(f/disp-sync [::impl/drag! self %])]
-    [:div {:class ["debug-header" (when @dragging "dragging")]
-           :on-mouse-down on-md}
-     (some-> @props props-name)]))
+        on-drag  #(f/disp-sync [::impl/drag! self %])
+        on-close #(f/disp [::impl/toggle tap])]
+    [:div {:class         ["reflet-header" (when @dragging "reflet-dragging")]
+           :on-mouse-down on-drag}
+     (some-> @props props-name)
+     [g/x {:class         "reflet-control"
+           :on-mouse-down (f/stop-prop on-close)}]]))
 
 (defmethod render :debug.type/props
   [{:debug/keys [tap] :as props}]
@@ -117,9 +120,9 @@
       (f/once (f/disp [::impl/init-props self props]))
       (when (isa? impl/state-h @state ::impl/display)
         [:div {:ref   (i/el! el)
-               :class "debug-panel"
+               :class "reflet-panel"
                :style @rect}
-         [:div {:class "debug-content"}
+         [:div {:class "reflet-content"}
           [debug-header props]
           [debug-refs props]]
          [:div]]))))
@@ -142,7 +145,7 @@
 
 (defn- overlay-el
   []
-  (.querySelector js/document "#reflet-debug-overlay"))
+  (.querySelector js/document "#reflet-overlay"))
 
 (defn- find-tap-point
   "Search siblings for first element that is not a debug tap. If no
@@ -152,7 +155,7 @@
   (loop [el (.-nextSibling tap-el)]
     (if el
       (let [c (.-className el)]
-        (if (= c "debug-tap")
+        (if (= c "reflet-tap")
           (recur (.-nextSibling el))
           el))
       (.-parentElement tap-el))))
@@ -175,7 +178,7 @@
   where it will happen during the first render."
   [target props]
   (if-not @target
-    [:div {:class "debug-tap"
+    [:div {:class "reflet-tap"
            :ref   (partial tap props target)}]
     [:<>]))
 
@@ -183,7 +186,7 @@
   []
   (or (overlay-el)
       (let [el (.createElement js/document "div")]
-        (.setAttribute el "id" "reflet-debug-overlay")
+        (.setAttribute el "id" "reflet-overlay")
         (.appendChild (body-el) el)
         el)))
 

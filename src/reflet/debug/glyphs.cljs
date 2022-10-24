@@ -15,8 +15,9 @@
   (util/merge-deep path-opts el))
 
 (defn mark-icon
-  [& [{:keys [group]}]]
-  [:svg {:view-box "0 0 20 30"}
+  [& [{:keys [group]
+       :as   props}]]
+  [:svg (assoc props :view-box "0 0 20 30")
    [:circle {:cx    10
              :cy    10
              :r     9
@@ -31,3 +32,11 @@
        (stroke
         {:d     "M 3,25 A 13,13 0 0 0 17,25"
          :style {:stroke-width "1.5px"}})]])])
+
+(defn x
+  [& [props]]
+  [:svg (assoc props :view-box "0 0 10 10")
+   [:path
+    (stroke
+     {:d     "M 1,1 L 9,9 M 9,1 L 1,9"
+      :style {:stroke-width "1.5px"}})]])

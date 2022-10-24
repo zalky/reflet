@@ -1,5 +1,5 @@
 
-$debug-color:                   color.adjust($blue, $alpha: -0.2);
+$debug-mark-color:              color.adjust($blue, $alpha: -0.3);
 $debug-radius:                  8px;
 $debug-border-thickness:        2px;
 $debug-panel-border:            $debug-border-thickness solid color.adjust($blue, $alpha: -0);
@@ -10,13 +10,13 @@ $syntax-keyword-namespace:      #9167db;
 $syntax-keyword-name:           #cb49f1;
 $syntax-ref:                    $blue;
 
-.debug-tap {
+.reflet-tap {
     display: none;
 }
 
-.debug-mark {
+.reflet-mark {
     position: fixed;
-    color: $debug-color;
+    color: $debug-mark-color;
     height: 16px;
     width:  16px;
     transform: translate(8px, 8px);
@@ -31,7 +31,7 @@ $syntax-ref:                    $blue;
     }
 }
 
-.debug-panel {
+.reflet-panel {
     position: fixed;
     width: 250px;
     border: $debug-panel-border;
@@ -56,11 +56,12 @@ $syntax-ref:                    $blue;
     }
 }
 
-.debug-header {
-    padding: 0.25rem 1rem;
+.reflet-header {
+    display: flex;
     position: sticky;
     top: 0;
     left: 0;
+    padding: 0.25rem 1rem;
     border-top-left-radius: $debug-radius;
     border-top-right-radius: $debug-radius;
     border-bottom: $debug-panel-inner-border;
@@ -72,21 +73,36 @@ $syntax-ref:                    $blue;
     &.dragging {
         cursor: grabbing;
     }
+
+    > :first-child {
+        flex: 1;
+    }
+
+    > :last-child {
+        width: 0.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        
+        &:hover {
+            width: 0.75rem;
+            transform: translateX(0.125rem);
+        }
+    }
 }
 
-.debug-refs {
+.reflet-refs {
     display: flex;
     flex-direction: column;
 }
 
-.debug-content {
+.reflet-content {
     display: flex;
     flex-direction: column;
     height: 100%;
     width: 100%;
     overflow-y: scroll;
 
-    > *:not(.debug-header) {
+    > *:not(.reflet-header) {
         padding: 0.75rem;
     }
 
@@ -97,7 +113,7 @@ $syntax-ref:                    $blue;
 
 // Data formatting
 
-.debug-map, .debug-vec, .debug-set {
+.reflet-map, .reflet-vec, .reflet-set {
     display: grid;
     grid-template-columns: 6px auto;
     align-items: center;
@@ -112,7 +128,7 @@ $syntax-ref:                    $blue;
     }
 }
 
-.debug-map-data {
+.reflet-map-data {
     display: grid;
     position: relative;
     grid-template-columns: 1fr auto;
@@ -125,24 +141,24 @@ $syntax-ref:                    $blue;
     }
 }
 
-.debug-map::before {
+.reflet-map::before {
     content: "{";
 }
 
-.debug-vec::before {
+.reflet-vec::before {
     content: "[";
 }
 
-.debug-set::before {
+.reflet-set::before {
     content: "\#{";
 }
 
-.debug-ref {
+.reflet-ref {
     color: $syntax-ref;
     cursor: pointer;
 }
 
-.debug-keyword {
+.reflet-keyword {
     > :first-child {
         color: $syntax-keyword-namespace;
     }
