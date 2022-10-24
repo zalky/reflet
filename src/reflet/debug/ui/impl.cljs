@@ -37,7 +37,7 @@
       (str (name type))
       (keyword "rect")))
 
-(f/reg-event-db ::init-props
+(f/reg-event-db ::set-props
   (fn [db [_ self props]]
     (as-> (apply assoc props self) %
       (dissoc % :debug/el)
@@ -46,6 +46,12 @@
 (f/reg-event-db ::set-rect
   (fn [db [_ self tap el]]
     (->> (db/get-inn db [tap :debug/rect])
+         (init-rect (i/grab el))
+         (db/assoc-inn db [self :debug/rect]))))
+
+(f/reg-event-db ::set-centroid
+  (fn [db [_ self {:keys [x y]} el]]
+    (->> {:left x :top y}
          (init-rect (i/grab el))
          (db/assoc-inn db [self :debug/rect]))))
 
@@ -93,11 +99,11 @@
 
 (defn create-group
   [xs]
-  (let [pos (c/centroid xs cluster-opts)]
-    {:debug/type  :debug.type/group
-     :overlay/id  (str "group" pos)
-     :debug/group (map create-mark xs)
-     :debug/pos   pos}))
+  (let [c (c/centroid xs cluster-opts)]
+    {:debug/type     :debug.type/group
+     :overlay/id     (str "group" c)
+     :debug/group    (map create-mark xs)
+     :debug/centroid c}))
 
 (f/reg-pull ::props
   (fn [self]

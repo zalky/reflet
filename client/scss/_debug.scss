@@ -16,7 +16,7 @@ $control-fade:                  -0.3;
     display: none;
 }
 
-.reflet-mark {
+.reflet-mark, .reflet-group {
     position: fixed;
     color: $debug-mark-color;
     width: 16px;

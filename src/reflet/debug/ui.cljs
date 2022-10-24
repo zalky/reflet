@@ -67,7 +67,7 @@
                 :el/uuid  [debug/el]}
     (let [rect (f/sub [::impl/rect self])
           cb   #(do (f/disp [::impl/set-rect self tap el])
-                    (f/disp [::impl/init-props self props]))]
+                    (f/disp [::impl/set-props self props]))]
       [:div {:ref      (i/el! el :cb cb)
              :class    "reflet-mark"
              :style    @rect
@@ -75,13 +75,17 @@
        [g/mark-icon]])))
 
 (defmethod render :debug.type/group
-  [{:debug/keys [group pos]}]
-  (f/with-ref* {:cmp/uuid [debug/self]}
-    [:div {:class    "reflet-mark reflet-group"
-           :style    {:left (:x pos)
-                      :top  (:y pos)}
-           :on-click #(f/disp [::impl/toggle self])}
-     [g/mark-icon {:group true}]]))
+  [{:debug/keys [centroid] :as props}]
+  (f/with-ref* {:cmp/uuid [debug/self]
+                :el/uuid  [debug/el]}
+    (let [rect (f/sub [::impl/rect self])
+          cb   #(do (f/disp [::impl/set-centroid self centroid el])
+                    (f/disp [::impl/set-props self props]))]
+      [:div {:ref      (i/el! el :cb cb)
+             :class    "reflet-group"
+             :style    @rect
+             :on-click #(f/disp [::impl/toggle self])}
+       [g/mark-icon {:group true}]])))
 
 (defn- debug-refs
   [{:debug/keys [self]}]
@@ -123,7 +127,7 @@
                 :in       props}
     (let [state (f/sub [::impl/panel self tap el])
           rect  (f/sub [::impl/rect self])]
-      (f/once (f/disp [::impl/init-props self props]))
+      (f/once (f/disp [::impl/set-props self props]))
       (when (isa? impl/state-h @state ::impl/display)
         [:div {:ref   (i/el! el)
                :class "reflet-panel"

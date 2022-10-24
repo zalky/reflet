@@ -17,7 +17,9 @@
 (defn mark-icon
   [& [{:keys [group]
        :as   props}]]
-  [:svg (assoc props :view-box "0 0 20 30")
+  [:svg (-> props
+            (dissoc :group)
+            (assoc :view-box "0 0 20 30"))
    [:circle {:cx   10
              :cy   10
              :r    9
