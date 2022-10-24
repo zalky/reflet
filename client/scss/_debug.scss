@@ -10,6 +10,8 @@ $syntax-keyword-namespace:      #9167db;
 $syntax-keyword-name:           #cb49f1;
 $syntax-ref:                    $blue;
 
+$control-fade:                  -0.4;
+
 .reflet-tap {
     display: none;
 }
@@ -70,23 +72,23 @@ $syntax-ref:                    $blue;
     cursor: default;
     user-select: none;
 
-    &.dragging {
+    &.reflet-dragging {
         cursor: grabbing;
     }
 
     > :first-child {
         flex: 1;
     }
+}
 
-    > :last-child {
-        width: 0.5rem;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        
-        &:hover {
-            width: 0.75rem;
-            transform: translateX(0.125rem);
-        }
+.reflet-control {
+    width: 0.5rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    color: color.adjust($blue, $alpha: $control-fade);
+
+    &:hover {
+        color: $blue;
     }
 }
 
