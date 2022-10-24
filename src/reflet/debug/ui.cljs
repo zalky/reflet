@@ -8,7 +8,7 @@
             [reflet.debug.ui.impl :as impl]
             [reflet.interop :as i]))
 
-(defn ref?
+(defn- ref?
   "Returns true if x is an entity reference."
   [x]
   (and (vector? x)
@@ -102,13 +102,19 @@
   [{:debug/keys [self tap]}]
   (let [props    (f/sub [::impl/props self])
         dragging (f/sub [::impl/dragging])
-        on-drag  #(f/disp-sync [::impl/drag! self %])
+        on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])
         on-close #(f/disp [::impl/toggle tap])]
     [:div {:class         ["reflet-header" (when @dragging "reflet-dragging")]
            :on-mouse-down on-drag}
      (some-> @props props-name)
      [g/x {:class         "reflet-control"
            :on-mouse-down (f/stop-prop on-close)}]]))
+
+(defn- handle
+  [{:debug/keys [self]}]
+  (let [on-drag #(f/disp-sync [::impl/drag! ::impl/resize self %])]
+    [g/handle {:class         "reflet-panel-handle"
+               :on-mouse-down on-drag}]))
 
 (defmethod render :debug.type/props
   [{:debug/keys [tap] :as props}]
@@ -125,14 +131,10 @@
          [:div {:class "reflet-content"}
           [debug-header props]
           [debug-refs props]]
-         [:div]]))))
+         [:div {:class "reflet-panel-shadow"}]
+         [handle props]]))))
 
-(defn overlay-id
-  [{tap :debug/tap
-    t   :debug/type}]
-  (str t (second tap)))
-
-(defn overlay
+(defn- overlay
   []
   [:div
    (doall
@@ -182,7 +184,7 @@
            :ref   (partial tap props target)}]
     [:<>]))
 
-(defn upsert-overlay-el!
+(defn- upsert-overlay-el!
   []
   (or (overlay-el)
       (let [el (.createElement js/document "div")]

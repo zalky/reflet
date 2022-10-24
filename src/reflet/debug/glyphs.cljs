@@ -31,3 +31,8 @@
   [& [props]]
   [:svg (assoc props :view-box "0 0 10 10")
    [:path (stroke {:d "M 1,1 L 9,9 M 9,1 L 1,9"})]])
+
+(defn handle
+  [& [props]]
+  [:svg (assoc props :view-box "0 0 10 10")
+   [:path (stroke {:d "M 7,1 L 1,7 M 7,5 L 5,7"})]])

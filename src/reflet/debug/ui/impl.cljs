@@ -19,15 +19,17 @@
      :width  (.-width r)
      :height (.-height r)}))
 
-(defn position
+(defn init-rect
   [el target-rect]
   (when el
     (let [{l :left
            t :top}    target-rect
           {w :width
            h :height} (rect el)]
-      {:left (max (- l w) 0)
-       :top  (max (- t h) 0)})))
+      {:left   (max (- l w) 0)
+       :top    (max (- t h) 0)
+       :width  w
+       :height h})))
 
 (defn rect-attr
   [debug-type]
@@ -44,14 +46,14 @@
 (f/reg-event-db ::set-rect
   (fn [db [_ self tap el]]
     (->> (db/get-inn db [tap :debug/rect])
-         (position (i/grab el))
+         (init-rect (i/grab el))
          (db/assoc-inn db [self :debug/rect]))))
 
 (f/reg-pull ::rect
   (fn [self]
     [:debug/rect self])
   (fn [rect]
-    (select-keys rect [:left :top])))
+    (select-keys rect [:left :top :width :height])))
 
 (def state-h
   (util/derive-pairs
@@ -160,22 +162,32 @@
      :height (max (or (.-clientHeight el) 0)
                   (or (.-innerHeight js/window) 0))}))
 
-(f/reg-event-fx ::drag
+(f/reg-event-fx ::move
   (fn [{db :db} [_ e-drag ref dx dy w h]]
     (let [{vw :width
            vh :height} (viewport-size)
 
-          x   (.-clientX e-drag)
-          y   (.-clientY e-drag)
-          l   (-> (max (- x dx) 0)
-                  (min (- vw w)))
-          t   (-> (max (- y dy) 0)
-                  (min (- vh h)))
-          pos {:left l :top t}]
-      {:db (db/update-inn db [ref :debug/rect] merge pos)})))
+          x    (.-clientX e-drag)
+          y    (.-clientY e-drag)
+          l    (-> (max (- x dx) 0)
+                   (min (- vw w)))
+          t    (-> (max (- y dy) 0)
+                   (min (- vh h)))
+          rect {:left l :top t}]
+      {:db (db/update-inn db [ref :debug/rect] merge rect)})))
+
+(f/reg-event-fx ::resize
+  (fn [{db :db} [_ e-drag ref dx dy w h]]
+    (letfn [(f [r]
+              (let [x (.-clientX e-drag)
+                    y (.-clientY e-drag)]
+                (-> r
+                    (assoc :width (+ (- x (:left r)) (- w dx)))
+                    (assoc :height (+ (- y (:top r)) (- h dy))))))]
+      {:db (db/update-inn db [ref :debug/rect] f)})))
 
 (defn drag-listener!
-  [db ref e-mouse-down]
+  [db handler ref e-mouse-down]
   (let [{l :left
          t :top
          w :width
@@ -186,9 +198,11 @@
         dx (- x l)
         dy (- y t)]
     (.preventDefault e-mouse-down)
+    (.stopPropagation e-mouse-down)
     (fn [e-drag]
       (.preventDefault e-drag)
-      (f/disp-sync [::drag e-drag ref dx dy w h]))))
+      (.stopPropagation e-drag)
+      (f/disp-sync [handler e-drag ref dx dy w h]))))
 
 (defn drag-unlistener!
   [listener]
@@ -198,11 +212,12 @@
     (f/disp-sync [::drag-stop!])))
 
 (f/reg-event-fx ::drag!
-  (fn [{db :db} [_ ref e-mouse-down]]
-    (let [listener   (drag-listener! db ref e-mouse-down)
-          unlistener (drag-unlistener! listener)]
-      (.addEventListener js/document "mousemove" listener)
-      (.addEventListener js/document "mouseup" unlistener)
+  (fn [{db :db} [_ handler ref e-mouse-down]]
+    {:pre [handler]}
+    (let [on-f (drag-listener! db handler ref e-mouse-down)
+          un-f (drag-unlistener! on-f)]
+      (.addEventListener js/document "mousemove" on-f)
+      (.addEventListener js/document "mouseup" un-f)
       {:db (assoc db ::dragging true)})))
 
 (f/reg-event-db ::drag-stop!
