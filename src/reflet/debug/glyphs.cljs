@@ -37,4 +37,4 @@
 (defn handle
   [& [props]]
   [:svg (assoc props :view-box "0 0 10 10")
-   [:path (stroke {:d "M 7,1 L 1,7 M 7,5 L 5,7"})]])
+   [:path (stroke {:d "M 8,2 A 7,7 0 0 1 2,8 M 6,2 A 5,5 0 0 1 2,6"})]])

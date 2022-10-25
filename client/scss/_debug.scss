@@ -1,10 +1,12 @@
 
-$debug-mark-color:              color.adjust($blue, $alpha: -0.3);
+$debug-mark-color:              color.adjust($blue, $lightness: 15);
+$debug-marks-bg:                rgba(236, 251, 255, 94%);
 $debug-radius:                  8px;
+$debug-panel-radius:            2 * $debug-radius;
+$debug-stack-height:            8px;
 $debug-border-thickness:        2px;
-$debug-panel-border:            $debug-border-thickness solid color.adjust($blue, $alpha: -0);
-$debug-panel-inner-border:      1px solid color.adjust($blue, $alpha: -0);
-$debug-panel-drop-shadow-color: color.adjust($blue, $alpha: -0.65);
+$debug-panel-border:            $debug-border-thickness solid $debug-mark-color;
+$debug-panel-inner-border:      1px solid color.adjust($debug-mark-color, $alpha: -0);
 
 $syntax-keyword-namespace:      #9167db;
 $syntax-keyword-name:           #cb49f1;
@@ -16,75 +18,83 @@ $control-fade:                  -0.3;
     display: none;
 }
 
-@mixin panel {
-    border: $debug-panel-border;
-    border-radius: $debug-radius;
-    box-shadow: 0 0 80px rgba(0, 0, 0, 0.07);
-    transform-style: preserve-3d;
-    background: $body-color;
-    color: $blue;
-    font-size: $font-size-xs;
-
-    $shadow-offset: 4px + $debug-border-thickness;
-
-    &-shadow {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        top: $shadow-offset;
-        left: $shadow-offset;
-        border-radius: $debug-radius + $shadow-offset / 2;
-        background: $debug-panel-drop-shadow-color;
-        transform: translateZ(-4px);
-    }
-}
-
 .reflet-node {
     position: fixed;
 }
 
 .reflet-group, .reflet-mark {
-    color: $debug-mark-color;
-    width: fit-content;
-    height: fit-content;
-    padding: 8px;
-    padding-bottom: 0;
-    transform: translate(16px, 16px);
-    border-radius: $debug-radius;
+    position: relative;
+    transform: translate($debug-radius, $debug-radius + $debug-stack-height);
     user-select: none;
+    color: $debug-mark-color;
+    transition: color 0.3s ease;
 
     svg {
         width: 16px;
-    }
 
-    &.reflet-open {
-        $shadow: color.adjust($body-color, $alpha: -0.2);
-        box-shadow: 0 0 20px $shadow;
-        background: $shadow;
-    }
-}
-
-.reflet-marks {
-    display: grid;
-    grid-template-columns: 16px auto;
-    grid-template-rows: 24px;
-    column-gap: 1rem;
-    align-items: start;
-    width: fit-content;
-    font-size: $font-size-xs * 0.95;
-
-    > div {
-        display: contents;
-        cursor: pointer;
-
-        > :nth-child(2n) {
-            cursor: pointer;
-            color: $blue;
+        path {
+            transition: all 0.3s linear;
+            opacity: 1;
+            visibility: visible;
         }
     }
 
-    > * {
-        white-space: nowrap;
+    .reflet-marks {
+        position: absolute;
+        display: grid;
+        grid-template-columns: (2 * $debug-radius) auto;
+        grid-template-rows: (2 * $debug-radius + $debug-stack-height);
+        align-items: start;
+        width: fit-content;
+        height: fit-content;
+
+        padding: $debug-radius;
+        padding-right: $debug-radius * 2;
+        padding-bottom: 0;
+        margin-left: -$debug-radius;
+        margin-top: -$debug-radius;
+        border-top-left-radius: 2 * $debug-radius;
+        border-bottom-left-radius: 2 * $debug-radius;
+        border-top-right-radius: 2 * $debug-radius;
+        border-bottom-right-radius: 2 * $debug-radius;
+
+        $shadow: color.adjust($body-color, $alpha: -0.2);
+        background: $debug-marks-bg;
+        font-size: $font-size-xs;
+
+        transition: all 0.3s linear;
+        visibility: hidden;
+        opacity: 0;
+
+        > div {
+            display: contents;
+            cursor: pointer;
+
+            &:hover > * {
+                color: $blue;
+            }
+
+            > :nth-child(2n) {
+                padding-left: 1rem;
+                cursor: pointer;
+            }
+        }
+
+        > * {
+            white-space: nowrap;
+        }
+    }
+
+    &:hover {
+        > svg path {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .reflet-marks {
+            visibility: visible;
+            opacity: 1;
+        }
     }
 }
 
@@ -93,14 +103,55 @@ $control-fade:                  -0.3;
     width: 15rem;
     min-width: 3rem;
     min-height: 3rem;
-    @include panel;
+
+    border: $debug-panel-border;
+    border-radius: $debug-panel-radius;
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.07);
+    transform-style: preserve-3d;
+    color: $blue;
+    font-size: $font-size-xs;
+
+    $shadow-offset: 4px + $debug-border-thickness;
+
+    &-shadow:nth-child(3) {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: $shadow-offset;
+        left: $shadow-offset;
+        border-radius: $debug-panel-radius + $shadow-offset / 2;
+        background: rgba(182, 235, 255, 50%);
+        transform: translateZ(-2px);
+    }
+
+    &-shadow:nth-child(4) {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        border-radius: $debug-panel-radius - $debug-border-thickness;
+        background: rgba(255, 255, 255, 50%);
+        transform: translateZ(-1px);
+    }
+
+    &-shadow:nth-child(5) {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        border-radius: $debug-panel-radius - $debug-border-thickness;
+        background: rgba(255, 255, 255, 97%);
+        transform: translateZ(-3px);
+    }
 
     &-handle {
         position: absolute;
         bottom: 0;
         right: 0;
-        width: 12px;
-        height: 12px;
+        width: 16px;
+        height: 16px;
         transition: all 0.3s ease;
         opacity: 0;
 
@@ -117,8 +168,8 @@ $control-fade:                  -0.3;
     top: 0;
     left: 0;
     padding: 0.25rem 0.75rem;
-    border-top-left-radius: $debug-radius;
-    border-top-right-radius: $debug-radius;
+    border-top-left-radius: $debug-panel-radius - $debug-border-thickness;
+    border-top-right-radius: $debug-panel-radius - $debug-border-thickness;
     border-bottom: $debug-panel-inner-border;
     background: $body-color;
     z-index: 1;
@@ -197,6 +248,10 @@ $control-fade:                  -0.3;
     > div {
         display: contents;
         overflow: hidden;
+
+        > :nth-child(2) {
+            justify-self: end;
+        }
     }
 }
 

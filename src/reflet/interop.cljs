@@ -32,7 +32,7 @@
   on js objects are inherently mutable, and not pure."
   [ref]
   (if (r/reactive?)
-    (-> "Do not use reflet.interop/grab in reactive context, prefer sub"
+    (-> "Do not use reflet.interop/grab in reactive context, prefer ::grab sub"
         (ex-info {:ref ref})
         (throw))
     (:obj (get (.-state db) ref))))

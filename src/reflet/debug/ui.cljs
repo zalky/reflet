@@ -26,7 +26,7 @@
 (defmethod debug-value ::ref
   [[attr uuid]]
   [:div {:class "reflet-ref"}
-   "@" (subs (str uuid) 0 6)])
+   "@" (subs (str uuid) 0 7)])
 
 (defmethod debug-value ::string
   [s]
@@ -92,10 +92,9 @@
        [:div {:on-mouse-enter #(f/disp [::impl/open self])
               :on-mouse-leave #(f/disp [::impl/close self])
               :class          ["reflet-mark" (when open? "reflet-open")]}
-        (if open?
-          [:div {:class "reflet-marks"}
-           [mark-expanded props]]
-          [g/mark-icon])]])))
+        [:div {:class "reflet-marks"}
+         [mark-expanded props]]
+        [g/mark-icon]]])))
 
 (defn- marks-expanded
   [{:debug/keys [group]}]
@@ -120,9 +119,8 @@
        [:div {:on-mouse-enter #(f/disp [::impl/open self])
               :on-mouse-leave #(f/disp [::impl/close self])
               :class          ["reflet-group" (when open? "reflet-open")]}
-        (if open?
-          [marks-expanded props]
-          [g/mark-icon {:group true}])]])))
+        [marks-expanded props]
+        [g/mark-icon {:group true}]]])))
 
 (defn- debug-refs
   [{:debug/keys [self]}]
@@ -135,8 +133,8 @@
   [{:debug/keys [self tap]}]
   (let [props    (f/sub [::impl/props self])
         dragging (f/sub [::impl/dragging])
-        on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])
-        on-close #(f/disp [::impl/toggle tap])]
+        on-close #(f/disp [::impl/toggle tap])
+        on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         ["reflet-header" (when @dragging "reflet-dragging")]
            :on-mouse-down on-drag}
      (some-> @props props-name)
@@ -148,6 +146,13 @@
   (let [on-drag #(f/disp-sync [::impl/drag! ::impl/resize self %])]
     [g/handle {:class         "reflet-panel-handle"
                :on-mouse-down on-drag}]))
+
+(defn drop-shadow
+  []
+  [:<>
+   [:div {:class "reflet-panel-shadow"}]
+   [:div {:class "reflet-panel-shadow"}]
+   [:div {:class "reflet-panel-shadow"}]])
 
 (defmethod render :debug.type/props
   [{:debug/keys [tap] :as props}]
@@ -164,8 +169,8 @@
          [:div {:class "reflet-content"}
           [debug-header props]
           [debug-refs props]]
-         [:div {:class "reflet-panel-shadow"}]
-         [handle props]]))))
+         [handle props]
+         (drop-shadow)]))))
 
 (defn- overlay
   []
