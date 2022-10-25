@@ -58,42 +58,6 @@
   [x]
   [:div (str x)])
 
-(defmulti render
-  :debug/type)
-
-(defmethod render :debug.type/mark
-  [{:debug/keys [tap] :as props}]
-  (f/with-ref* {:cmp/uuid [debug/self]
-                :el/uuid  [debug/el]}
-    (let [rect (f/sub [::impl/rect self])
-          cb   #(do (f/disp [::impl/set-rect self tap el])
-                    (f/disp [::impl/set-props self props]))]
-      [:div {:ref      (i/el! el :cb cb)
-             :class    "reflet-mark"
-             :style    @rect
-             :on-click #(f/disp [::impl/toggle tap])}
-       [g/mark-icon]])))
-
-(defmethod render :debug.type/group
-  [{:debug/keys [centroid] :as props}]
-  (f/with-ref* {:cmp/uuid [debug/self]
-                :el/uuid  [debug/el]}
-    (let [rect (f/sub [::impl/rect self])
-          cb   #(do (f/disp [::impl/set-centroid self centroid el])
-                    (f/disp [::impl/set-props self props]))]
-      [:div {:ref      (i/el! el :cb cb)
-             :class    "reflet-group"
-             :style    @rect
-             :on-click #(f/disp [::impl/toggle self])}
-       [g/mark-icon {:group true}]])))
-
-(defn- debug-refs
-  [{:debug/keys [self]}]
-  (when-let [p @(f/sub [::impl/props self])]
-    (f/once (f/disp [::impl/props-ready self]))
-    [:div {:class "reflet-refs"}
-     [debug-value (:debug/refs p)]]))
-
 (def component-name-re
   #"(.*)\.([^.]+)+")
 
@@ -101,6 +65,71 @@
   [{:debug/keys [id line]}]
   (if-let [[_ ns n] (re-find component-name-re (namespace id))]
     [:span (str ns "/" n  " : L" line)]))
+
+(defmulti render
+  :debug/type)
+
+(defn- mark-expanded
+  [{:debug/keys [tap]}]
+  (let [t        (f/sub [::impl/tap tap])
+        on-click #(f/disp [::impl/toggle tap])]
+    [:div {:on-click on-click}
+     [g/mark-icon]
+     [:div (some-> @t props-name)]]))
+
+(defmethod render :debug.type/mark
+  [{:debug/keys [tap] :as props}]
+  (f/with-ref* {:cmp/uuid [debug/self]
+                :el/uuid  [debug/el]}
+    (let [state (f/sub [::impl/node self])
+          rect  (f/sub [::impl/rect self])
+          cb    #(do (f/disp [::impl/set-rect self tap el])
+                     (f/disp [::impl/set-props self props]))
+          open? (= @state ::impl/open)]
+      [:div {:ref   (i/el! el :cb cb)
+             :class "reflet-node"
+             :style @rect}
+       [:div {:on-mouse-enter #(f/disp [::impl/open self])
+              :on-mouse-leave #(f/disp [::impl/close self])
+              :class          ["reflet-mark" (when open? "reflet-open")]}
+        (if open?
+          [:div {:class "reflet-marks"}
+           [mark-expanded props]]
+          [g/mark-icon])]])))
+
+(defn- marks-expanded
+  [{:debug/keys [group]}]
+  [:div {:class "reflet-marks"}
+   (doall
+    (for [{id  :overlay/id
+           :as n} group]
+      ^{:key id} [mark-expanded n]))])
+
+(defmethod render :debug.type/group
+  [{:debug/keys [centroid] :as props}]
+  (f/with-ref* {:cmp/uuid [debug/self]
+                :el/uuid  [debug/el]}
+    (let [state (f/sub [::impl/node self])
+          rect  (f/sub [::impl/rect self])
+          cb    #(do (f/disp [::impl/set-centroid self centroid el])
+                     (f/disp [::impl/set-props self props]))
+          open? (= @state ::impl/open)]
+      [:div {:ref   (i/el! el :cb cb)
+             :class "reflet-node"
+             :style @rect}
+       [:div {:on-mouse-enter #(f/disp [::impl/open self])
+              :on-mouse-leave #(f/disp [::impl/close self])
+              :class          ["reflet-group" (when open? "reflet-open")]}
+        (if open?
+          [marks-expanded props]
+          [g/mark-icon {:group true}])]])))
+
+(defn- debug-refs
+  [{:debug/keys [self]}]
+  (when-let [p @(f/sub [::impl/props self])]
+    (f/once (f/disp [::impl/props-ready self]))
+    [:div {:class "reflet-refs"}
+     [debug-value (:debug/refs p)]]))
 
 (defn- debug-header
   [{:debug/keys [self tap]}]

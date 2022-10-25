@@ -65,6 +65,13 @@
   (util/derive-pairs
    [[::mounted ::open] ::display]))
 
+(fsm/reg-fsm ::node
+  (fn [self]
+    {:ref  self
+     :attr :debug.panel/state
+     :fsm  {nil    {[::open self] ::open}
+            ::open {[::close self] nil}}}))
+
 (fsm/reg-fsm ::panel
   (fn [self tap el]
     {:ref  self
@@ -74,7 +81,7 @@
             ::open    {[::toggle tap] ::closed}
             ::closed  {[::toggle tap] ::open}}}))
 
-(f/reg-no-op ::toggle ::props-ready)
+(f/reg-no-op ::toggle ::open ::close ::props-ready)
 
 (def cluster-opts
   {:attrs      {:id #(find % :debug/id)
@@ -113,6 +120,12 @@
        :debug/line
        :debug/refs]}
      self]))
+
+(f/reg-pull ::tap
+  (fn [tap]
+    [[:debug/id
+      :debug/line]
+     tap]))
 
 (f/reg-pull ::overlay-panels
   (fn []
