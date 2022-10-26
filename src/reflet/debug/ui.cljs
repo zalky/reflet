@@ -5,59 +5,9 @@
             [reflet.core :as f]
             [reflet.debug :as d]
             [reflet.debug.glyphs :as g]
+            [reflet.debug.ui.data :as data]
             [reflet.debug.ui.impl :as impl]
             [reflet.interop :as i]))
-
-(defn- ref?
-  "Returns true if x is an entity reference."
-  [x]
-  (and (vector? x)
-       (= (count x) 2)
-       (keyword? (first x))))
-
-(defmulti debug-value
-  (fn [x]
-    (cond
-      (ref? x)    ::ref
-      (string? x) ::string
-      (map? x)    ::map
-      :else       (type x))))
-
-(defmethod debug-value ::ref
-  [[attr uuid :as ref]]
-  [:div {:class    "reflet-ref"
-         :on-click #(f/disp [::impl/open-ref ref])}
-   "@" (subs (str uuid) 0 7)])
-
-(defmethod debug-value ::string
-  [s]
-  [:div {:class "reflet-string"}
-   (str \" s \")])
-
-(defmethod debug-value ::map
-  [m]
-  [:div {:class "reflet-map"}
-   [:div {:class "reflet-map-data"}
-    (map-indexed
-     (fn [i [k ref]]
-       (when (not= k ::f/debug-id)
-         [:div {:key i}
-          [debug-value k]
-          [debug-value ref]]))
-     m)]])
-
-(defmethod debug-value Keyword
-  [k]
-  [:div {:class "reflet-keyword"}
-   (if-let [ns (namespace k)]
-     [:<>
-      [:span (str ":" ns "/")]
-      [:span (name k)]]
-     [:span (str k)])])
-
-(defmethod debug-value :default
-  [x]
-  [:div (str x)])
 
 (def component-name-re
   #"(.*)\.([^.]+)+")
@@ -92,13 +42,13 @@
        [:div {:on-mouse-enter #(f/disp [::impl/open self])
               :on-mouse-leave #(f/disp [::impl/close self])
               :class          ["reflet-mark" (when open? "reflet-open")]}
-        [:div {:class "reflet-marks"}
+        [:div {:class "reflet-mark-expanded"}
          [mark-expanded props]]
         [g/mark-icon]]])))
 
 (defn- marks-expanded
   [{:debug/keys [group]}]
-  [:div {:class "reflet-marks"}
+  [:div {:class "reflet-mark-expanded"}
    (doall
     (for [{id  :overlay/id
            :as n} group]
@@ -122,19 +72,19 @@
         [marks-expanded props]
         [g/mark-icon {:group true}]]])))
 
-(defn- debug-refs
+(defn- debug-props-cmp
   [{:debug/keys [self]}]
-  (when-let [p @(f/sub [::impl/props self])]
-    (f/once (f/disp [::impl/props-ready self]))
+  (when-let [p @(f/sub [::impl/props-cmp self])]
+    (f/once (f/disp [::impl/props-cmp-ready self]))
     [:div {:class "reflet-refs"}
-     [debug-value (:debug/refs p)]]))
+     [data/debug-value (:debug/refs p)]]))
 
 (defmulti debug-header
   :debug/type)
 
-(defmethod debug-header :debug.type/props
+(defmethod debug-header :debug.type/props-cmp
   [{:debug/keys [self tap]}]
-  (let [props    (f/sub [::impl/props self])
+  (let [props    (f/sub [::impl/props-cmp self])
         dragging (f/sub [::impl/dragging])
         on-close #(f/disp [::impl/toggle tap])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
@@ -157,12 +107,12 @@
    [:div {:class "reflet-panel-shadow"}]
    [:div {:class "reflet-panel-shadow"}]])
 
-(defmethod render :debug.type/props
+(defmethod render :debug.type/props-cmp
   [{:debug/keys [tap] :as props}]
   (f/with-ref* {:cmp/uuid [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [state (f/sub [::impl/props-fsm self tap el])
+    (let [state (f/sub [::impl/props-cmp-fsm self tap el])
           rect  (f/sub [::impl/rect self])]
       (f/once (f/disp [::impl/set-props self props]))
       (when (isa? impl/state-h @state ::impl/display)
@@ -171,7 +121,7 @@
                :style @rect}
          [:div {:class "reflet-content"}
           [debug-header props]
-          [debug-refs props]]
+          [debug-props-cmp props]]
          [handle props]
          (drop-shadow)]))))
 
@@ -182,7 +132,7 @@
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         ["reflet-header" (when @dragging "reflet-dragging")]
            :on-mouse-down on-drag}
-     [debug-value ref]
+     [data/debug-value ref]
      [g/x {:class         "reflet-control"
            :on-mouse-down (f/stop-prop on-close)}]]))
 

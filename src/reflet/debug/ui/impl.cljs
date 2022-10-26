@@ -186,16 +186,16 @@
      :fsm  {nil    {[::open self] ::open}
             ::open {[::close self] nil}}}))
 
-(fsm/reg-fsm ::props-fsm
+(fsm/reg-fsm ::props-cmp-fsm
   (fn [self tap el]
     {:ref  self
      :attr :debug.panel/state
      :fsm  {nil       {[::toggle tap] ::mounted}
-            ::mounted {[::props-ready self] {:to ::open :dispatch [::set-tap-rect self el tap]}}
+            ::mounted {[::props-cmp-ready self] {:to ::open :dispatch [::set-tap-rect self el tap]}}
             ::open    {[::toggle tap] ::closed}
             ::closed  {[::toggle tap] ::open}}}))
 
-(f/reg-no-op ::toggle ::open ::close ::props-ready)
+(f/reg-no-op ::toggle ::open ::close ::props-cmp-ready)
 
 (defn create-ref-entity
   [ref]
@@ -220,11 +220,11 @@
      :overlay/id (str "mark" (second ref))
      :debug/tap  ref}))
 
-(defn create-props
+(defn create-props-cmp
   [m]
   (let [ref (find m :debug/id)]
-    {:debug/type :debug.type/props
-     :overlay/id (str "props" (second ref))
+    {:debug/type :debug.type/props-cmp
+     :overlay/id (str "props-cmp" (second ref))
      :debug/tap  ref}))
 
 (def cluster-opts
@@ -242,7 +242,7 @@
      :debug/group    (map create-mark xs)
      :debug/centroid c}))
 
-(f/reg-pull ::props
+(f/reg-pull ::props-cmp
   (fn [self]
     [{:debug/tap
       [:debug/type
@@ -268,7 +268,7 @@
     (let [t      (vals taps)
           g      (c/cluster t cluster-opts)
           marks  (map create-mark (:noise g))
-          props  (map create-props t)
+          props  (map create-props-cmp t)
           groups (map create-group (vals (dissoc g :noise)))]
       (concat marks groups props))))
 

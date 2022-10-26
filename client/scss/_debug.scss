@@ -39,7 +39,7 @@ $control-fade:                  -0.3;
         }
     }
 
-    .reflet-marks {
+    .reflet-mark-expanded {
         position: absolute;
         display: grid;
         grid-template-columns: (2 * $debug-radius) auto;
@@ -91,7 +91,7 @@ $control-fade:                  -0.3;
             visibility: hidden;
         }
 
-        .reflet-marks {
+        .reflet-mark-expanded {
             visibility: visible;
             opacity: 1;
         }
