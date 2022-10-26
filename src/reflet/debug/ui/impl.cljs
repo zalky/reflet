@@ -248,7 +248,7 @@
       [:debug/type
        :debug/id
        :debug/line
-       :debug/refs]}
+       :debug/props]}
      self]))
 
 (f/reg-pull ::tap

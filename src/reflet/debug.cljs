@@ -60,7 +60,7 @@
   ;; will happen during the first render.
   (fn [db [_ ref tap]]
     (-> db
-        (assoc-in [::taps ref] tap)
+        (update-in [::taps ref] merge tap)
         (db/mergen tap))))
 
 (f/reg-event-fx ::untap

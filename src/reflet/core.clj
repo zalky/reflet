@@ -58,12 +58,11 @@
   "Two sets of symbols are bound, the symbols given by the bindings, and
   a set guaranteed to be unique in order to properly bound
   props."
-  [refs parsed env {:keys [in] :as opts}]
+  [props-sym refs parsed env {:keys [in] :as opts}]
   (let [keys        (mapv :key parsed)
         id-attrs    (mapv :id-attr parsed)
         given-syms  (mapv :sym parsed)
-        unique-syms (mapv gensym given-syms)
-        props-sym   (or in (gensym))]
+        unique-syms (mapv gensym given-syms)]
     [props-sym   (if (bound-local? env props-sym) props-sym {})
      unique-syms (get-refs props-sym refs keys id-attrs opts)
      given-syms  unique-syms
@@ -109,7 +108,7 @@
     :or   {debug true}}]
   `(and (r*/reactive?) ~debug d/*debug*))
 
-(defn- debug-id
+(defn- get-tap-id
   "Produces a debug id that is unique within a dom tree, but not across
   trees with the same topology."
   [refs opts]
@@ -128,14 +127,14 @@
   (util/split-keys bindings [:in :meta :debug]))
 
 (defn- wrap-debug
-  [refs target d-id env body opts]
+  [props-sym target tap-id env body opts]
   `(if ~(debug? opts)
-     (let [p# {:debug/type :debut.type/tap
-               :debug/id   (second ~d-id)
-               :debug/line ~(:line env)
-               :debug/refs (deref ~refs)}]
+     (let [p# {:debug/type  :debut.type/tap
+               :debug/id    (second ~tap-id)
+               :debug/line  ~(:line env)
+               :debug/props ~props-sym}]
        [:<>
-        (d/*debug* ~target p#)
+        (d/*debug* p# ~target)
         (do ~@body)])
      (do ~@body)))
 
@@ -146,17 +145,18 @@
   [bindings & body]
   (let [[opts unparsed] (get-opts bindings)
         parsed          (s/conform ::rs/bindings unparsed)
+        props           (or (:in opts) (gensym))
         refs            (gensym)
-        d-id            (gensym)
+        tap-id          (gensym)
         target          (gensym)
         env             &env]
     `(r/with-let [~refs   (volatile! {})
-                  ~d-id   ~(debug-id refs opts)
-                  ~target (r/atom nil)]
+                  ~target (r/atom nil)
+                  ~tap-id ~(get-tap-id refs opts)]
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
-               (bind-refs refs parsed env opts))
-         ~(wrap-debug refs target d-id env body opts))
+               (bind-refs props refs parsed env opts))
+         ~(wrap-debug props target tap-id env body opts))
        ~(with-ref-cleanup refs))))
 
 (defmacro with-ref*

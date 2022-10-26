@@ -77,7 +77,7 @@
   (when-let [p @(f/sub [::impl/props-cmp self])]
     (f/once (f/disp [::impl/props-cmp-ready self]))
     [:div {:class "reflet-refs"}
-     [data/debug-value (:debug/refs p)]]))
+     [data/debug-value (:debug/props p)]]))
 
 (defmulti debug-header
   :debug/type)
@@ -181,27 +181,43 @@
           el))
       (.-parentElement tap-el))))
 
-(defn- tap
+(defn- init-tap
   [props target tap-el]
-  (some->> tap-el
-           (find-tap-point)
-           (reset! target)
-           (impl/rect)
-           (assoc props :debug/rect)
-           (vector ::d/tap (find props :debug/id))
-           (f/disp)))
+  (let [ref (find props :debug/id)]
+    (some->> tap-el
+             (find-tap-point)
+             (reset! target)
+             (impl/rect)
+             (assoc props :debug/rect)
+             (vector ::d/tap ref)
+             (f/disp))))
 
-(defn debug-tap
+(defn reactive-tap
+  [_]
+  (r/create-class
+   {:component-did-update
+    (f/props-did-update-handler
+     (fn [_ props]
+       (let [ref (find props :debug/id)]
+         (f/disp [::d/tap ref props]))))
+
+    :reagent-render
+    (fn [_]
+      [:div {:class "reflet-reactive-tap"}])}))
+
+(defn tap
   "::d/tap must happen after the ::d/untap of the previous react
   lifecycle. To guarantee this, ::d/tap must be invoked in either the
   `:ref` callback, or the `:component-did-mount` phase of the
   component lifecycle. Must not dispatch ::d/tap in a `with-let`,
   where it will happen during the first render."
-  [target props]
+  [props target]
   (if-not @target
     [:div {:class "reflet-tap"
-           :ref   (partial tap props target)}]
-    [:<>]))
+           :ref   (partial init-tap props target)}]
+    (-> [reactive-tap props]
+        (r/as-element)
+        (react-dom/createPortal (body-el)))))
 
 (defn- upsert-overlay-el!
   []
@@ -213,6 +229,6 @@
 
 (defn load-debugger!
   []
-  (set! d/*debug* debug-tap)
+  (set! d/*debug* tap)
   (->> (upsert-overlay-el!)
        (dom/render [overlay])))

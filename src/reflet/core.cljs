@@ -6,7 +6,7 @@
             [re-frame.interop :as interop]
             [re-frame.registrar :as reg]
             [reagent.core :as r]
-            [reagent.impl.component :as util**]
+            [reagent.impl.component :as util]
             [reflet.db :as db]
             [reflet.debug :as debug]
             [reflet.fsm :as fsm]
@@ -262,5 +262,5 @@
   [f]
   (fn [this old-argv]
     (let [new (r/props this)
-          old (util**/extract-props old-argv)]
+          old (util/extract-props old-argv)]
       (f old new))))
