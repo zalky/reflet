@@ -18,10 +18,12 @@
       :else       (type x))))
 
 (defmethod debug-value ::ref
-  [[attr uuid :as ref]]
+  [[attr value :as ref]]
   [:div {:class    "reflet-ref"
          :on-click #(f/disp [::impl/open-ref ref])}
-   "@" (subs (str uuid) 0 7)])
+   "@" (if (uuid? value)
+         (subs (str value) 0 8)
+         (str value))])
 
 (defmethod debug-value ::string
   [s]
