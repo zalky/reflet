@@ -61,7 +61,7 @@
     [:kr.track/duration id])
   (fn [secs]
     (when (number? secs)
-      (str (Math/floor (/ secs 60)) ":" (mod secs 60)))))
+      (str (quot secs 60) ":" (mod secs 60)))))
 
 (f/reg-sub ::selecting?
   (fn [[_ self]]
