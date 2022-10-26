@@ -88,15 +88,17 @@
 
   2. Do not pass them to contexts outside of the `with-ref` in which
      they were made"
-  [refs]
+  [refs context]
   (list
    'finally
+   `(when-let [ref# (:debug-id ~context)]
+      (db/unmount-ref! ref#)
+      (disp [::with-ref-cleanup ref#])
+      (disp [::d/untap ref#]))
    `(doseq [[k# ref#] (deref ~refs)]
-      (when (= k# ::debug-id)
-        (f/dispatch [::d/untap ref#]))
       (when (and ref# (db/transient? ref#))
         (db/unmount-ref! ref#)
-        (f/dispatch [::with-ref-cleanup ref#])))))
+        (disp [::with-ref-cleanup ref#])))))
 
 (defn- component-name
   []
@@ -108,35 +110,39 @@
     :or   {debug true}}]
   `(and (r*/reactive?) ~debug d/*debug*))
 
-(defn- get-tap-id
+(defn- debug-id
   "Produces a debug id that is unique within a dom tree, but not across
   trees with the same topology."
-  [refs opts]
+  []
+  `(let [^clj c# r*/*ratom-context*
+         g#      (or (.-withRefGeneration c#) 0)
+         id#     (keyword ~(component-name) g#)
+         r#      (vector :debug/id id#)]
+     (set! (.-withRefGeneration c#) (inc g#))
+     (db/mount-ref! r#)
+     r#))
+
+(defn- wrap-debug
+  [props-sym context env body opts]
+  `(if ~(debug? opts)
+     (let [p# {:debug/type  :debut.type/tap
+               :debug/id    (second (:debug-id ~context))
+               :debug/line  ~(:line env)
+               :debug/props ~props-sym}]
+       [:<>
+        (d/*debug* p# (:target ~context))
+        (do ~@body)])
+     (do ~@body)))
+
+(defn debug-context
+  [env opts]
   `(when ~(debug? opts)
-     (let [^clj c# r*/*ratom-context*
-           g#      (or (.-withRefGeneration c#) 0)
-           id#     (keyword ~(component-name) g#)
-           r#      (vector :debug/id id#)]
-       (set! (.-withRefGeneration c#) (inc g#))
-       (vswap! ~refs assoc ::debug-id r#)
-       (db/mount-ref! r#)
-       r#)))
+     {:target   (r/atom nil)
+      :debug-id ~(debug-id)}))
 
 (defn- get-opts
   [bindings]
   (util/split-keys bindings [:in :meta :debug]))
-
-(defn- wrap-debug
-  [props-sym target tap-id env body opts]
-  `(if ~(debug? opts)
-     (let [p# {:debug/type  :debut.type/tap
-               :debug/id    (second ~tap-id)
-               :debug/line  ~(:line env)
-               :debug/props ~props-sym}]
-       [:<>
-        (d/*debug* p# ~target)
-        (do ~@body)])
-     (do ~@body)))
 
 (defmacro with-ref
   "Generates entity references. Optionally rebinds props attributes,
@@ -146,18 +152,16 @@
   (let [[opts unparsed] (get-opts bindings)
         parsed          (s/conform ::rs/bindings unparsed)
         props           (or (:in opts) (gensym))
+        context         (gensym)
         refs            (gensym)
-        tap-id          (gensym)
-        target          (gensym)
         env             &env]
-    `(r/with-let [~refs   (volatile! {})
-                  ~target (r/atom nil)
-                  ~tap-id ~(get-tap-id refs opts)]
+    `(r/with-let [~refs    (volatile! {})
+                  ~context ~(debug-context env opts)]
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs props refs parsed env opts))
-         ~(wrap-debug props target tap-id env body opts))
-       ~(with-ref-cleanup refs))))
+         ~(wrap-debug props context env body opts))
+       ~(with-ref-cleanup refs context))))
 
 (defmacro with-ref*
   "Like with-ref but debug disabled. For implementing the debug UI."

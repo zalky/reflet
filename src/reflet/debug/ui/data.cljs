@@ -18,7 +18,7 @@
 
 (defmethod debug-value nil
   [_]
-  "nil")
+  [:div "nil"])
 
 (defmethod debug-value js/Number
   [n]
@@ -43,10 +43,9 @@
    [:div {:class "reflet-map-data"}
     (map-indexed
      (fn [i [k ref]]
-       (when (not= k ::f/debug-id)
-         [:div {:key i}
-          [debug-value k]
-          [debug-value ref]]))
+       [:div {:key i}
+        [debug-value k]
+        [debug-value ref]])
      m)]])
 
 (defmethod debug-value Keyword
