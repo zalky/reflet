@@ -40,44 +40,52 @@
 (f/reg-event-db ::set-props
   (fn [db [_ self props]]
     (as-> (apply assoc props self) %
-      (dissoc % :debug/el)
+      (dissoc % :debug/el :debug/self)
       (db/mergen db %))))
 
-(f/reg-event-db ::set-rect
+(f/reg-event-db ::set-tap-rect
   (fn [db [_ self tap el]]
     (->> (db/get-inn db [tap :debug/rect])
          (init-rect (i/grab el))
-         (db/assoc-inn db [self :debug/rect]))))
+         (db/update-inn db [self :debug/rect] merge))))
+
+(f/reg-event-db ::set-rect
+  (fn [db [_ self el]]
+    (->> {:left   200
+          :top    200
+          :width  250
+          :height 150}
+         (db/update-inn db [self :debug/rect] merge))))
 
 (f/reg-event-db ::set-centroid
   (fn [db [_ self {:keys [x y]} el]]
     (->> {:left x :top y}
          (init-rect (i/grab el))
-         (db/assoc-inn db [self :debug/rect]))))
+         (db/update-inn db [self :debug/rect] merge))))
 
 (f/reg-pull ::rect
   (fn [self]
     [:debug/rect self])
   (fn [rect]
-    (select-keys rect [:left :top :width :height])))
+    (select-keys rect [:left :top :width :height :z-index])))
 
 (def state-h
   (util/derive-pairs
    [[::mounted ::open] ::display]))
 
-(fsm/reg-fsm ::node
+(fsm/reg-fsm ::node-fsm
   (fn [self]
     {:ref  self
-     :attr :debug.panel/state
+     :attr :debug.node/state
      :fsm  {nil    {[::open self] ::open}
             ::open {[::close self] nil}}}))
 
-(fsm/reg-fsm ::panel
+(fsm/reg-fsm ::props-fsm
   (fn [self tap el]
     {:ref  self
      :attr :debug.panel/state
      :fsm  {nil       {[::toggle tap] ::mounted}
-            ::mounted {[::props-ready self] {:to ::open :dispatch [::set-rect self tap el]}}
+            ::mounted {[::props-ready self] {:to ::open :dispatch [::set-tap-rect self tap el]}}
             ::open    {[::toggle tap] ::closed}
             ::closed  {[::toggle tap] ::open}}}))
 
@@ -89,6 +97,22 @@
                 :y  #(get-in % [:debug/rect :top])}
    :min-points 2
    :epsilon    50})
+
+(defn create-ref-entity
+  [ref]
+  {:debug/type :debug.type/ref
+   :overlay/id (str (first ref) (second ref))
+   :debug/ref  ref})
+
+(f/reg-event-db ::open-ref
+  (fn [db [_ ref]]
+    (->> ref
+         (create-ref-entity)
+         (assoc-in db [::refs ref]))))
+
+(f/reg-event-db ::close-ref
+  (fn [db [_ ref]]
+    (update db ::refs dissoc ref)))
 
 (defn create-mark
   [m]
@@ -127,12 +151,9 @@
       :debug/line]
      tap]))
 
-(f/reg-pull ::overlay-panels
-  (fn []
-    [{::overlay-panels
-      [:cmp/uuid
-       :debug/type
-       :debug/tap]}]))
+(f/reg-sub ::overlay-refs
+  (fn [db _]
+    (vals (get db ::refs))))
 
 (f/reg-sub ::overlay-nodes
   (fn [_]
@@ -148,9 +169,9 @@
 (f/reg-sub ::overlay
   (fn [_]
     [(f/sub [::overlay-nodes])
-     (f/sub [::overlay-panels])])
-  (fn [[nodes panels] _]
-    (concat nodes panels)))
+     (f/sub [::overlay-refs])])
+  (fn [[nodes refs] _]
+    (concat nodes refs)))
 
 (f/reg-sub ::render)
 
@@ -230,6 +251,14 @@
     (.removeEventListener js/document "mouseup" anon)
     (f/disp-sync [::drag-stop!])))
 
+(defn- update-drag-z
+  [db ref]
+  (let [z (get db ::z-index 1)]
+    (-> db
+        (assoc ::dragging true)
+        (update ::z-index inc)
+        (db/update-inn [ref :debug/rect] assoc :z-index z))))
+
 (f/reg-event-fx ::drag!
   (fn [{db :db} [_ handler ref e-mouse-down]]
     {:pre [handler]}
@@ -237,7 +266,7 @@
           un-f (drag-unlistener! on-f)]
       (.addEventListener js/document "mousemove" on-f)
       (.addEventListener js/document "mouseup" un-f)
-      {:db (assoc db ::dragging true)})))
+      {:db (update-drag-z db ref)})))
 
 (f/reg-event-db ::drag-stop!
   (fn [db _]

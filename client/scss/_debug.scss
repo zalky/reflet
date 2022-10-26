@@ -269,7 +269,10 @@ $control-fade:                  -0.3;
 
 .reflet-ref {
     color: $syntax-ref;
-    cursor: pointer;
+
+    :not(.reflet-header) > & {
+        cursor: pointer;
+    }
 }
 
 .reflet-keyword {
