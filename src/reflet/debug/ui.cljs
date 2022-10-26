@@ -83,7 +83,7 @@
                 :el/uuid  [debug/el]}
     (let [state (f/sub [::impl/node-fsm self])
           rect  (f/sub [::impl/rect self])
-          cb    #(do (f/disp [::impl/set-tap-rect self tap el])
+          cb    #(do (f/disp [::impl/set-tap-rect self el tap])
                      (f/disp [::impl/set-props self props]))
           open? (= @state ::impl/open)]
       [:div {:ref   (i/el! el :cb cb)
@@ -110,7 +110,7 @@
                 :el/uuid  [debug/el]}
     (let [state (f/sub [::impl/node-fsm self])
           rect  (f/sub [::impl/rect self])
-          cb    #(do (f/disp [::impl/set-centroid self centroid el])
+          cb    #(do (f/disp [::impl/set-centroid self el centroid])
                      (f/disp [::impl/set-props self props]))
           open? (= @state ::impl/open)]
       [:div {:ref   (i/el! el :cb cb)
