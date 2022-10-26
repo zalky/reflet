@@ -91,13 +91,6 @@
 
 (f/reg-no-op ::toggle ::open ::close ::props-ready)
 
-(def cluster-opts
-  {:attrs      {:id #(find % :debug/id)
-                :x  #(get-in % [:debug/rect :left])
-                :y  #(get-in % [:debug/rect :top])}
-   :min-points 2
-   :epsilon    50})
-
 (defn create-ref-entity
   [ref]
   {:debug/type :debug.type/ref
@@ -127,6 +120,13 @@
     {:debug/type :debug.type/props
      :overlay/id (str "props" (second ref))
      :debug/tap  ref}))
+
+(def cluster-opts
+  {:attrs      {:id #(find % :debug/id)
+                :x  #(get-in % [:debug/rect :left])
+                :y  #(get-in % [:debug/rect :top])}
+   :min-points 2
+   :epsilon    50})
 
 (defn create-group
   [xs]

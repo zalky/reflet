@@ -13,8 +13,8 @@
   (get-in db [:group p]))
 
 (defn set-group
-  [db p g]
-  (assoc-in db [:group p] g))
+  [db p group]
+  (assoc-in db [:group p] group))
 
 (defn pow
   [x y]
@@ -37,14 +37,17 @@
   (get-in db [:neighbours id]))
 
 (defn index-neigh
-  [{points         :points
-    n              :neighbours
-    {eps :epsilon} :opts
-    :as            db} q]
+  [{points      :points
+    n           :neighbours
+    {eps  :epsilon
+     dist :distance-fn
+     :or  {dist euclidean-distance}
+     :as  opts} :opts
+    :as         db} q]
   (letfn [(f [n p]
             (let [q* (get points q)
                   p* (get points p)
-                  d  (euclidean-distance q* p*)]
+                  d  (dist q* p*)]
               (if (<= d eps)
                 (update n q conj p)
                 n)))]
@@ -63,18 +66,18 @@
 
 (defn grow-neigh
   [{{:keys [min-points]} :opts
-    :as                  db} seed g]
+    :as                  db} seed group]
   (loop [db         db
          done       #{}
          [q & more] seed]
     (if q
-      (let [done* (conj done q)
-            g*    (get-group db q)]
-        (if (= g* :noise)
-          (recur (set-group db q g) done* more)
-          (if g*
+      (let [done*  (conj done q)
+            group* (get-group db q)]
+        (if (= group* :noise)
+          (recur (set-group db q group) done* more)
+          (if group*
             (recur db done* more)
-            (let [db     (set-group db q g)
+            (let [db     (set-group db q group)
                   db     (index-neigh db q)
                   grow-n (get-neigh db q)]
               (if (<= min-points (count grow-n))
@@ -86,33 +89,38 @@
   "Simple DBSCAN implementation. See
   https://en.wikipedia.org/wiki/DBSCAN
 
-  This may not be the most ideal clustering algorithm for UI
-  applications, since it can produce clusters that are arbitrarily
-  large as long as they are densly connected. However, it is easy to
-  implement, and given that UI elements also possess a high degree of
-  geometric regularity, with a correctly tuned `:epsilon` parameter it
-  should still be able to produce good results."
+  One potential drawback of this algorithm for this application is
+  that it can produce clusters that are arbitrarily large as long as
+  they are densly connected. However, UI elements possess a high
+  degree of geometric regularity, and so with a correctly tuned
+  `:epsilon` parameter it should be able to produce good results. The
+  naive grid clustering approach below, while guaranteeing bounded
+  clusters, can potentially fail to cluster points that are adjacent,
+  but on opposite sides of a partition. There are hierarchical grid
+  clustering algorithms that might mitigate this issue, but with the
+  right tuning DBSCAN should be fine."
   [{{:keys [min-points]} :opts
     :as                  db}]
   (loop [db         db
-         g          0
+         group      0
          [p & more] (points db)]
     (if p
       (if (get-group db p)
-        (recur db g more)
+        (recur db group more)
         (let [db (index-neigh db p)
               n  (get-neigh db p)]
           (if (< (count n) min-points)
-            (recur (set-group db p :noise) g more)
-            (let [g    (inc g)
-                  seed (disj n p)]
-              (-> (set-group db p g)
-                  (grow-neigh seed g)
-                  (recur g more))))))
+            (recur (set-group db p :noise) group more)
+            (let [group (inc group)
+                  seed  (disj n p)]
+              (-> db
+                  (set-group p group)
+                  (grow-neigh seed group)
+                  (recur group more))))))
       db)))
 
 (defn grid
-  "Dead simple grid clustering."
+  "Simple grid clustering."
   [{{[quant-x
       quant-y] :quant} :opts
     :as                db}]
