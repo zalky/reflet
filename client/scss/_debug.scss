@@ -1,6 +1,6 @@
 
 $debug-mark-color:              color.adjust($blue, $lightness: 15);
-$debug-marks-bg:                rgba(236, 251, 255, 94%);
+$debug-marks-bg:                rgba(236, 247, 255, 94%); // rgba(236, 251, 255, 94%);
 $debug-radius:                  8px;
 $debug-panel-radius:            2 * $debug-radius;
 $debug-stack-height:            8px;
@@ -120,7 +120,7 @@ $control-fade:                  -0.3;
         top: $shadow-offset;
         left: $shadow-offset;
         border-radius: $debug-panel-radius + $shadow-offset / 2;
-        background: rgba(182, 235, 255, 50%);
+        background: rgba(182, 223, 255, 50%); //rgba(182, 235, 255, 50%);
         transform: translateZ(-2px);
     }
 
