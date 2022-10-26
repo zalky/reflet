@@ -6,6 +6,7 @@
             [reflet.debug :as d]
             [reflet.debug.glyphs :as g]
             [reflet.debug.ui.data :as data]
+            [reflet.debug.ui.data.impl :as datai]
             [reflet.debug.ui.impl :as impl]
             [reflet.interop :as i]))
 
@@ -148,7 +149,8 @@
              :class "reflet-panel"
              :style @rect}
        [:div {:class "reflet-content"}
-        [debug-header props]]
+        [debug-header props]
+        [data/debug-value @(f/sub [::datai/data ref])]]
        [handle props]
        (drop-shadow)])))
 

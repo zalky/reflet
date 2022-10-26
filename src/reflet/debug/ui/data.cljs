@@ -13,9 +13,16 @@
   (fn [x]
     (cond
       (ref? x)    ::ref
-      (string? x) ::string
       (map? x)    ::map
       :else       (type x))))
+
+(defmethod debug-value nil
+  [_]
+  "nil")
+
+(defmethod debug-value js/Number
+  [n]
+  [:div {:class "reflet-number"} n])
 
 (defmethod debug-value ::ref
   [[attr value :as ref]]
@@ -25,7 +32,7 @@
          (subs (str value) 0 8)
          (str value))])
 
-(defmethod debug-value ::string
+(defmethod debug-value js/String
   [s]
   [:div {:class "reflet-string"}
    (str \" s \")])
