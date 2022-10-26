@@ -794,16 +794,17 @@
 (defn result-reaction
   [input-r result-fn query-v]
   (let [result-v (get-result-v query-v)]
-    (traced-reaction result-v
+    (traced-reaction nil result-v
       (fn []
         (->> (rest result-v)
              (map maybe-deref)
              (apply result-fn @input-r))))))
 
 (defn query-ref
-  [query-v]
+  [query-v rx-id]
   (-> (random-ref :query/uuid)
-      (with-meta {:query-v query-v})))
+      (with-meta {:query-v query-v
+                  :rx-id   rx-id})))
 
 (defn pull-reaction
   "Returns a differential pull reaction. `expr-fn` is a function that
@@ -817,9 +818,10 @@
   is not reactive to them. Instead, it is reactive to changes the
   query tick, which tracks the db-tick and synced."
   [config expr-fn query-v]
-  (let [q-ref  (query-ref query-v)
+  (let [rx-id  (atom nil)
+        q-ref  (query-ref query-v rx-id)
         q-tick (query-tick q-ref)]
-    (traced-reaction query-v
+    (traced-reaction rx-id query-v
       (fn []
         (let [expr-r (apply expr-fn (rest query-v))
               in     {:db         (.-state db/app-db)
