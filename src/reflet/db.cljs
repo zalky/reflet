@@ -681,7 +681,8 @@
       (update ::e->q clear-stale-entities @stale q-ref)
       (update ::e->q add-fresh-entities @fresh q-ref)
       (assoc-in [::q->tick q-ref] query-tick)
-      (assoc ::touched-queries #{})))
+      (assoc ::touched-queries #{})
+      (update ::q util/conjs q-ref)))
 
 (defn- acc-refs!
   "Accumulates freshly touched entity refs in volatiles."
@@ -716,7 +717,8 @@
         (update ::e->q clear-stale-entities stale q-ref)
         (update ::q->e dissoc q-ref)
         (update ::q->tick dissoc q-ref)
-        (update ::q->event dissoc q-ref))))
+        (update ::q->event dissoc q-ref)
+        (update ::q disj q-ref))))
 
 ;;;; Query index injection interceptor
 

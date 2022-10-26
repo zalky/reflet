@@ -69,6 +69,23 @@
      props-sym   `(->> ~(zipmap keys unique-syms)
                        (merge ~props-sym))]))
 
+(defn- debug?
+  [{:keys [debug]
+    :or   {debug true}}]
+  `(and (r*/reactive?) ~debug d/*debug*))
+
+(defn- wrap-debug
+  [props-sym context env body opts]
+  `(if ~(debug? opts)
+     (let [p# {:debug/type  :debut.type/tap
+               :debug/id    (second (:debug-id ~context))
+               :debug/line  ~(:line env)
+               :debug/props ~props-sym}]
+       [:<>
+        (d/*debug* p# (:target ~context))
+        (do ~@body)])
+     (do ~@body)))
+
 (defn- with-ref-cleanup
   "Clean up clause.
 
@@ -95,6 +112,10 @@
       (db/unmount-ref! ref#)
       (disp [::with-ref-cleanup ref#])
       (disp [::d/untap ref#]))
+
+   `(when-let [a# (:aliases ~context)]
+      (disp [::d/uncollect-aliases a#]))
+
    `(doseq [[k# ref#] (deref ~refs)]
       (when (and ref# (db/transient? ref#))
         (db/unmount-ref! ref#)
@@ -104,11 +125,6 @@
   []
   `(reagent.impl.component/component-name
     (r/current-component)))
-
-(defn- debug?
-  [{:keys [debug]
-    :or   {debug true}}]
-  `(and (r*/reactive?) ~debug d/*debug*))
 
 (defn- debug-id
   "Produces a debug id that is unique within a dom tree, but not across
@@ -122,23 +138,20 @@
      (db/mount-ref! r#)
      r#))
 
-(defn- wrap-debug
-  [props-sym context env body opts]
-  `(if ~(debug? opts)
-     (let [p# {:debug/type  :debut.type/tap
-               :debug/id    (second (:debug-id ~context))
-               :debug/line  ~(:line env)
-               :debug/props ~props-sym}]
-       [:<>
-        (d/*debug* p# (:target ~context))
-        (do ~@body)])
-     (do ~@body)))
+(defn- collect-aliases
+  [env]
+  (let [m `(quote ~(->> (:ns env)
+                        (:requires)
+                        (keep (fn [[k v]] (when-not (= k v) [v {k 1}])))
+                        (into {})))]
+    `(do (disp [::d/collect-aliases ~m]) ~m)))
 
 (defn debug-context
   [env opts]
   `(when ~(debug? opts)
      {:target   (r/atom nil)
-      :debug-id ~(debug-id)}))
+      :debug-id ~(debug-id)
+      :aliases  ~(collect-aliases env)}))
 
 (defn- get-opts
   [bindings]

@@ -69,6 +69,37 @@
              (update ::taps dissoc ref)
              (db/dissocn ref))}))
 
+(defn- plus
+  [x y]
+  (+ (or x 0)
+     (or y 0)))
+
+(defn- minus
+  [x y]
+  (max (- (or x 0)
+          (or y 0))
+       0))
+
+(defn- collect
+  [f]
+  (partial merge-with (partial merge-with f)))
+
+(f/reg-event-db ::collect-aliases
+  (fn [db [_ aliases]]
+    (update db [::aliases] (collect plus) aliases)))
+
+(f/reg-event-db ::uncollect-aliases
+  (fn [db [_ aliases]]
+    (update db [::aliases] (collect minus) aliases)))
+
+(f/reg-sub ::debug-aliases*
+  (fn [db]
+    (get db ::aliases)))
+
+(f/reg-sub ::debug-aliases
+  (fn [_]
+    (f/subscribe [])))
+
 (f/reg-sub ::taps
   (fn [db _]
     (get db ::taps)))
