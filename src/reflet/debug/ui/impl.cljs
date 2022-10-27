@@ -131,37 +131,40 @@
        :width  w
        :height h})))
 
-(defn- new-rect
-  [_ _]
-  {:left   200
-   :top    200
-   :width  300
-   :height 150})
+(def rect-hierarchy
+  (util/derive-pairs
+   [[:debug.type/ref
+     :debug.type/props-cmp] ::panel]))
 
-(defn- new-tap-rect
-  [db el tap]
+(defmulti get-rect
+  (fn [db _ type & _] type)
+  :hierarchy #'rect-hierarchy)
+
+(defmethod get-rect ::panel
+  [_ _ _ el _]
+  (let [{h :height} (rect (i/grab el))]
+    {:left   200
+     :top    200
+     :width  300
+     :height h}))
+
+(defmethod get-rect :debug.type/group
+  [_ _ _ el {:keys [x y]}]
+  (->> {:left x :top y}
+       (shift-rect (i/grab el))))
+
+(defmethod get-rect :debug.type/mark
+  [db _ _ el tap]
   (->> (db/get-inn db [tap :debug/rect])
        (shift-rect (i/grab el))))
 
 (f/reg-event-db ::set-rect
-  (fn [db [_ self el]]
-    (let [r (new-rect db el)]
+  (fn [db [_ self & args]]
+    (letfn [(f [r]
+              (or r (apply get-rect db self args)))]
       (-> db
-          (db/update-inn [self :debug/rect] merge r)
+          (db/update-inn [self :debug/rect] f)
           (update-z-index self)))))
-
-(f/reg-event-db ::set-tap-rect
-  (fn [db [_ self el tap]]
-    (let [r (new-tap-rect db el tap)]
-      (-> db
-          (db/update-inn [self :debug/rect] merge r)
-          (update-z-index self)))))
-
-(f/reg-event-db ::set-centroid
-  (fn [db [_ self el {:keys [x y]}]]
-    (->> {:left x :top y}
-         (shift-rect (i/grab el))
-         (db/update-inn db [self :debug/rect] merge))))
 
 (f/reg-event-db ::set-props
   (fn [db [_ self props]]
@@ -175,10 +178,6 @@
   (fn [rect]
     (select-keys rect [:left :top :width :height :z-index])))
 
-(def state-h
-  (util/derive-pairs
-   [[::mounted ::open] ::display]))
-
 (fsm/reg-fsm ::node-fsm
   (fn [self]
     {:ref  self
@@ -186,45 +185,37 @@
      :fsm  {nil    {[::open self] ::open}
             ::open {[::close self] nil}}}))
 
-(fsm/reg-fsm ::props-cmp-fsm
-  (fn [self tap el]
+(def state-h
+  (util/derive-pairs
+   [[::mounted ::open] ::display]))
+
+(fsm/reg-fsm ::panel-fsm
+  (fn [self type el]
     {:ref  self
      :attr :debug.panel/state
-     :fsm  {nil       {[::toggle tap] ::mounted}
-            ::mounted {[::props-cmp-ready self] {:to ::open :dispatch [::set-tap-rect self el tap]}}
-            ::open    {[::toggle tap] ::closed}
-            ::closed  {[::toggle tap] ::open}}}))
+     :fsm  {nil       {[::set-props self] ::mounted}
+            ::mounted {[::ready-to-size self] {:to ::open :dispatch [::set-rect self type el]}}
+            ::open    {[::close self] ::nil}}}))
 
-(f/reg-no-op ::toggle ::open ::close ::props-cmp-ready)
+(f/reg-no-op ::open ::close ::ready-to-size)
 
 (defn create-ref-entity
   [ref]
   {:debug/type :debug.type/ref
-   :overlay/id (str (first ref) (second ref))
+   :debug/self [:debug/id (str (first ref) (second ref))]
    :debug/ref  ref})
 
-(f/reg-event-db ::open-ref
-  (fn [db [_ ref]]
-    (->> ref
-         (create-ref-entity)
-         (assoc-in db [::refs ref]))))
-
-(f/reg-event-db ::close-ref
-  (fn [db [_ ref]]
-    (update db ::refs dissoc ref)))
+(defn create-props-cmp
+  [ref]
+  {:debug/type :debug.type/props-cmp
+   :debug/self [:debug/id (str "props-cmp" (second ref))]
+   :debug/tap  ref})
 
 (defn create-mark
   [m]
   (let [ref (find m :debug/id)]
     {:debug/type :debug.type/mark
-     :overlay/id (str "mark" (second ref))
-     :debug/tap  ref}))
-
-(defn create-props-cmp
-  [m]
-  (let [ref (find m :debug/id)]
-    {:debug/type :debug.type/props-cmp
-     :overlay/id (str "props-cmp" (second ref))
+     :debug/self [:debug/id (str "mark" (second ref))]
      :debug/tap  ref}))
 
 (def cluster-opts
@@ -238,7 +229,7 @@
   [xs]
   (let [c (c/centroid xs cluster-opts)]
     {:debug/type     :debug.type/group
-     :overlay/id     (str "group" c)
+     :debug/self     [:debug/id (str "group" c)]
      :debug/group    (map create-mark xs)
      :debug/centroid c}))
 
@@ -259,6 +250,30 @@
       :debug/line]
      tap]))
 
+(f/reg-event-db ::open-prop
+  (fn [db [_ ref]]
+    (->> ref
+         (create-props-cmp)
+         (assoc-in db [::props ref]))))
+
+(f/reg-event-db ::close-prop
+  (fn [db [_ ref]]
+    (update db ::props dissoc ref)))
+
+(f/reg-event-db ::open-ref
+  (fn [db [_ ref]]
+    (->> ref
+         (create-ref-entity)
+         (assoc-in db [::refs ref]))))
+
+(f/reg-event-db ::close-ref
+  (fn [db [_ ref]]
+    (update db ::refs dissoc ref)))
+
+(f/reg-sub ::overlay-props
+  (fn [db _]
+    (vals (get db ::props))))
+
 (f/reg-sub ::overlay-refs
   (fn [db _]
     (vals (get db ::refs))))
@@ -270,15 +285,15 @@
     (let [t      (vals taps)
           g      (c/cluster t cluster-opts)
           marks  (map create-mark (:noise g))
-          props  (map create-props-cmp t)
           groups (map create-group (vals (dissoc g :noise)))]
-      (concat marks groups props))))
+      (concat marks groups))))
 
 (f/reg-sub ::overlay
   (fn [_]
     [(f/sub [::overlay-nodes])
+     (f/sub [::overlay-props])
      (f/sub [::overlay-refs])])
-  (fn [[nodes refs] _]
-    (concat nodes refs)))
+  (fn [[nodes props refs] _]
+    (concat nodes props refs)))
 
 (f/reg-sub ::render)

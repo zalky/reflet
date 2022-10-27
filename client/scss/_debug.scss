@@ -38,6 +38,11 @@ $control-fade:                  -0.3;
     position: fixed;
 }
 
+.reflet-glyph {
+    display: flex;
+    align-items: center;
+}
+
 .reflet-group, .reflet-mark {
     position: relative;
     transform: translate($debug-radius, $debug-radius + $debug-stack-height);

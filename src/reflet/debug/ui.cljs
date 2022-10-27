@@ -26,17 +26,17 @@
 (defn- mark-expanded
   [{:debug/keys [tap]}]
   (let [t (f/sub [::impl/tap tap])]
-    [:div {:on-click #(f/disp [::impl/toggle tap])}
-     [:div [g/mark-icon]]
+    [:div {:on-click #(f/disp [::impl/open-prop tap])}
+     [g/mark-icon]
      [:div (some-> @t props-name)]]))
 
 (defmethod render :debug.type/mark
-  [{:debug/keys [tap] :as props}]
+  [{:debug/keys [type tap] :as props}]
   (f/with-ref* {:cmp/uuid [debug/self]
                 :el/uuid  [debug/el]}
     (let [state (f/sub [::impl/node-fsm self])
           rect  (f/sub [::impl/rect self])
-          cb    #(do (f/disp [::impl/set-tap-rect self el tap])
+          cb    #(do (f/disp [::impl/set-rect self type el tap])
                      (f/disp [::impl/set-props self props]))
           open? (= @state ::impl/open)]
       [:div {:ref   (i/el! el :cb cb)
@@ -53,17 +53,17 @@
   [{:debug/keys [group]}]
   [:div {:class "reflet-mark-expanded"}
    (doall
-    (for [{id  :overlay/id
+    (for [{id  :debug/self
            :as n} group]
       ^{:key id} [mark-expanded n]))])
 
 (defmethod render :debug.type/group
-  [{:debug/keys [centroid] :as props}]
+  [{:debug/keys [type centroid] :as props}]
   (f/with-ref* {:cmp/uuid [debug/self]
                 :el/uuid  [debug/el]}
     (let [state (f/sub [::impl/node-fsm self])
           rect  (f/sub [::impl/rect self])
-          cb    #(do (f/disp [::impl/set-centroid self el centroid])
+          cb    #(do (f/disp [::impl/set-rect self type el centroid])
                      (f/disp [::impl/set-props self props]))
           open? (= @state ::impl/open)]
       [:div {:ref   (i/el! el :cb cb)
@@ -75,13 +75,6 @@
         [marks-expanded props]
         [g/mark-icon {:group true}]]])))
 
-(defn- props-cmp
-  [{:debug/keys [self]}]
-  (when-let [p @(f/sub [::impl/props-cmp self])]
-    (f/once (f/disp [::impl/props-cmp-ready self]))
-    [:div {:class "reflet-refs"}
-     [data/debug-value (:debug/props p)]]))
-
 (defmulti header
   :debug/type)
 
@@ -89,7 +82,7 @@
   [{:debug/keys [self tap]}]
   (let [props    (f/sub [::impl/props-cmp self])
         dragging (f/sub [::impl/dragging])
-        on-close #(f/disp [::impl/toggle tap])
+        on-close #(f/disp [::impl/close-prop tap])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         ["reflet-header" (when @dragging "reflet-dragging")]
            :on-mouse-down on-drag}
@@ -107,13 +100,19 @@
   []
   [:div {:class "reflet-panel-shadow"}])
 
+(defn- props-content
+  [{:debug/keys [self]}]
+  (when-let [p @(f/sub [::impl/props-cmp self])]
+    (f/once (f/disp [::impl/ready-to-size self]))
+    [data/debug-value (:debug/props p)]))
+
 (defmethod render :debug.type/props-cmp
-  [{:debug/keys [tap] :as props}]
+  [{:debug/keys [type] :as props}]
   (f/with-ref* {:cmp/uuid [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [state (f/sub [::impl/props-cmp-fsm self tap el])
-          rect  (f/sub [::impl/rect self])]
+    (let [rect  (f/sub [::impl/rect self])
+          state (f/sub [::impl/panel-fsm self type el])]
       (f/once (f/disp [::impl/set-props self props]))
       (when (isa? impl/state-h @state ::impl/display)
         [:div {:ref   (i/el! el)
@@ -121,7 +120,7 @@
                :style @rect}
          [:div {:class "reflet-content"}
           [header props]
-          [props-cmp props]]
+          [props-content props]]
          [handle props]
          (drop-shadow)]))))
 
@@ -136,29 +135,35 @@
      [g/x {:class         "reflet-control"
            :on-mouse-down (f/stop-prop on-close)}]]))
 
+(defn- ref-content
+  [{:debug/keys [self ref]}]
+  (let [e (f/sub [::datai/entity ref])]
+    (f/once (f/disp [::impl/ready-to-size self]))
+    [data/debug-value @e]))
+
 (defmethod render :debug.type/ref
-  [{:debug/keys [ref] :as props}]
+  [{:debug/keys [type] :as props}]
   (f/with-ref* {:cmp/uuid [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect   (f/sub [::impl/rect self])
-          entity (f/sub [::datai/entity ref])
-          cb     #(do (f/disp [::impl/set-rect self el])
-                      (f/disp [::impl/set-props self props]))]
-      [:div {:ref   (i/el! el :cb cb)
-             :class "reflet-panel"
-             :style @rect}
-       [:div {:class "reflet-content"}
-        [header props]
-        [data/debug-value @entity]]
-       [handle props]
-       (drop-shadow)])))
+    (let [rect  (f/sub [::impl/rect self])
+          state (f/sub [::impl/panel-fsm self type el])]
+      (f/once (f/disp [::impl/set-props self props]))
+      (when (isa? impl/state-h @state ::impl/display)
+        [:div {:ref   (i/el! el)
+               :class "reflet-panel"
+               :style @rect}
+         [:div {:class "reflet-content"}
+          [header props]
+          [ref-content props]]
+         [handle props]
+         (drop-shadow)]))))
 
 (defn- overlay
   []
   [:<>
    (doall
-    (for [{id  :overlay/id
+    (for [{id  :debug/self
            :as n} @(f/sub [::impl/overlay])]
       ^{:key id} [render n]))])
 

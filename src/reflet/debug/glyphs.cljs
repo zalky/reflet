@@ -17,24 +17,27 @@
 (defn mark-icon
   [& [{:keys [group]
        :as   props}]]
-  [:svg (-> props
-            (dissoc :group)
-            (assoc :view-box "0 0 20 30"))
-   [:circle {:cx   10
-             :cy   10
-             :r    9
-             :fill "currentColor"}]
-   (when group
-     [:<>
-      [:path (stroke {:d "M 3,20 A 11,11 0 0 0 17,20"})]
-      [:path (stroke {:d "M 3,25 A 13,13 0 0 0 17,25"})]])])
+  [:div {:class "reflet-glyph"}
+   [:svg (-> props
+             (dissoc :group)
+             (assoc :view-box "0 0 20 30"))
+    [:circle {:cx   10
+              :cy   10
+              :r    9
+              :fill "currentColor"}]
+    (when group
+      [:<>
+       [:path (stroke {:d "M 3,20 A 11,11 0 0 0 17,20"})]
+       [:path (stroke {:d "M 3,25 A 13,13 0 0 0 17,25"})]])]])
 
 (defn x
   [& [props]]
-  [:svg (assoc props :view-box "0 0 10 10")
-   [:path (stroke {:d "M 1,1 L 9,9 M 9,1 L 1,9"})]])
+  [:div {:class "reflet-glyph"}
+   [:svg (assoc props :view-box "0 0 10 10")
+    [:path (stroke {:d "M 1,1 L 9,9 M 9,1 L 1,9"})]]])
 
 (defn handle
   [& [props]]
-  [:svg (assoc props :view-box "0 0 10 10")
-   [:path (stroke {:d "M 8,2 A 7,7 0 0 1 2,8 M 6,2 A 5,5 0 0 1 2,6"})]])
+  [:div {:class "reflet-glyph"}
+   [:svg (assoc props :view-box "0 0 10 10")
+    [:path (stroke {:d "M 8,2 A 7,7 0 0 1 2,8 M 6,2 A 5,5 0 0 1 2,6"})]]])

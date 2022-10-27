@@ -74,11 +74,12 @@
                :js/uuid  [player/context player/source]
                :el/uuid  [player/el]
                :in       props}
-    (let [m          (f/sub [::impl/materialized self])
-          selecting? (f/sub [::impl/selecting? self])]
-      [:div {:class ["player" (when @selecting? "selecting")]}
-       [player-inner (merge props @m)]
-       [b/button-toolbar
-        [b/button-group [controls props]]
-        [b/button-group [selector props]]]
-       [track-list props]])))
+    (f/with-ref {:cmp/uuid [player/test]}
+      (let [m          (f/sub [::impl/materialized self])
+            selecting? (f/sub [::impl/selecting? self])]
+        [:div {:class ["player" (when @selecting? "selecting")]}
+         [player-inner (merge props @m)]
+         [b/button-toolbar
+          [b/button-group [controls props]]
+          [b/button-group [selector props]]]
+         [track-list props]]))))

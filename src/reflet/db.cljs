@@ -238,9 +238,7 @@
 (def default-unique-attributes
   #{:system/uuid
     :cmp/uuid
-    :debug/id
-    :js/uuid
-    :el/uuid})
+    :debug/id})
 
 (defn new-db
   "Returns a new db, optionally with initial data and unique id
