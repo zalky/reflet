@@ -69,23 +69,6 @@
      props-sym   `(->> ~(zipmap keys unique-syms)
                        (merge ~props-sym))]))
 
-(defn- debug?
-  [{:keys [debug]
-    :or   {debug true}}]
-  `(and (r*/reactive?) ~debug d/*debug*))
-
-(defn- wrap-debug
-  [props-sym context env body opts]
-  `(if ~(debug? opts)
-     (let [p# {:debug/type  :debut.type/tap
-               :debug/id    (second (:debug-id ~context))
-               :debug/line  ~(:line env)
-               :debug/props ~props-sym}]
-       [:<>
-        (d/*debug* p# (:target ~context))
-        (do ~@body)])
-     (do ~@body)))
-
 (defn- with-ref-cleanup
   "Clean up clause.
 
@@ -121,6 +104,36 @@
         (db/unmount-ref! ref#)
         (disp [::with-ref-cleanup ref#])))))
 
+(defn- env-name
+  [env]
+  (-> env :fn-scope first :name str))
+
+(defn- env-ns
+  [env]
+  (-> env :fn-scope first :info :ns str))
+
+(defn- env-line
+  [env]
+  (-> env :line))
+
+(defn- debug?
+  [{:keys [debug]
+    :or   {debug true}}]
+  `(and (r*/reactive?) ~debug d/*debug*))
+
+(defn- wrap-debug
+  [props-sym context env body opts]
+  `(if ~(debug? opts)
+     (let [p# {:debug/type  :debut.type/tap
+               :debug/id    (second (:debug-id ~context))
+               :debug/fn    (symbol ~(env-ns env) ~(env-name env))
+               :debug/line  ~(env-line env)
+               :debug/props ~props-sym}]
+       [:<>
+        (d/*debug* p# (:target ~context))
+        (do ~@body)])
+     (do ~@body)))
+
 (defn- component-name
   []
   `(reagent.impl.component/component-name
@@ -129,11 +142,12 @@
 (defn- debug-id
   "Produces a debug id that is unique within a dom tree, but not across
   trees with the same topology."
-  []
+  [env]
   `(let [^clj c# r*/*ratom-context*
          g#      (or (.-withRefGeneration c#) 0)
-         id#     (keyword ~(component-name) g#)
-         r#      (vector :debug/id id#)]
+         ns#     ~(env-ns env)
+         n#      (str ~(env-name env) "$" g#)
+         r#      [:debug/id (keyword ns# n#)]]
      (set! (.-withRefGeneration c#) (inc g#))
      (db/mount-ref! r#)
      r#))
@@ -150,7 +164,7 @@
   [env opts]
   `(when ~(debug? opts)
      {:target   (r/atom nil)
-      :debug-id ~(debug-id)
+      :debug-id ~(debug-id env)
       :aliases  ~(collect-aliases env)}))
 
 (defn- get-opts

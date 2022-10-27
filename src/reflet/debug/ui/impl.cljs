@@ -135,7 +135,7 @@
   [_ _]
   {:left   200
    :top    200
-   :width  250
+   :width  300
    :height 150})
 
 (defn- new-tap-rect
@@ -247,6 +247,7 @@
     [{:debug/tap
       [:debug/type
        :debug/id
+       :debug/fn
        :debug/line
        :debug/props]}
      self]))
@@ -254,6 +255,7 @@
 (f/reg-pull ::tap
   (fn [tap]
     [[:debug/id
+      :debug/fn
       :debug/line]
      tap]))
 

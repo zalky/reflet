@@ -1,6 +1,7 @@
 (ns reflet.debug
   (:require [cinch.core :as util]
             [clojure.string :as str]
+            [react :as react]
             [reagent.core :as r]
             [re-frame.core :as f]
             [reflet.db :as db]))
@@ -86,19 +87,55 @@
 
 (f/reg-event-db ::collect-aliases
   (fn [db [_ aliases]]
-    (update db [::aliases] (collect plus) aliases)))
+    (update db ::aliases (collect plus) aliases)))
 
 (f/reg-event-db ::uncollect-aliases
   (fn [db [_ aliases]]
-    (update db [::aliases] (collect minus) aliases)))
+    (update db ::aliases (collect minus) aliases)))
 
-(f/reg-sub ::debug-aliases*
+(f/reg-sub ::collected-aliases
   (fn [db]
     (get db ::aliases)))
 
-(f/reg-sub ::debug-aliases
+(defonce alias-context
+  (react/createContext nil))
+
+(def AliasProvider
+  (.-Provider alias-context))
+
+(defn alias-provider
+  ([child]
+   (alias-provider nil child))
+  ([aliases child]
+   [:> AliasProvider
+    (let [defaults @(f/subscribe [::aliases])]
+      {:value (merge defaults aliases)})
+    child]))
+
+(def AliasConsumer
+  (.-Consumer alias-context))
+
+(defn alias-consumer
+  [c]
+  [:> AliasConsumer {}
+   (fn [aliases]
+     (r/as-element [c (js->clj aliases)]))])
+
+(f/reg-sub ::aliases
   (fn [_]
-    (f/subscribe [])))
+    (f/subscribe [::collected-aliases]))
+  (fn [aliases _]
+    (reduce-kv
+     (fn [acc ns a]
+       (or (some->> a
+                    (filter (comp pos? val))
+                    (sort-by val #(compare %2 %1))
+                    (ffirst)
+                    (str)
+                    (assoc acc (str ns)))
+           acc))
+     {}
+     aliases)))
 
 (f/reg-sub ::taps
   (fn [db _]

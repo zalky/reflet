@@ -14,9 +14,11 @@
   #"(.*)\.([^.]+)+")
 
 (defn- props-name
-  [{:debug/keys [id line]}]
-  (if-let [[_ ns n] (re-find component-name-re (namespace id))]
-    [:span (str ns "/" n  " : L" line)]))
+  [{:debug/keys [fn line]}]
+  (when (and fn line)
+    (let [ns (namespace fn)
+          n  (name fn)]
+     [:span (str ns "/" n " : L" line)])))
 
 (defmulti render
   :debug/type)
@@ -73,17 +75,19 @@
         [marks-expanded props]
         [g/mark-icon {:group true}]]])))
 
-(defn- debug-props-cmp
+(defn- props-cmp
   [{:debug/keys [self]}]
-  (when-let [p @(f/sub [::impl/props-cmp self])]
-    (f/once (f/disp [::impl/props-cmp-ready self]))
-    [:div {:class "reflet-refs"}
-     [data/debug-value (:debug/props p)]]))
+  (let [p (f/sub [::impl/props-cmp self])]
+    (when-let [{:debug/keys [props fn]} @p]
+      (f/once (f/disp [::impl/props-cmp-ready self]))
+      [:div {:class "reflet-refs"}
+       (d/alias-provider {(namespace fn) ""}
+         [data/debug-value props])])))
 
-(defmulti debug-header
+(defmulti header
   :debug/type)
 
-(defmethod debug-header :debug.type/props-cmp
+(defmethod header :debug.type/props-cmp
   [{:debug/keys [self tap]}]
   (let [props    (f/sub [::impl/props-cmp self])
         dragging (f/sub [::impl/dragging])
@@ -121,12 +125,12 @@
                :class "reflet-panel"
                :style @rect}
          [:div {:class "reflet-content"}
-          [debug-header props]
-          [debug-props-cmp props]]
+          [header props]
+          [props-cmp props]]
          [handle props]
          (drop-shadow)]))))
 
-(defmethod debug-header :debug.type/ref
+(defmethod header :debug.type/ref
   [{:debug/keys [self ref]}]
   (let [dragging (f/sub [::impl/dragging])
         on-close #(f/disp [::impl/close-ref ref])
@@ -143,14 +147,15 @@
                 :el/uuid  [debug/el]
                 :in       props}
     (let [rect (f/sub [::impl/rect self])
+          data (f/sub [::datai/data ref])
           cb   #(do (f/disp [::impl/set-rect self el])
                     (f/disp [::impl/set-props self props]))]
       [:div {:ref   (i/el! el :cb cb)
              :class "reflet-panel"
              :style @rect}
        [:div {:class "reflet-content"}
-        [debug-header props]
-        [data/debug-value @(f/sub [::datai/data ref])]]
+        [header props]
+        (d/alias-provider [data/debug-value @data])]
        [handle props]
        (drop-shadow)])))
 
