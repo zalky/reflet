@@ -96,9 +96,6 @@
       (disp [::with-ref-cleanup ref#])
       (disp [::d/untap ref#]))
 
-   `(when-let [a# (:aliases ~context)]
-      (disp [::d/uncollect-aliases a#]))
-
    `(doseq [[k# ref#] (deref ~refs)]
       (when (and ref# (db/transient? ref#))
         (db/unmount-ref! ref#)
@@ -152,20 +149,11 @@
      (db/mount-ref! r#)
      r#))
 
-(defn- collect-aliases
-  [env]
-  (let [m `(quote ~(->> (:ns env)
-                        (:requires)
-                        (keep (fn [[k v]] (when-not (= k v) [v {k 1}])))
-                        (into {})))]
-    `(do (disp [::d/collect-aliases ~m]) ~m)))
-
 (defn debug-context
   [env opts]
   `(when ~(debug? opts)
      {:target   (r/atom nil)
-      :debug-id ~(debug-id env)
-      :aliases  ~(collect-aliases env)}))
+      :debug-id ~(debug-id env)}))
 
 (defn- get-opts
   [bindings]

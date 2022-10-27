@@ -1,6 +1,5 @@
 (ns reflet.debug.ui.data
   (:require [reflet.core :as f]
-            [reflet.debug :as d]
             [reflet.debug.ui.impl :as impl]))
 
 (defn- ref?
@@ -53,14 +52,9 @@
   [k]
   [:div {:class "reflet-keyword"}
    (if-let [ns (namespace k)]
-     (d/alias-consumer
-      (fn [aliases]
-        (let [alias (get aliases ns)]
-          [:<>
-           (if alias
-             [:span (str "::" alias (when (seq alias) "/"))]
-             [:span (str ":" ns "/")])
-           [:span (name k)]])))
+     [:<>
+      [:span (str ":" ns "/")]
+      [:span (name k)]]
      [:span (str k)])])
 
 (defmethod debug-value :default

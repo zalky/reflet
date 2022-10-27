@@ -77,12 +77,10 @@
 
 (defn- props-cmp
   [{:debug/keys [self]}]
-  (let [p (f/sub [::impl/props-cmp self])]
-    (when-let [{:debug/keys [props fn]} @p]
-      (f/once (f/disp [::impl/props-cmp-ready self]))
-      [:div {:class "reflet-refs"}
-       (d/alias-provider {(namespace fn) ""}
-         [data/debug-value props])])))
+  (when-let [p @(f/sub [::impl/props-cmp self])]
+    (f/once (f/disp [::impl/props-cmp-ready self]))
+    [:div {:class "reflet-refs"}
+     [data/debug-value (:debug/props p)]]))
 
 (defmulti header
   :debug/type)
@@ -146,16 +144,16 @@
   (f/with-ref* {:cmp/uuid [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect (f/sub [::impl/rect self])
-          data (f/sub [::datai/data ref])
-          cb   #(do (f/disp [::impl/set-rect self el])
-                    (f/disp [::impl/set-props self props]))]
+    (let [rect   (f/sub [::impl/rect self])
+          entity (f/sub [::datai/entity ref])
+          cb     #(do (f/disp [::impl/set-rect self el])
+                      (f/disp [::impl/set-props self props]))]
       [:div {:ref   (i/el! el :cb cb)
              :class "reflet-panel"
              :style @rect}
        [:div {:class "reflet-content"}
         [header props]
-        (d/alias-provider [data/debug-value @data])]
+        [data/debug-value @entity]]
        [handle props]
        (drop-shadow)])))
 
