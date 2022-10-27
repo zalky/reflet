@@ -28,9 +28,10 @@
   [[attr value :as ref]]
   [:div {:class    "reflet-ref"
          :on-click #(f/disp [::impl/open-ref ref])}
-   "@" (if (uuid? value)
-         (subs (str value) 0 8)
-         (str value))])
+   (namespace attr) "@"
+   (if (uuid? value)
+     (subs (str value) 0 8)
+     (str value))])
 
 (defmethod debug-value js/String
   [s]
