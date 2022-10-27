@@ -35,7 +35,7 @@
 (defmethod debug-value js/String
   [s]
   [:div {:class "reflet-string"}
-   (str \" s \")])
+   [:span (str \" s \")]])
 
 (defmethod debug-value ::map
   [m]
@@ -51,11 +51,12 @@
 (defmethod debug-value Keyword
   [k]
   [:div {:class "reflet-keyword"}
-   (if-let [ns (namespace k)]
+   [:span ":"]
+   (when-let [ns (namespace k)]
      [:<>
-      [:span (str ":" ns "/")]
-      [:span (name k)]]
-     [:span (str k)])])
+      [:span ns]
+      [:span "/"]])
+   [:span (name k)]])
 
 (defmethod debug-value :default
   [x]

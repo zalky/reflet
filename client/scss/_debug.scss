@@ -223,6 +223,12 @@ $control-fade:                  -0.3;
 
 // Data formatting
 
+@mixin truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 1rem;
+}
+
 .reflet-map, .reflet-vec, .reflet-set {
     display: grid;
     grid-template-columns: 6px auto;
@@ -241,7 +247,7 @@ $control-fade:                  -0.3;
 .reflet-map-data {
     display: grid;
     position: relative;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto auto;
     column-gap: 0.5rem;
     padding: 0 0.1rem;
     font-family: $font-family-monospace;
@@ -249,10 +255,15 @@ $control-fade:                  -0.3;
 
     > div {
         display: contents;
-        overflow: hidden;
+
+        > * {
+            display: flex;
+            overflow: hidden;
+            white-space: nowrap;
+        }
 
         > :nth-child(2) {
-            justify-self: end;
+            justify-content: flex-end;
         }
     }
 }
@@ -278,9 +289,11 @@ $control-fade:                  -0.3;
 }
 
 .reflet-keyword {
-    white-space: nowrap;
+    display: flex;
 
-    > :first-child {
+    > :nth-child(2) {
+        @include truncate;
+        direction: rtl;
         color: $syntax-keyword-namespace;
     }
 
@@ -290,7 +303,12 @@ $control-fade:                  -0.3;
 }
 
 .reflet-string {
+    display: flex;
     color: #9f9dfa;
+
+    > * {
+        @include truncate;
+    }
 }
 
 .reflet-number {
