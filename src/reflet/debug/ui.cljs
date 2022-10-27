@@ -27,7 +27,7 @@
   [{:debug/keys [tap]}]
   (let [t (f/sub [::impl/tap tap])]
     [:div {:on-click #(f/disp [::impl/toggle tap])}
-     [g/mark-icon]
+     [:div [g/mark-icon]]
      [:div (some-> @t props-name)]]))
 
 (defmethod render :debug.type/mark
@@ -105,10 +105,7 @@
 
 (defn drop-shadow
   []
-  [:<>
-   [:div {:class "reflet-panel-shadow"}]
-   [:div {:class "reflet-panel-shadow"}]
-   [:div {:class "reflet-panel-shadow"}]])
+  [:div {:class "reflet-panel-shadow"}])
 
 (defmethod render :debug.type/props-cmp
   [{:debug/keys [tap] :as props}]

@@ -18,7 +18,7 @@
 
 (defmethod debug-value nil
   [_]
-  [:div "nil"])
+  [:div {:class "reflet-nil"} "nil"])
 
 (defmethod debug-value js/Number
   [n]
