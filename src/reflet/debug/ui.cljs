@@ -41,7 +41,8 @@
 (defmethod render :debug.type/mark
   [{:debug/keys [tap] :as props}]
   (f/with-ref* {:debug/id [debug/self]
-                :el/uuid  [debug/el]}
+                :el/uuid  [debug/el]
+                :in       props}
     (let [rect  (f/sub [::impl/rect self])
           state (f/sub [::impl/node-fsm self el tap])
           cb    #(f/disp [::impl/ready-to-size self])]
@@ -52,6 +53,7 @@
                :style @rect}
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
                 :on-mouse-leave #(f/disp [::impl/close self])
+                :on-click       #(f/disp [::impl/select el])
                 :class          ["reflet-mark"
                                  (when (= @state ::impl/open)
                                    "reflet-open")]}
@@ -70,7 +72,8 @@
 (defmethod render :debug.type/mark-group
   [{:debug/keys [centroid] :as props}]
   (f/with-ref* {:debug/id [debug/self]
-                :el/uuid  [debug/el]}
+                :el/uuid  [debug/el]
+                :in       props}
     (let [rect  (f/sub [::impl/rect self])
           state (f/sub [::impl/node-fsm self el centroid])
           cb    #(f/disp [::impl/ready-to-size self])]
@@ -81,6 +84,7 @@
                :style @rect}
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
                 :on-mouse-leave #(f/disp [::impl/close self])
+                :on-click       #(f/disp [::impl/select el])
                 :class          ["reflet-mark-group"
                                  (when (= @state ::impl/open)
                                    "reflet-open")]}
@@ -118,6 +122,10 @@
     (f/once (f/disp [::impl/ready-to-size self]))
     [data/debug-value (:debug/props p)]))
 
+(defn- display?
+  [state]
+  (isa? impl/state-hierarchy state ::impl/display))
+
 (defmethod render :debug.type/props-panel
   [{:debug/keys [tap] :as props}]
   (f/with-ref* {:debug/id [debug/self]
@@ -126,10 +134,11 @@
     (let [rect  (f/sub [::impl/rect-quantize self el])
           state (f/sub [::impl/panel-fsm self el tap])]
       (f/once (f/disp [::impl/set-props self props]))
-      (when (isa? impl/state-hierarchy @state ::impl/display)
-        [:div {:ref   (i/el! el)
-               :class ["reflet-panel" (dragging-class)]
-               :style @rect}
+      (when (display? @state)
+        [:div {:ref      (i/el! el)
+               :style    @rect
+               :on-click #(f/disp [::impl/select el])
+               :class    ["reflet-panel" (dragging-class)]}
          [:div {:class "reflet-content"}
           [header props]
           [props-content props]]
@@ -160,10 +169,11 @@
     (let [rect  (f/sub [::impl/rect-quantize self el])
           state (f/sub [::impl/panel-fsm self el ref])]
       (f/once (f/disp [::impl/set-props self props]))
-      (when (isa? impl/state-hierarchy @state ::impl/display)
-        [:div {:ref   (i/el! el)
-               :class ["reflet-panel" (dragging-class)]
-               :style @rect}
+      (when (display? @state)
+        [:div {:ref      (i/el! el)
+               :style    @rect
+               :on-click #(f/disp [::impl/select el])
+               :class    ["reflet-panel" (dragging-class)]}
          [:div {:class "reflet-content"}
           [header props]
           [ref-content props]]

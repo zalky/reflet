@@ -41,6 +41,14 @@
   (fn [db _]
     (get db ::dragging)))
 
+(f/reg-sub ::selected
+  (fn [db _]
+    (get db ::selected)))
+
+(f/reg-event-db ::select
+  (fn [db [_ ref]]
+    (assoc db ::selected ref)))
+
 (defn viewport-size
   []
   (let [el (.-documentElement js/document)]
@@ -114,6 +122,7 @@
       (.addEventListener js/document "mouseup" un-f)
       {:db (-> db
                (assoc ::dragging handler)
+               (assoc ::selected ref)
                (update-z-index ref))})))
 
 (f/reg-event-db ::drag-stop!
@@ -157,10 +166,13 @@
   :hierarchy #'cmp-hierarchy)
 
 (defmethod get-rect ::panel
-  [_ _ el]
-  (let [{h :height} (rect (i/grab el))]
-    {:left   200
-     :top    200
+  [db _ el]
+  (let [source-el   (::selected db)
+        {t :top
+         l :left}   (rect (i/grab source-el))
+        {h :height} (rect (i/grab el))]
+    {:left   (+ (or l (/ (:height (viewport-size)) 4)) 50)
+     :top    (+ (or t (/ (:width (viewport-size)) 4)) 50)
      :width  300
      :height h}))
 
@@ -240,31 +252,31 @@
 
 (f/reg-no-op ::open ::close ::ready-to-size)
 
-(defn create-ref-panel
-  [ref]
-  {:debug/type :debug.type/ref-panel
-   :debug/self [:debug/id (str (first ref) (second ref))]
-   :debug/ref  ref})
-
-(defn create-props-panel
-  [ref]
-  {:debug/type :debug.type/props-panel
-   :debug/self [:debug/id (str "props-panel" (second ref))]
-   :debug/tap  ref})
-
-(defn create-mark
-  [m]
-  (let [ref (find m :debug/id)]
-    {:debug/type :debug.type/mark
-     :debug/self [:debug/id (str "mark" (second ref))]
-     :debug/tap  ref}))
-
 (def cluster-opts
   {:attrs      {:id #(find % :debug/id)
                 :x  #(get-in % [:debug/rect :left])
                 :y  #(get-in % [:debug/rect :top])}
    :min-points 2
    :epsilon    50})
+
+(defn create-ref-panel
+  [[a v :as ref]]
+  {:debug/type :debug.type/ref-panel
+   :debug/self [:debug/id (str "ref-panel" a v)]
+   :debug/ref  ref})
+
+(defn create-props-panel
+  [[a v :as ref]]
+  {:debug/type :debug.type/props-panel
+   :debug/self [:debug/id (str "props-panel" v)]
+   :debug/tap  ref})
+
+(defn create-mark
+  [m]
+  (let [[a v :as ref] (find m :debug/id)]
+    {:debug/type :debug.type/mark
+     :debug/self [:debug/id (str "mark" v)]
+     :debug/tap  ref}))
 
 (defn create-mark-group
   [xs]
@@ -305,7 +317,9 @@
 
 (f/reg-event-db ::close-panel
   (fn [db [_ ref]]
-    (update db ::panels dissoc ref)))
+    (-> db
+        (update ::panels dissoc ref)
+        (dissoc ::selected))))
 
 (f/reg-sub ::overlay-panels
   (fn [db _]
