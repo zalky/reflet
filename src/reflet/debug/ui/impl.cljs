@@ -165,16 +165,23 @@
     (db/get-inn db [self :debug/type]))
   :hierarchy #'cmp-hierarchy)
 
+(def max-init-panel-height
+  500)
+
+(defn pos-or-default
+  [pos dim]
+  (+ (or pos (/ (get (viewport-size) dim) 4)) 50))
+
 (defmethod get-rect ::panel
   [db _ el]
   (let [source-el   (::selected db)
         {t :top
          l :left}   (some-> source-el i/grab rect)
         {h :height} (some-> el i/grab rect)]
-    {:left   (+ (or l (/ (:height (viewport-size)) 4)) 50)
-     :top    (+ (or t (/ (:width (viewport-size)) 4)) 50)
+    {:left   (pos-or-default l :height)
+     :top    (pos-or-default t :width)
      :width  300
-     :height h}))
+     :height (some-> h (min max-init-panel-height))}))
 
 (defmethod get-rect :debug.type/mark-group
   [_ _ el {:keys [x y]}]

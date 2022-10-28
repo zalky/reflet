@@ -155,13 +155,25 @@
      [g/x {:class         "reflet-control"
            :on-mouse-down (f/stop-prop on-close)}]]))
 
-(defn- ref-content
+(defmulti ref-content
+  (comp first :debug/ref))
+
+(defmethod ref-content :default
   [{:debug/keys [self ref]}]
   (f/once (f/disp [::impl/ready-to-size self]))
   (if-let [e @(f/sub [::datai/entity ref])]
     [data/debug-value e]
     [:div {:class "reflet-no-data"}
-     [:span "NO DATA"]]))
+     [:span "No Data"]]))
+
+(defmethod ref-content :el/uuid
+  [{:debug/keys [self ref]}]
+  (f/once (f/disp [::impl/ready-to-size self]))
+  (if-let [^js el @(f/sub [::i/grab ref])]
+    [:div {:class "reflet-html"}
+     (.-outerHTML el)]
+    [:div {:class "reflet-no-data"}
+     [:span "No Element"]]))
 
 (defmethod render :debug.type/ref-panel
   [{:debug/keys [ref] :as props}]
@@ -237,10 +249,12 @@
 
 (defn tap
   "::d/tap must happen after the ::d/untap of the previous react
-  lifecycle. To guarantee this, ::d/tap must be invoked in either the
-  `:ref` callback, or the `:component-did-mount` phase of the
-  component lifecycle. Must not dispatch ::d/tap in a `with-let`,
-  where it will happen during the first render."
+  lifecycle. To guarantee this, ::d/tap must not be invoked in the
+  render phase of the react lifecycle. Is is safe to use in either the
+  `:ref` callback, the `:component-did-mount`, or
+  `:component-did-update` phase of the component lifecycle. Must not
+  dispatch ::d/tap in a `with-let`, where it will happen during the
+  first render."
   [props target]
   (if-not @target
     [:div {:class "reflet-tap"

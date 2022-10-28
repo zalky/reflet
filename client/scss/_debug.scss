@@ -244,12 +244,12 @@ $control-fade:                  -0.3;
     display: grid;
     grid-template-columns: 6px auto;
     align-items: center;
+    font-family: $font-family-monospace;
 
     &::before {
         display: flex;
         justify-self: right;
         align-self: start;
-        font-family: $font-family-monospace;
         font-weight: 700;
         white-space: nowrap;
     }
@@ -292,6 +292,8 @@ $control-fade:                  -0.3;
 }
 
 .reflet-ref {
+    font-family: $font-family-monospace;
+
     :not(.reflet-header) > & {
         color: $syntax-ref;
         cursor: pointer;
@@ -299,6 +301,8 @@ $control-fade:                  -0.3;
 }
 
 .reflet-keyword {
+    font-family: $font-family-monospace;
+
     > :first-child {
         color: $syntax-keyword-namespace;
     }
@@ -316,6 +320,7 @@ $control-fade:                  -0.3;
 
 .reflet-string {
     color: $syntax-string;
+    font-family: $font-family-monospace;
     font-style: italic;
 
     > * {
@@ -325,15 +330,23 @@ $control-fade:                  -0.3;
 
 .reflet-nil {
     color: $syntax-string;
+    font-family: $font-family-monospace;
 }
 
 .reflet-no-data {
     display: flex;
     justify-content: center;
     width: 100%;
+    text-transform: uppercase;
     color: $syntax-string;
 }
 
 .reflet-number {
     color: #8b8ab8;
+    font-family: $font-family-monospace;
+}
+
+.reflet-html {
+    color: $syntax-string;
+    font-family: $font-family-monospace;
 }
