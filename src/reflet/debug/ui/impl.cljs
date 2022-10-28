@@ -223,14 +223,21 @@
     (mod h lh)))
 
 (f/reg-sub ::rect-quantize
+  ;; Quantize size and position with respect to line-height. For nicer
+  ;; visual results when quantizing element height, we preserve
+  ;; whatever height offset the the element originally had from a
+  ;; quantization point. The end result is that the element height
+  ;; will initially fit the content, and then shrink or expand by the
+  ;; quantization factor (line-height). All other dimensions just snap
+  ;; directly to quantization points.
   (fn [[_ self el]]
     [(f/sub [::rect self])
      (f/sub [::i/grab el])])
   (fn [[rect ^js el] _]
     (when (and el (not-empty rect))
-      (let [lh     (px el :line-height)
-            offset (v-offset lh el)
-            qfn    (comp int quant)]
+      (let [qfn    (comp int quant)
+            lh     (px el :line-height)
+            offset (v-offset lh el)]
         (-> rect
             (update :left qfn lh)
             (update :top qfn lh)
