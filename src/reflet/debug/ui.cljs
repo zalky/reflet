@@ -21,6 +21,13 @@
       [:span (str ns "/" n " : L" line)])
     [:span "with-ref removed"]))
 
+(defn- dragging-class
+  []
+  (case @(f/sub [::impl/dragging])
+    ::impl/move   "reflet-move"
+    ::impl/resize "reflet-resize"
+    nil))
+
 (defmulti render
   :debug/type)
 
@@ -33,7 +40,7 @@
 
 (defmethod render :debug.type/mark
   [{:debug/keys [tap] :as props}]
-  (f/with-ref* {:cmp/uuid [debug/self]
+  (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]}
     (let [rect  (f/sub [::impl/rect self])
           state (f/sub [::impl/node-fsm self el tap])
@@ -60,9 +67,9 @@
            :as n} group]
       ^{:key id} [mark-expanded n]))])
 
-(defmethod render :debug.type/group
+(defmethod render :debug.type/mark-group
   [{:debug/keys [centroid] :as props}]
-  (f/with-ref* {:cmp/uuid [debug/self]
+  (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]}
     (let [rect  (f/sub [::impl/rect self])
           state (f/sub [::impl/node-fsm self el centroid])
@@ -74,7 +81,7 @@
                :style @rect}
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
                 :on-mouse-leave #(f/disp [::impl/close self])
-                :class          ["reflet-group"
+                :class          ["reflet-mark-group"
                                  (when (= @state ::impl/open)
                                    "reflet-open")]}
           [marks-expanded props]
@@ -83,13 +90,13 @@
 (defmulti header
   :debug/type)
 
-(defmethod header :debug.type/props-cmp
+(defmethod header :debug.type/props-panel
   [{:debug/keys [self tap]}]
-  (let [props    (f/sub [::impl/props-cmp self])
+  (let [props    (f/sub [::impl/props-panel self])
         dragging (f/sub [::impl/dragging])
         on-close #(f/disp [::impl/close-panel tap])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
-    [:div {:class         ["reflet-header" (when @dragging "reflet-dragging")]
+    [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
      (props-name @props)
      [g/x {:class         "reflet-control"
@@ -107,21 +114,21 @@
 
 (defn- props-content
   [{:debug/keys [self]}]
-  (when-let [p @(f/sub [::impl/props-cmp self])]
+  (when-let [p @(f/sub [::impl/props-panel self])]
     (f/once (f/disp [::impl/ready-to-size self]))
     [data/debug-value (:debug/props p)]))
 
-(defmethod render :debug.type/props-cmp
+(defmethod render :debug.type/props-panel
   [{:debug/keys [tap] :as props}]
-  (f/with-ref* {:cmp/uuid [debug/self]
+  (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect  (f/sub [::impl/rect self])
+    (let [rect  (f/sub [::impl/rect-quantize self el])
           state (f/sub [::impl/panel-fsm self el tap])]
       (f/once (f/disp [::impl/set-props self props]))
       (when (isa? impl/state-hierarchy @state ::impl/display)
         [:div {:ref   (i/el! el)
-               :class "reflet-panel"
+               :class ["reflet-panel" (dragging-class)]
                :style @rect}
          [:div {:class "reflet-content"}
           [header props]
@@ -129,12 +136,11 @@
          [handle props]
          (drop-shadow)]))))
 
-(defmethod header :debug.type/ref
+(defmethod header :debug.type/ref-panel
   [{:debug/keys [self ref]}]
-  (let [dragging (f/sub [::impl/dragging])
-        on-close #(f/disp [::impl/close-panel ref])
+  (let [on-close #(f/disp [::impl/close-panel ref])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
-    [:div {:class         ["reflet-header" (when @dragging "reflet-dragging")]
+    [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
      [data/debug-value ref]
      [g/x {:class         "reflet-control"
@@ -146,17 +152,17 @@
     (f/once (f/disp [::impl/ready-to-size self]))
     [data/debug-value @e]))
 
-(defmethod render :debug.type/ref
+(defmethod render :debug.type/ref-panel
   [{:debug/keys [ref] :as props}]
-  (f/with-ref* {:cmp/uuid [debug/self]
+  (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect  (f/sub [::impl/rect self])
+    (let [rect  (f/sub [::impl/rect-quantize self el])
           state (f/sub [::impl/panel-fsm self el ref])]
       (f/once (f/disp [::impl/set-props self props]))
       (when (isa? impl/state-hierarchy @state ::impl/display)
         [:div {:ref   (i/el! el)
-               :class "reflet-panel"
+               :class ["reflet-panel" (dragging-class)]
                :style @rect}
          [:div {:class "reflet-content"}
           [header props]

@@ -43,7 +43,7 @@ $control-fade:                  -0.3;
     align-items: center;
 }
 
-.reflet-group, .reflet-mark {
+.reflet-mark, .reflet-mark-group {
     position: relative;
     transform: translate($debug-radius, $debug-radius + $debug-stack-height);
     user-select: none;
@@ -161,10 +161,14 @@ $control-fade:                  -0.3;
         opacity: 0;
         color: $debug-border-color;
 
-        &:hover {
+        &:hover, .reflet-panel:hover.reflet-resize & {
             opacity: 1;
             cursor: nwse-resize;
         }
+    }
+
+    &.reflet-resize {
+        cursor: nwse-resize;
     }
 }
 
@@ -183,7 +187,7 @@ $control-fade:                  -0.3;
     user-select: none;
     font-weight: $font-bold;
 
-    &.reflet-dragging {
+    .reflet-move & {
         cursor: grabbing;
     }
 

@@ -22,6 +22,21 @@
       (.setProperty style (prop k) v))
     el))
 
+(defn computed-style
+  [el k]
+  (-> el
+      (js/getComputedStyle)
+      (.getPropertyValue (name k))))
+
+(defn px
+  "Gets the float value of the computed style."
+  [el k]
+  (js/parseFloat (computed-style el k)))
+
+(defn quant
+  [n m]
+  (* (quot n m) m))
+
 (f/reg-sub ::dragging
   (fn [db _]
     (get db ::dragging)))
@@ -98,12 +113,12 @@
       (.addEventListener js/document "mousemove" on-f)
       (.addEventListener js/document "mouseup" un-f)
       {:db (-> db
-               (assoc ::dragging true)
+               (assoc ::dragging handler)
                (update-z-index ref))})))
 
 (f/reg-event-db ::drag-stop!
   (fn [db _]
-    (assoc db ::dragging false)))
+    (dissoc db ::dragging)))
 
 ;;;; Component queries and mutations
 
@@ -133,8 +148,8 @@
 
 (def cmp-hierarchy
   (util/derive-pairs
-   [[:debug.type/ref
-     :debug.type/props-cmp] ::panel]))
+   [[:debug.type/ref-panel
+     :debug.type/props-panel] ::panel]))
 
 (defmulti get-rect
   (fn [db self & _]
@@ -149,7 +164,7 @@
      :width  300
      :height h}))
 
-(defmethod get-rect :debug.type/group
+(defmethod get-rect :debug.type/mark-group
   [_ _ el {:keys [x y]}]
   (->> {:left x :top y}
        (shift-rect (i/grab el))))
@@ -179,6 +194,19 @@
   (fn [rect]
     (select-keys rect [:left :top :width :height :z-index])))
 
+(f/reg-sub ::rect-quantize
+  (fn [[_ self el]]
+    [(f/sub [::rect self])
+     (f/sub [::i/grab el])])
+  (fn [[rect ^js el] _]
+    (when el
+      (let [lh (px el :line-height)]
+        (-> rect
+            (update :left quant lh)
+            (update :top quant lh)
+            (update :width quant lh)
+            (update :height quant lh))))))
+
 (def state-hierarchy
   (util/derive-pairs
    [[::mounted ::open] ::display]))
@@ -202,16 +230,16 @@
 
 (f/reg-no-op ::open ::close ::ready-to-size)
 
-(defn create-ref-entity
+(defn create-ref-panel
   [ref]
-  {:debug/type :debug.type/ref
+  {:debug/type :debug.type/ref-panel
    :debug/self [:debug/id (str (first ref) (second ref))]
    :debug/ref  ref})
 
-(defn create-props-cmp
+(defn create-props-panel
   [ref]
-  {:debug/type :debug.type/props-cmp
-   :debug/self [:debug/id (str "props-cmp" (second ref))]
+  {:debug/type :debug.type/props-panel
+   :debug/self [:debug/id (str "props-panel" (second ref))]
    :debug/tap  ref})
 
 (defn create-mark
@@ -228,15 +256,15 @@
    :min-points 2
    :epsilon    50})
 
-(defn create-group
+(defn create-mark-group
   [xs]
   (let [c (c/centroid xs cluster-opts)]
-    {:debug/type     :debug.type/group
-     :debug/self     [:debug/id (str "group" c)]
+    {:debug/type     :debug.type/mark-group
+     :debug/self     [:debug/id (str "mark-group" c)]
      :debug/group    (map create-mark xs)
      :debug/centroid c}))
 
-(f/reg-pull ::props-cmp
+(f/reg-pull ::props-panel
   (fn [self]
     [{:debug/tap
       [:debug/type
@@ -256,13 +284,13 @@
 (f/reg-event-db ::open-prop
   (fn [db [_ ref]]
     (->> ref
-         (create-props-cmp)
+         (create-props-panel)
          (assoc-in db [::panels ref]))))
 
 (f/reg-event-db ::open-ref
   (fn [db [_ ref]]
     (->> ref
-         (create-ref-entity)
+         (create-ref-panel)
          (assoc-in db [::panels ref]))))
 
 (f/reg-event-db ::close-panel
@@ -280,7 +308,7 @@
     (let [t      (vals taps)
           g      (c/cluster t cluster-opts)
           marks  (map create-mark (:noise g))
-          groups (map create-group (vals (dissoc g :noise)))]
+          groups (map create-mark-group (vals (dissoc g :noise)))]
       (concat marks groups))))
 
 (f/reg-sub ::overlay
