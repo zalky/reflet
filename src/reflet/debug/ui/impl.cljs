@@ -169,8 +169,8 @@
   [db _ el]
   (let [source-el   (::selected db)
         {t :top
-         l :left}   (rect (i/grab source-el))
-        {h :height} (rect (i/grab el))]
+         l :left}   (some-> source-el i/grab rect)
+        {h :height} (some-> el i/grab rect)]
     {:left   (+ (or l (/ (:height (viewport-size)) 4)) 50)
      :top    (+ (or t (/ (:width (viewport-size)) 4)) 50)
      :width  300
@@ -220,7 +220,7 @@
     [(f/sub [::rect self])
      (f/sub [::i/grab el])])
   (fn [[rect ^js el] _]
-    (when el
+    (when (and el (not-empty rect))
       (let [lh     (px el :line-height)
             offset (v-offset lh el)]
         (-> rect
