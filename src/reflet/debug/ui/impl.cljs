@@ -222,11 +222,12 @@
   (fn [[rect ^js el] _]
     (when (and el (not-empty rect))
       (let [lh     (px el :line-height)
-            offset (v-offset lh el)]
+            offset (v-offset lh el)
+            qfn    (comp int quant)]
         (-> rect
-            (update :left quant lh)
-            (update :top quant lh)
-            (update :width quant lh)
+            (update :left qfn lh)
+            (update :top qfn lh)
+            (update :width qfn lh)
             (update :height #(+ (quant % lh) offset)))))))
 
 (def state-hierarchy
