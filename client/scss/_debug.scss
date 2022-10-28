@@ -112,7 +112,7 @@ $control-fade:                  -0.3;
     }
 
     &:hover {
-        > svg path {
+        svg path {
             opacity: 0;
             visibility: hidden;
         }
