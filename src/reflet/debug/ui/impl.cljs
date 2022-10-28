@@ -131,14 +131,14 @@
        :width  w
        :height h})))
 
-(def rect-hierarchy
+(def cmp-hierarchy
   (util/derive-pairs
    [[:debug.type/ref
      :debug.type/props-cmp] ::panel]))
 
 (defmulti get-rect
   (fn [db _ type & _] type)
-  :hierarchy #'rect-hierarchy)
+  :hierarchy #'cmp-hierarchy)
 
 (defmethod get-rect ::panel
   [_ _ _ el _]
@@ -185,7 +185,7 @@
      :fsm  {nil    {[::open self] ::open}
             ::open {[::close self] nil}}}))
 
-(def state-h
+(def state-hierarchy
   (util/derive-pairs
    [[::mounted ::open] ::display]))
 

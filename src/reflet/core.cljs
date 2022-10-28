@@ -202,10 +202,10 @@
            (assoc cofx :random-ref)))))
 
 (reg-event-fx ::with-ref-cleanup
-  (fn [{:keys [db]} [_ & refs]]
-    {::i/cleanup refs
-     :db         (apply db/dissocn db refs)
-     :log        (concat [:debug "Entity cleanup"] refs)}))
+  (fn [{:keys [db]} [_ ref]]
+    {::i/cleanup [ref]
+     :db         (db/dissocn db ref)
+     :log        [:debug "Entity cleanup" ref]}))
 
 ;;;; Additional Utilities
 

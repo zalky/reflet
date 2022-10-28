@@ -15,10 +15,11 @@
 
 (defn- props-name
   [{:debug/keys [fn line]}]
-  (when (and fn line)
+  (if (and fn line)
     (let [ns (namespace fn)
           n  (name fn)]
-     [:span (str ns "/" n " : L" line)])))
+      [:span (str ns "/" n " : L" line)])
+    [:span "with-ref removed"]))
 
 (defmulti render
   :debug/type)
@@ -86,7 +87,7 @@
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         ["reflet-header" (when @dragging "reflet-dragging")]
            :on-mouse-down on-drag}
-     (some-> @props props-name)
+     (props-name @props)
      [g/x {:class         "reflet-control"
            :on-mouse-down (f/stop-prop on-close)}]]))
 
@@ -114,7 +115,7 @@
     (let [rect  (f/sub [::impl/rect self])
           state (f/sub [::impl/panel-fsm self type el])]
       (f/once (f/disp [::impl/set-props self props]))
-      (when (isa? impl/state-h @state ::impl/display)
+      (when (isa? impl/state-hierarchy @state ::impl/display)
         [:div {:ref   (i/el! el)
                :class "reflet-panel"
                :style @rect}
@@ -149,7 +150,7 @@
     (let [rect  (f/sub [::impl/rect self])
           state (f/sub [::impl/panel-fsm self type el])]
       (f/once (f/disp [::impl/set-props self props]))
-      (when (isa? impl/state-h @state ::impl/display)
+      (when (isa? impl/state-hierarchy @state ::impl/display)
         [:div {:ref   (i/el! el)
                :class "reflet-panel"
                :style @rect}
