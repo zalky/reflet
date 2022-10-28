@@ -157,9 +157,11 @@
 
 (defn- ref-content
   [{:debug/keys [self ref]}]
-  (let [e (f/sub [::datai/entity ref])]
-    (f/once (f/disp [::impl/ready-to-size self]))
-    [data/debug-value @e]))
+  (f/once (f/disp [::impl/ready-to-size self]))
+  (if-let [e @(f/sub [::datai/entity ref])]
+    [data/debug-value e]
+    [:div {:class "reflet-no-data"}
+     [:span "NO DATA"]]))
 
 (defmethod render :debug.type/ref-panel
   [{:debug/keys [ref] :as props}]

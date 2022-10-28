@@ -327,6 +327,13 @@ $control-fade:                  -0.3;
     color: $syntax-string;
 }
 
+.reflet-no-data {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    color: $syntax-string;
+}
+
 .reflet-number {
     color: #8b8ab8;
 }
