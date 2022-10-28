@@ -137,11 +137,12 @@
      :debug.type/props-cmp] ::panel]))
 
 (defmulti get-rect
-  (fn [db _ type & _] type)
+  (fn [db self & _]
+    (db/get-inn db [self :debug/type]))
   :hierarchy #'cmp-hierarchy)
 
 (defmethod get-rect ::panel
-  [_ _ _ el _]
+  [_ _ el]
   (let [{h :height} (rect (i/grab el))]
     {:left   200
      :top    200
@@ -149,12 +150,12 @@
      :height h}))
 
 (defmethod get-rect :debug.type/group
-  [_ _ _ el {:keys [x y]}]
+  [_ _ el {:keys [x y]}]
   (->> {:left x :top y}
        (shift-rect (i/grab el))))
 
 (defmethod get-rect :debug.type/mark
-  [db _ _ el tap]
+  [db _ el tap]
   (->> (db/get-inn db [tap :debug/rect])
        (shift-rect (i/grab el))))
 
@@ -178,24 +179,26 @@
   (fn [rect]
     (select-keys rect [:left :top :width :height :z-index])))
 
-(fsm/reg-fsm ::node-fsm
-  (fn [self]
-    {:ref  self
-     :attr :debug.node/state
-     :fsm  {nil    {[::open self] ::open}
-            ::open {[::close self] nil}}}))
-
 (def state-hierarchy
   (util/derive-pairs
    [[::mounted ::open] ::display]))
 
+(fsm/reg-fsm ::node-fsm
+  (fn [& [self :as args]]
+    (let [e (vec (cons ::set-rect args))]
+      {:ref self
+       :fsm {nil       {[::set-props self] ::mounted}
+             ::mounted {[::ready-to-size self] {:to ::closed :dispatch e}}
+             ::closed  {[::open self] ::open}
+             ::open    {[::close self] ::closed}}})))
+
 (fsm/reg-fsm ::panel-fsm
-  (fn [self type el]
-    {:ref  self
-     :attr :debug.panel/state
-     :fsm  {nil       {[::set-props self] ::mounted}
-            ::mounted {[::ready-to-size self] {:to ::open :dispatch [::set-rect self type el]}}
-            ::open    {[::close self] ::nil}}}))
+  (fn [self el tap]
+    (let [e [::set-rect self el]]
+      {:ref self
+       :fsm {nil       {[::set-props self] ::mounted}
+             ::mounted {[::ready-to-size self] {:to ::open :dispatch e}}
+             ::open    {[::close-panel tap] nil}}})))
 
 (f/reg-no-op ::open ::close ::ready-to-size)
 
@@ -254,29 +257,21 @@
   (fn [db [_ ref]]
     (->> ref
          (create-props-cmp)
-         (assoc-in db [::props ref]))))
-
-(f/reg-event-db ::close-prop
-  (fn [db [_ ref]]
-    (update db ::props dissoc ref)))
+         (assoc-in db [::panels ref]))))
 
 (f/reg-event-db ::open-ref
   (fn [db [_ ref]]
     (->> ref
          (create-ref-entity)
-         (assoc-in db [::refs ref]))))
+         (assoc-in db [::panels ref]))))
 
-(f/reg-event-db ::close-ref
+(f/reg-event-db ::close-panel
   (fn [db [_ ref]]
-    (update db ::refs dissoc ref)))
+    (update db ::panels dissoc ref)))
 
-(f/reg-sub ::overlay-props
+(f/reg-sub ::overlay-panels
   (fn [db _]
-    (vals (get db ::props))))
-
-(f/reg-sub ::overlay-refs
-  (fn [db _]
-    (vals (get db ::refs))))
+    (vals (get db ::panels))))
 
 (f/reg-sub ::overlay-nodes
   (fn [_]
@@ -291,9 +286,8 @@
 (f/reg-sub ::overlay
   (fn [_]
     [(f/sub [::overlay-nodes])
-     (f/sub [::overlay-props])
-     (f/sub [::overlay-refs])])
-  (fn [[nodes props refs] _]
-    (concat nodes props refs)))
+     (f/sub [::overlay-panels])])
+  (fn [[nodes panels] _]
+    (concat nodes panels)))
 
 (f/reg-sub ::render)
