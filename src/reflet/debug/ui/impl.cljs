@@ -194,18 +194,28 @@
   (fn [rect]
     (select-keys rect [:left :top :width :height :z-index])))
 
+(defn- v-offset
+  [lh el]
+  (let [b (* 2 (px el :border-width))
+        h (->> (.. el -firstChild -children)
+               (array-seq)
+               (map #(px % :height))
+               (reduce + b))]
+    (mod h lh)))
+
 (f/reg-sub ::rect-quantize
   (fn [[_ self el]]
     [(f/sub [::rect self])
      (f/sub [::i/grab el])])
   (fn [[rect ^js el] _]
     (when el
-      (let [lh (px el :line-height)]
+      (let [lh     (px el :line-height)
+            offset (v-offset lh el)]
         (-> rect
             (update :left quant lh)
             (update :top quant lh)
             (update :width quant lh)
-            (update :height quant lh))))))
+            (update :height #(+ (quant % lh) offset)))))))
 
 (def state-hierarchy
   (util/derive-pairs
