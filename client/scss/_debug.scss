@@ -10,6 +10,7 @@ $debug-border-thickness:        2px;
 $debug-border-color:            color.adjust($debug-color, $lightness: 15);
 $debug-panel-border:            $debug-border-thickness solid $debug-border-color;
 $debug-panel-inner-border:      1px solid $debug-border-color;
+$debug-panel-drop-shadow:       rgba(208, 208, 208, 50%);
 
 $syntax-keyword-namespace:      #9167db;
 $syntax-keyword-name:           #ac4af0; // #cb49f1;
@@ -147,7 +148,7 @@ $control-fade:                  -0.3;
         top: $shadow-offset;
         left: $shadow-offset;
         border-radius: $debug-panel-radius + $shadow-offset / 2;
-        background: rgba(208, 208, 208, 50%);
+        background: $debug-panel-drop-shadow;
         transform: translateZ(-1px);
     }
 
