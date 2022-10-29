@@ -263,16 +263,26 @@
         (r/as-element)
         (react-dom/createPortal (body-el)))))
 
+(defn- upsert-css!
+  []
+  (when-not (js/document.getElementById "style")
+    (let [el (js/document.createElement "style")]
+      (set! (.-id el) "reflet-css")
+      (set! (.-innerHTML el) "")        ; Nothing for now
+      (js/document.body.appendChild el))))
+
 (defn- upsert-overlay-el!
   []
   (or (overlay-el)
       (let [el (.createElement js/document "div")]
         (.setAttribute el "id" "reflet-overlay")
+        (.add (.-classList el) "reflet-overlay")
         (.appendChild (body-el) el)
         el)))
 
 (defn load-debugger!
   []
   (set! d/*debug* tap)
+  (upsert-css!)
   (->> (upsert-overlay-el!)
        (dom/render [overlay])))

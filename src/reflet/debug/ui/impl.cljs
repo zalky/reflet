@@ -107,10 +107,13 @@
     (f/disp-sync [::drag-stop!])))
 
 (defn update-z-index
+  "Attempt to start panels ontop all host UI elements. This still
+  leaves over a billion panel interactions. Worst case the panels stop
+  layering properly."
   [db ref]
-  (let [z (get db ::z-index 1)]
+  (let [z (get db ::z-index 1000000000)]
     (-> db
-        (update ::z-index inc)
+        (assoc ::z-index (inc z))
         (db/update-inn [ref :debug/rect] assoc :z-index z))))
 
 (f/reg-event-fx ::drag!
