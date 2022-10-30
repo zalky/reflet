@@ -101,13 +101,9 @@
         (db/unmount-ref! ref#)
         (disp [::with-ref-cleanup ref#])))))
 
-(defn- env-name
+(defn- env-namespace
   [env]
-  (-> env :fn-scope first :name str))
-
-(defn- env-ns
-  [env]
-  (-> env :fn-scope first :info :ns str))
+  (-> env :ns :name str not-empty))
 
 (defn- env-line
   [env]
@@ -123,7 +119,7 @@
   `(if ~(debug? opts)
      (let [p# {:debug/type  :debut.type/tap
                :debug/id    (second (:debug-id ~context))
-               :debug/fn    (symbol ~(env-ns env) ~(env-name env))
+               :debug/ns    ~(env-namespace env)
                :debug/line  ~(env-line env)
                :debug/props ~props-sym}]
        [:<>
@@ -142,9 +138,8 @@
   [env]
   `(let [^clj c# r*/*ratom-context*
          g#      (or (.-withRefGeneration c#) 0)
-         ns#     ~(env-ns env)
-         n#      (str ~(env-name env) "$" g#)
-         r#      [:debug/id (keyword ns# n#)]]
+         n#      ~(component-name)
+         r#      [:debug/id (keyword n# g#)]]
      (set! (.-withRefGeneration c#) (inc g#))
      (db/mount-ref! r#)
      r#))
@@ -179,10 +174,18 @@
        ~(with-ref-cleanup refs context))))
 
 (defmacro with-ref*
-  "Like with-ref but debug disabled. For implementing the debug UI."
+  "Like with-ref but with debug implicitly disabled. Used to implement
+  the debug UI. Not for public use: throws an error if used outside of
+  a reflet.debug.* namespace."
   [bindings & body]
-  `(with-ref ~(assoc bindings :debug false)
-     ~@body))
+  (let [ns (env-namespace &env)
+        l  (env-line &env)]
+    (when-not (re-find #"^reflet.debug" ns)
+      (-> "Cannot use with-ref* outside reflet debug namespace"
+          (ex-info {:ns ns :line l})
+          (throw)))
+    `(with-ref ~(assoc bindings :debug false)
+       ~@body)))
 
 (defn- no-eval-keywords
   [expr]

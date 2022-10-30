@@ -201,18 +201,32 @@ $control-fade:                  -0.3;
     z-index: 1;
     cursor: default;
     user-select: none;
-    font-weight: $font-bold;
 
     .reflet-move & {
         cursor: grabbing;
     }
 
-    > :first-child {
+    > :last-child {
         flex: 1 1 auto;
-        overflow: hidden;
-        white-space: nowrap;
-        margin-right: 0.5rem;
+        justify-content: flex-end;
     }
+}
+
+.reflet-props-title, .reflet-ref-title {
+    overflow: hidden;
+    white-space: nowrap;
+    margin-right: 0.5rem;
+    font-weight: $font-weight-bold;
+
+    > :nth-child(2), :nth-child(3) {
+        margin-left: 0.25rem;
+        font-weight: $font-weight-normal;
+        font-style: italic;
+    }
+}
+
+.reflet-ref-title > .reflet-ref {
+    color: $font-color;
 }
 
 .reflet-control {
@@ -309,11 +323,8 @@ $control-fade:                  -0.3;
 
 .reflet-ref {
     font-family: $font-family-monospace;
-
-    :not(.reflet-header) > & {
-        color: $syntax-ref;
-        cursor: pointer;
-    }
+    color: $syntax-ref;
+    cursor: pointer;
 }
 
 .reflet-keyword {

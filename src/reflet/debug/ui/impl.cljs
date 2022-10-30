@@ -307,9 +307,8 @@
 (f/reg-pull ::props-panel
   (fn [self]
     [{:debug/tap
-      [:debug/type
-       :debug/id
-       :debug/fn
+      [:debug/id
+       :debug/ns
        :debug/line
        :debug/props]}
      self]))
@@ -317,7 +316,7 @@
 (f/reg-pull ::tap
   (fn [tap]
     [[:debug/id
-      :debug/fn
+      :debug/ns
       :debug/line]
      tap]))
 

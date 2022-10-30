@@ -11,15 +11,22 @@
             [reflet.interop :as i]))
 
 (def component-name-re
-  #"(.*)\.([^.]+)+")
+  #"(.*\.)*([^.]+)")
+
+(defn- component-name
+  [id]
+  (let [[_ ns n] (re-find component-name-re (namespace id))]
+    n))
 
 (defn- props-name
-  [{:debug/keys [fn line]}]
-  (if (and fn line)
-    (let [ns (namespace fn)
-          n  (name fn)]
-      [:span (str ns "/" n " : L" line)])
-    [:span "with-ref removed"]))
+  [{:debug/keys [id ns line]}]
+  [:div {:class "reflet-props-title"}
+   (if (and id ns line)
+     [:<>
+      [:span (component-name id)]
+      [:span "in"]
+      [:span ns " : L" line]]
+     [:span "with-ref removed"])])
 
 (defn- dragging-class
   []
@@ -151,7 +158,8 @@
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
-     [data/debug-value ref]
+     [:div {:class "reflet-ref-title"}
+      [data/debug-value ref]]
      [g/x {:class         "reflet-control"
            :on-mouse-down (f/stop-prop on-close)}]]))
 

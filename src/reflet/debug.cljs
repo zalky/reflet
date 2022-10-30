@@ -52,6 +52,11 @@
                event)
     context))
 
+(def debug-tap-events
+  (f/->interceptor
+   :id ::debug-tap
+   :after debug-tap-after))
+
 (f/reg-event-db ::tap
   ;; ::d/tap must happen after the ::d/untap of the previous react
   ;; lifecycle. To guarantee this, ::d/tap must be invoked in either
@@ -73,8 +78,4 @@
   (fn [db _]
     (get db ::taps)))
 
-(def debug-tap-events
-  (f/->interceptor
-   :id ::debug-tap
-   :after debug-tap-after))
 
