@@ -309,6 +309,46 @@ $control-fade:                  -0.3;
     }
 }
 
+.reflet-coll-expander {
+    user-select: none;
+    cursor: pointer;
+
+    > *, svg {
+        transition: all 0.3s ease;
+    }
+
+    > :nth-child(2) {
+        margin: 0 0.5rem;
+    }
+
+    &.reflet-coll-expand svg {
+        transform: scale(1, -1);
+    }
+
+    &.reflet-coll-expand > :nth-child(1), &.reflet-coll-expand > :nth-child(3) {
+        opacity: 0.2;
+    }
+
+    .reflet-glyph {
+        padding-top: 1px;
+    }
+
+    svg {
+        // Add a bit of margin to help center align with the monospace
+        // collection characters
+        width: 12px;
+    }
+}
+
+.reflet-coll-expanded {
+    grid-column-start: 1;
+    grid-column-end: span 2;
+
+    > * {
+        flex-direction: column;
+    }
+}
+
 .reflet-map::before {
     content: "{";
 }
@@ -319,6 +359,18 @@ $control-fade:                  -0.3;
 
 .reflet-set::before {
     content: "\#{";
+}
+
+.reflet-list::before {
+    content: "(";
+}
+
+.reflet-vec, .reflet-set, .reflet-list {
+    display: flex;
+
+    > :not(:first-child) {
+        margin-left: 0.25rem;
+    }
 }
 
 .reflet-ref {
@@ -334,7 +386,7 @@ $control-fade:                  -0.3;
         color: $syntax-keyword-namespace;
     }
 
-    > :nth-child(2) {
+    > :nth-child(2):not(:last-child) {
         @include truncate;
         direction: rtl;
         color: $syntax-keyword-namespace;
@@ -377,4 +429,3 @@ $control-fade:                  -0.3;
     color: $syntax-string;
     font-family: $font-family-monospace;
 }
-

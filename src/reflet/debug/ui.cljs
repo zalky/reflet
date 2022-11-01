@@ -127,7 +127,7 @@
   [{:debug/keys [self]}]
   (when-let [p @(f/sub [::impl/props-panel self])]
     (f/once (f/disp [::impl/ready-to-size self]))
-    [data/debug-value (:debug/props p)]))
+    [data/value (:debug/props p)]))
 
 (defn- display?
   [state]
@@ -159,7 +159,7 @@
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
      [:div {:class "reflet-ref-title"}
-      [data/debug-value ref]]
+      [data/value ref]]
      [g/x {:class         "reflet-control"
            :on-mouse-down (f/stop-prop on-close)}]]))
 
@@ -170,7 +170,7 @@
   [{:debug/keys [self ref]}]
   (f/once (f/disp [::impl/ready-to-size self]))
   (if-let [e @(f/sub [::datai/entity ref])]
-    [data/debug-value e]
+    [data/value e]
     [:div {:class "reflet-no-data"}
      [:span "No Data"]]))
 

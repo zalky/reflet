@@ -41,3 +41,10 @@
   [:div {:class "reflet-glyph"}
    [:svg (assoc props :view-box "0 0 10 10")
     [:path (stroke {:d "M 8,2 A 7,7 0 0 1 2,8 M 6,2 A 5,5 0 0 1 2,6"})]]])
+
+(defn coll-expander
+  []
+  [:div {:class "reflet-glyph"}
+   [:svg {:view-box "0 0 20 10"}
+    [:path (stroke {:d            "M 2,2 L 10,8 L 18,2"
+                    :stroke-width "1px"})]]])
