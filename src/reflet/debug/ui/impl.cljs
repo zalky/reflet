@@ -106,12 +106,16 @@
     (.removeEventListener js/document "mouseup" anon)
     (f/disp-sync [::drag-stop!])))
 
+(defn get-z-index
+  [db]
+  (get db ::z-index 1000000000))
+
 (defn update-z-index
   "Attempt to start panels ontop all host UI elements. This still
   leaves over a billion panel interactions. Worst case the panels stop
   layering properly."
   [db ref]
-  (let [z (get db ::z-index 1000000000)]
+  (let [z (get-z-index db)]
     (-> db
         (assoc ::z-index (inc z))
         (db/update-inn [ref :debug/rect] assoc :z-index z))))
@@ -304,6 +308,14 @@
      :debug/group    (map create-mark xs)
      :debug/centroid c}))
 
+(defn create-context
+  [ref {:keys [x y]} z]
+  {:debug/type :debug.type.context/ref
+   :debug/ref  ref
+   :debug/pos  {:left    x
+                :top     y
+                :z-index z}})
+
 (f/reg-pull ::props-panel
   (fn [self]
     [{:debug/tap
@@ -332,6 +344,22 @@
          (create-ref-panel)
          (assoc-in db [::panels ref]))))
 
+(f/reg-event-fx ::open-context
+  (fn [{db :db} [_ ref pos]]
+    (letfn [(f [e]
+              (.removeEventListener js/document "click" f)
+              (f/disp [::close-context]))]
+      (.addEventListener js/document "click" f)
+      (let [z (get-z-index db)]
+        {:db (-> (->> z
+                      (create-context ref pos)
+                      (assoc db ::context))
+                 (assoc ::z-index (inc z)))}))))
+
+(f/reg-event-db ::close-context
+  (fn [db _]
+    (dissoc db ::context)))
+
 (f/reg-event-db ::close-panel
   (fn [db [_ ref]]
     (-> db
@@ -341,6 +369,12 @@
 (f/reg-sub ::overlay-panels
   (fn [db _]
     (vals (get db ::panels))))
+
+(f/reg-sub ::overlay-context
+  (fn [db _]
+    (some-> db
+            (get ::context)
+            (vector))))
 
 (f/reg-sub ::overlay-nodes
   (fn [_]
@@ -355,8 +389,9 @@
 (f/reg-sub ::overlay
   (fn [_]
     [(f/sub [::overlay-nodes])
-     (f/sub [::overlay-panels])])
-  (fn [[nodes panels] _]
-    (concat nodes panels)))
+     (f/sub [::overlay-panels])
+     (f/sub [::overlay-context])])
+  (fn [[nodes panels context] _]
+    (concat nodes panels context)))
 
 (f/reg-sub ::render)

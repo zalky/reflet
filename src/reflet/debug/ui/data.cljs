@@ -49,14 +49,22 @@
   [:div {:class "reflet-string"}
    [:span (str \" s \")]])
 
+(defn- pos
+  [e]
+  {:x (.-clientX e)
+   :y (.-clientY e)})
+
 (defmethod value ::ref
   [[attr value :as ref]]
-  [:div {:class    "reflet-ref"
-         :on-click #(f/disp [::ui/open-ref ref])}
-   (namespace attr) "@"
-   (if (uuid? value)
-     (subs (str value) 0 8)
-     (str value))])
+  (let [l-click #(f/disp [::ui/open-ref ref])
+        r-click #(f/disp [::ui/open-context ref (pos %)])]
+    [:div {:class           "reflet-ref"
+           :on-click        (f/prevent-default l-click)
+           :on-context-menu (f/prevent-default r-click)}
+     (namespace attr) "@"
+     (if (uuid? value)
+       (subs (str value) 0 8)
+       (str value))]))
 
 (defmethod value Keyword
   [k]

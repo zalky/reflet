@@ -64,13 +64,13 @@
                 :class          ["reflet-mark"
                                  (when (= @state ::impl/open)
                                    "reflet-open")]}
-          [:div {:class "reflet-mark-expanded"}
+          [:div {:class "reflet-context"}
            [mark-expanded props]]
           [g/mark-icon]]]))))
 
 (defn- marks-expanded
   [{:debug/keys [group]}]
-  [:div {:class "reflet-mark-expanded"}
+  [:div {:class "reflet-context"}
    (doall
     (for [{id  :debug/self
            :as n} group]
@@ -202,13 +202,34 @@
          [handle props]
          (drop-shadow)]))))
 
+(defmethod render :debug.type.context/ref
+  [{:debug/keys [ref pos] :as props}]
+  (f/with-ref* {:debug/id [debug/self]
+                :in       props}
+    [:div {:class "reflet-context"
+           :style pos}
+     [:div
+      [:div "{db}"]
+      [:div "app state"]]
+     [:div
+      [:div "[:e]"]
+      [:div "events"]]
+     [:div
+      [:div "pull"]
+      [:div "queries"]]
+     [:div
+      [:div "FSM"]
+      [:div "transitions"]]]))
+
 (defn- overlay
   []
   [:<>
    (doall
-    (for [{id  :debug/self
-           :as n} @(f/sub [::impl/overlay])]
-      ^{:key id} [render n]))])
+    (map-indexed
+     (fn [i {id  :debug/self
+             :as node}]
+       ^{:key (or id i)} [render node])
+     @(f/sub [::impl/overlay])))])
 
 (defn- body-el
   []

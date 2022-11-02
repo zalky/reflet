@@ -9,7 +9,7 @@
 $debug-color:                   #454545;
 
 $debug-mark-color:              #8967f4; // #a267f4;
-$debug-marks-bg:                rgb(245, 247, 255, 94%);
+$debug-marks-bg:                rgba(245, 247, 255, 94%); // rgba(245, 245, 246, 96%);
 $debug-radius:                  8px;
 $debug-panel-radius:            2 * $debug-radius;
 $debug-stack-height:            8px;
@@ -59,72 +59,74 @@ $control-fade:                  -0.3;
     align-items: center;
 }
 
+.reflet-context {
+    position: absolute;
+    display: grid;
+    grid-template-columns: (2 * $debug-radius) auto;
+    grid-row-gap: $debug-stack-height;
+    align-items: start;
+    width: fit-content;
+    height: fit-content;
+
+    padding: 0.75rem;
+    border-radius: 2 * $debug-radius;
+
+    $shadow: color.adjust($body-color, $alpha: -0.2);
+    background: $debug-marks-bg;
+    font-size: $font-size-xs;
+
+    > div {
+        display: contents;
+        cursor: pointer;
+
+        > :nth-child(2n+1) {
+            color: $debug-mark-color;
+            font-weight: 600;
+        }
+
+        &:hover > * {
+            color: color.adjust($debug-mark-color, $lightness: -5);
+        }
+
+        > :nth-child(2n) {
+            padding-left: 1rem;
+            cursor: pointer;
+            color: $font-color;
+        }
+    }
+
+    > * {
+        white-space: nowrap;
+    }
+}
+
 .reflet-mark, .reflet-mark-group {
     position: relative;
-    transform: translate($debug-radius, $debug-radius + $debug-stack-height);
+    transform: translate($debug-radius, $debug-radius);
     user-select: none;
     color: $debug-mark-color;
     transition: color 0.3s ease;
 
     svg {
         width: 16px;
+        margin-bottom: - $debug-stack-height;
 
         path {
             transition: all 0.3s linear;
             opacity: 1;
             visibility: visible;
-
             @include disable-safari-transitions;
         }
     }
 
-    .reflet-mark-expanded {
-        position: absolute;
-        display: grid;
-        grid-template-columns: (2 * $debug-radius) auto;
-        grid-template-rows: (2 * $debug-radius + $debug-stack-height);
-        align-items: start;
-        width: fit-content;
-        height: fit-content;
-
+    .reflet-context {
         padding: $debug-radius;
-        padding-right: $debug-radius * 2;
-        padding-bottom: 0;
         margin-left: -$debug-radius;
         margin-top: -$debug-radius;
-        border-top-left-radius: 2 * $debug-radius;
-        border-bottom-left-radius: 2 * $debug-radius;
-        border-top-right-radius: 2 * $debug-radius;
-        border-bottom-right-radius: 2 * $debug-radius;
-
-        $shadow: color.adjust($body-color, $alpha: -0.2);
-        background: $debug-marks-bg;
-        font-size: $font-size-xs;
         transition: all 0.3s linear;
-
-        @include disable-safari-transitions;
-
         visibility: hidden;
         opacity: 0;
-
-        > div {
-            display: contents;
-            cursor: pointer;
-
-            &:hover > * {
-                color: color.adjust($debug-mark-color, $lightness: -5);
-            }
-
-            > :nth-child(2n) {
-                padding-left: 1rem;
-                cursor: pointer;
-                color: $font-color;
-            }
-        }
-
-        > * {
-            white-space: nowrap;
-        }
+        @include disable-safari-transitions;
     }
 
     &:hover {
@@ -133,7 +135,7 @@ $control-fade:                  -0.3;
             visibility: hidden;
         }
 
-        .reflet-mark-expanded {
+        .reflet-context {
             visibility: visible;
             opacity: 1;
         }
