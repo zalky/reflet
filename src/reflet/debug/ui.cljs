@@ -273,7 +273,7 @@
 
 (defn- upsert-css!
   []
-  (when-not (js/document.getElementById "style")
+  (when-not (js/document.getElementById "reflet-css")
     (let [el (js/document.createElement "style")]
       (set! (.-id el) "reflet-css")
       (set! (.-innerHTML el) "")        ; Nothing for now
