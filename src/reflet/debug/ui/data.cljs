@@ -54,15 +54,19 @@
   {:x (.-clientX e)
    :y (.-clientY e)})
 
+(defn value-ref
+  [[attr value]]
+  [:div {:class "reflet-ref"}
+   (namespace attr) "@"
+   (if (uuid? value)
+     (subs (str value) 0 8)
+     (str value))])
+
 (defmethod value ::ref
-  [[attr value :as ref]]
+  [ref]
   (let [cb #(f/disp [::ui/open-ref ref])]
-    [:div {:class    "reflet-ref"
-           :on-click (f/prevent-default cb)}
-     (namespace attr) "@"
-     (if (uuid? value)
-       (subs (str value) 0 8)
-       (str value))]))
+    [:div {:on-click (f/prevent-default cb)}
+     (value-ref ref)]))
 
 (defmethod value Keyword
   [k]

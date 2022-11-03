@@ -48,3 +48,9 @@
    [:svg {:view-box "0 0 20 10"}
     [:path (stroke {:d            "M 2,2 L 10,8 L 18,2"
                     :stroke-width "1px"})]]])
+
+(defn back
+  [& [props]]
+  [:div {:class "reflet-glyph"}
+   [:svg (assoc props :view-box "0 0 10 10")
+    [:path (stroke {:d "M 9,1 L 1,5 L 9,9"})]]])

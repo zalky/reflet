@@ -172,23 +172,18 @@
     (db/get-inn db [self :debug/type]))
   :hierarchy #'cmp-hierarchy)
 
-(def max-init-panel-height
-  500)
-
 (defn pos-or-default
   [pos dim]
   (+ (or pos (/ (get (viewport-size) dim) 4)) 50))
 
 (defmethod get-rect ::panel
   [db _ el]
-  (let [source-el   (::selected db)
+  (let [source-el (::selected db)
         {t :top
-         l :left}   (some-> source-el i/grab rect)
-        {h :height} (some-> el i/grab rect)]
-    {:left   (pos-or-default l :height)
-     :top    (pos-or-default t :width)
-     :width  300
-     :height (some-> h (min max-init-panel-height))}))
+         l :left} (some-> source-el i/grab rect)]
+    {:left  (pos-or-default l :height)
+     :top   (pos-or-default t :width)
+     :width 300}))
 
 (defmethod get-rect :debug.type/mark-group
   [_ _ el {:keys [x y]}]
@@ -216,11 +211,15 @@
           (db/update-inn [self :debug/rect] f)
           (update-z-index self)))))
 
+(def max-init-panel-height
+  500)
+
 (f/reg-event-db ::set-height
   (fn [db [_ self el]]
     (letfn [(f [r]
               (->> (i/grab el)
                    (panel-content-height)
+                   (min max-init-panel-height)
                    (assoc r :height)))]
       (-> db
           (db/update-inn [self :debug/rect] f)
@@ -269,25 +268,25 @@
    [[::mounted ::open] ::display]))
 
 (fsm/reg-fsm ::node-fsm
-  (fn [& [self :as args]]
-    (let [e (vec (cons ::set-rect args))]
-      {:ref self
-       :fsm {nil       {[::set-props self] ::mounted}
-             ::mounted {[::ready-to-size self] {:to ::closed :dispatch e}}
-             ::closed  {[::open self] ::open}
-             ::open    {[::close self] ::closed}}})))
+  (fn [self]
+    {:ref self
+     :fsm {nil      {[::set-props self] ::open}
+           ::open   {[::close self] ::closed}
+           ::closed {[::open self] ::open}}}))
 
 (fsm/reg-fsm ::panel-fsm
-  (fn [self el tap]
-    (let [e [::set-rect self el]]
-      {:ref self
-       :fsm {nil       {[::set-props self] ::mounted}
-             ::mounted {[::ready-to-size self] {:to ::open :dispatch e}}
-             ::open    {[::close-panel tap] nil}}})))
+  (fn [self tap]
+    {:ref self
+     :fsm {nil    {[::set-props self] ::open}
+           ::open {[::close-panel tap] nil}}}))
 
-(f/reg-event-db ::choose-lens
+(f/reg-event-db ::set-lens
   (fn [db [_ self lens]]
     (db/assoc-inn db [self :debug/lens] lens)))
+
+(f/reg-event-db ::clear-lens
+  (fn [db [_ self]]
+    (db/updaten db self dissoc :debug/lens)))
 
 (f/reg-pull ::lens
   (fn [self]

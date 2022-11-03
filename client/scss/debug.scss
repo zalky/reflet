@@ -100,9 +100,10 @@ $control-fade:                  -0.3;
     }
 }
 
-.reflet-choose-lens {
+.reflet-set-lens {
     display: flex;
     justify-content: space-evenly;
+    user-select: none;
 
     > * {
         font-size: $font-size-sm;
@@ -218,11 +219,6 @@ $control-fade:                  -0.3;
     .reflet-move & {
         cursor: grabbing;
     }
-
-    > :last-child {
-        flex: 1 1 auto;
-        justify-content: flex-end;
-    }
 }
 
 .reflet-props-title, .reflet-ref-title {
@@ -230,6 +226,7 @@ $control-fade:                  -0.3;
     white-space: nowrap;
     margin-right: 0.5rem;
     font-weight: $font-weight-bold;
+    flex: 1 1 auto;
 
     > :nth-child(2), :nth-child(3) {
         margin-left: 0.25rem;
@@ -248,6 +245,7 @@ $control-fade:                  -0.3;
     cursor: pointer;
     color: $debug-border-color;
     flex: 0 0 auto;
+    margin-left: 0.75rem;
 
     &:hover {
         color: $debug-color;
@@ -389,7 +387,10 @@ $control-fade:                  -0.3;
 .reflet-ref {
     font-family: $font-family-monospace;
     color: $syntax-ref;
-    cursor: pointer;
+
+    :not(.reflet-ref-title) > & {
+        cursor: pointer;
+    }
 }
 
 .reflet-keyword {

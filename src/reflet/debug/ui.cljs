@@ -51,8 +51,8 @@
                 :el/uuid  [debug/el]
                 :in       props}
     (let [rect  (f/sub [::impl/rect self])
-          state (f/sub [::impl/node-fsm self el tap])
-          cb    #(f/disp [::impl/ready-to-size self])]
+          state (f/sub [::impl/node-fsm self])
+          cb    #(f/disp [::impl/set-rect self el tap])]
       (f/once (f/disp [::impl/set-props self props]))
       (when @state
         [:div {:ref   (i/el! el :cb cb)
@@ -82,8 +82,8 @@
                 :el/uuid  [debug/el]
                 :in       props}
     (let [rect  (f/sub [::impl/rect self])
-          state (f/sub [::impl/node-fsm self el centroid])
-          cb    #(f/disp [::impl/ready-to-size self])]
+          state (f/sub [::impl/node-fsm self])
+          cb    #(f/disp [::impl/set-rect self el centroid])]
       (f/once (f/disp [::impl/set-props self props]))
       (when @state
         [:div {:ref   (i/el! el :cb cb)
@@ -124,9 +124,10 @@
   [:div {:class "reflet-panel-shadow"}])
 
 (defn- props-content
-  [{:debug/keys [self]}]
+  [{:debug/keys [self el]}]
   (when-let [p @(f/sub [::impl/props-panel self])]
-    (f/once (f/disp [::impl/ready-to-size self]))
+    (f/once [(f/disp [::impl/set-rect self el])
+             (f/disp [::impl/set-height self el])])
     [data/value (:debug/props p)]))
 
 (defn- display?
@@ -154,14 +155,19 @@
 
 (defmethod header :debug.type/ref-panel
   [{:debug/keys [self ref]}]
-  (let [on-close #(f/disp [::impl/close-ref-panel self])
+  (let [lens     (f/sub [::impl/lens self])
+        on-back  #(f/disp [::impl/clear-lens self])
+        on-close #(f/disp [::impl/close-ref-panel self])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
      [:div {:class "reflet-ref-title"}
-      [data/value ref]]
-     [g/x {:class         "reflet-control"
-           :on-mouse-down (f/stop-prop on-close)}]]))
+      [data/value-ref ref]]
+     (when @lens
+       [g/back {:on-mouse-down (f/stop-prop on-back)
+                :class         "reflet-control"}])
+     [g/x {:on-mouse-down (f/stop-prop on-close)
+           :class         "reflet-control"}]]))
 
 (defmulti ref-content
   (comp first :debug/ref))
@@ -179,17 +185,18 @@
      [:span "No Data"]]))
 
 (defmethod ref-lens :default
-  [{:debug/keys [self ref]}]
-  (let [cb-d #(f/disp [::impl/choose-lens self :debug.lens/db])
-        cb-e #(f/disp [::impl/choose-lens self :debug.lens/events])
-        cb-p #(f/disp [::impl/choose-lens self :debug.lens/pull])
-        cb-f #(f/disp [::impl/choose-lens self :debug.lens/fsm])]
-   (f/once (f/disp [::impl/ready-to-size self]))
-   [:div {:class "reflet-choose-lens"}
-    [:div {:on-click cb-d} "db"]
-    [:div {:on-click cb-e} "events"]
-    [:div {:on-click cb-p} "pull"]
-    [:div {:on-click cb-f} "FSM"]]))
+  [{:debug/keys [self el]}]
+  (let [cb-d #(f/disp [::impl/set-lens self :debug.lens/db])
+        cb-e #(f/disp [::impl/set-lens self :debug.lens/events])
+        cb-p #(f/disp [::impl/set-lens self :debug.lens/pull])
+        cb-f #(f/disp [::impl/set-lens self :debug.lens/fsm])]
+    (f/once [(f/disp [::impl/set-rect self el])
+             (f/disp [::impl/set-height self el])])
+    [:div {:class "reflet-set-lens"}
+     [:div {:on-click cb-d} "db"]
+     [:div {:on-click cb-e} "events"]
+     [:div {:on-click cb-p} "pull"]
+     [:div {:on-click cb-f} "FSM"]]))
 
 (defmethod ref-content :default
   [props]
