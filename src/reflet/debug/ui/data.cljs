@@ -56,11 +56,9 @@
 
 (defmethod value ::ref
   [[attr value :as ref]]
-  (let [l-click #(f/disp [::ui/open-ref ref])
-        r-click #(f/disp [::ui/open-context ref (pos %)])]
-    [:div {:class           "reflet-ref"
-           :on-click        (f/prevent-default l-click)
-           :on-context-menu (f/prevent-default r-click)}
+  (let [cb #(f/disp [::ui/open-ref ref])]
+    [:div {:class    "reflet-ref"
+           :on-click (f/prevent-default cb)}
      (namespace attr) "@"
      (if (uuid? value)
        (subs (str value) 0 8)

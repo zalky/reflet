@@ -100,6 +100,17 @@ $control-fade:                  -0.3;
     }
 }
 
+.reflet-choose-lens {
+    display: flex;
+    justify-content: space-evenly;
+
+    > * {
+        font-size: $font-size-sm;
+        cursor: pointer;
+        font-family: $font-family-monospace;
+    }
+}
+
 .reflet-mark, .reflet-mark-group {
     position: relative;
     transform: translate($debug-radius, $debug-radius);

@@ -200,6 +200,14 @@
   (->> (db/get-inn db [tap :debug/rect])
        (shift-rect (i/grab el))))
 
+(defn- panel-content-height
+  [el]
+  (let [b (* 2 (px el :border-width))]
+    (->> (.. el -firstChild -children)
+         (array-seq)
+         (map #(px % :height))
+         (reduce + b))))
+
 (f/reg-event-db ::set-rect
   (fn [db [_ self & args]]
     (letfn [(f [r]
@@ -208,11 +216,15 @@
           (db/update-inn [self :debug/rect] f)
           (update-z-index self)))))
 
-(f/reg-event-db ::set-props
-  (fn [db [_ self props]]
-    (as-> (apply assoc props self) %
-      (dissoc % :debug/el :debug/self)
-      (db/mergen db %))))
+(f/reg-event-db ::set-height
+  (fn [db [_ self el]]
+    (letfn [(f [r]
+              (->> (i/grab el)
+                   (panel-content-height)
+                   (assoc r :height)))]
+      (-> db
+          (db/update-inn [self :debug/rect] f)
+          (update-z-index self)))))
 
 (f/reg-pull ::rect
   (fn [self]
@@ -222,12 +234,7 @@
 
 (defn- v-offset
   [lh el]
-  (let [b (* 2 (px el :border-width))
-        h (->> (.. el -firstChild -children)
-               (array-seq)
-               (map #(px % :height))
-               (reduce + b))]
-    (mod h lh)))
+  (mod (panel-content-height el) lh))
 
 (f/reg-sub ::rect-quantize
   ;; Quantize size and position with respect to line-height. For nicer
@@ -251,6 +258,12 @@
             (update :width qfn lh)
             (update :height #(+ (quant % lh) offset)))))))
 
+(f/reg-event-db ::set-props
+  (fn [db [_ self props]]
+    (as-> (apply assoc props self) %
+      (dissoc % :debug/el :debug/self)
+      (db/mergen db %))))
+
 (def state-hierarchy
   (util/derive-pairs
    [[::mounted ::open] ::display]))
@@ -272,6 +285,14 @@
              ::mounted {[::ready-to-size self] {:to ::open :dispatch e}}
              ::open    {[::close-panel tap] nil}}})))
 
+(f/reg-event-db ::choose-lens
+  (fn [db [_ self lens]]
+    (db/assoc-inn db [self :debug/lens] lens)))
+
+(f/reg-pull ::lens
+  (fn [self]
+    [:debug/lens self]))
+
 (f/reg-no-op ::open ::close ::ready-to-size)
 
 (def cluster-opts
@@ -284,7 +305,7 @@
 (defn create-ref-panel
   [[a v :as ref]]
   {:debug/type :debug.type/ref-panel
-   :debug/self [:debug/id (str "ref-panel" a v)]
+   :debug/self (db/random-ref :debug/id)
    :debug/ref  ref})
 
 (defn create-props-panel
@@ -307,14 +328,6 @@
      :debug/self     [:debug/id (str "mark-group" c)]
      :debug/group    (map create-mark xs)
      :debug/centroid c}))
-
-(defn create-context
-  [ref {:keys [x y]} z]
-  {:debug/type :debug.type.context/ref
-   :debug/ref  ref
-   :debug/pos  {:left    x
-                :top     y
-                :z-index z}})
 
 (f/reg-pull ::props-panel
   (fn [self]
@@ -340,41 +353,25 @@
 
 (f/reg-event-db ::open-ref
   (fn [db [_ ref]]
-    (->> ref
-         (create-ref-panel)
-         (assoc-in db [::panels ref]))))
+    (let [p (create-ref-panel ref)]
+      (assoc-in db [::panels (:debug/self p)] p))))
 
-(f/reg-event-fx ::open-context
-  (fn [{db :db} [_ ref pos]]
-    (letfn [(f [e]
-              (.removeEventListener js/document "click" f)
-              (f/disp [::close-context]))]
-      (.addEventListener js/document "click" f)
-      (let [z (get-z-index db)]
-        {:db (-> (->> z
-                      (create-context ref pos)
-                      (assoc db ::context))
-                 (assoc ::z-index (inc z)))}))))
-
-(f/reg-event-db ::close-context
-  (fn [db _]
-    (dissoc db ::context)))
-
-(f/reg-event-db ::close-panel
-  (fn [db [_ ref]]
+(f/reg-event-db ::close-props-panel
+  (fn [db [_ tap]]
     (-> db
-        (update ::panels dissoc ref)
+        (update ::panels dissoc tap)
         (dissoc ::selected))))
+
+(f/reg-event-db ::close-ref-panel
+  (fn [db [_ self]]
+    (-> db
+        (update ::panels dissoc self)
+        (dissoc ::selected)
+        (db/dissocn self))))
 
 (f/reg-sub ::overlay-panels
   (fn [db _]
     (vals (get db ::panels))))
-
-(f/reg-sub ::overlay-context
-  (fn [db _]
-    (some-> db
-            (get ::context)
-            (vector))))
 
 (f/reg-sub ::overlay-nodes
   (fn [_]
@@ -389,9 +386,8 @@
 (f/reg-sub ::overlay
   (fn [_]
     [(f/sub [::overlay-nodes])
-     (f/sub [::overlay-panels])
-     (f/sub [::overlay-context])])
-  (fn [[nodes panels context] _]
-    (concat nodes panels context)))
+     (f/sub [::overlay-panels])])
+  (fn [[nodes panels] _]
+    (concat nodes panels)))
 
 (f/reg-sub ::render)

@@ -6,7 +6,7 @@
             [reflet.debug :as d]
             [reflet.debug.glyphs :as g]
             [reflet.debug.ui.data :as data]
-            [reflet.debug.ui.data.impl :as datai]
+            [reflet.debug.ui.data.impl :as data-impl]
             [reflet.debug.ui.impl :as impl]
             [reflet.interop :as i]))
 
@@ -105,7 +105,7 @@
   [{:debug/keys [self tap]}]
   (let [props    (f/sub [::impl/props-panel self])
         dragging (f/sub [::impl/dragging])
-        on-close #(f/disp [::impl/close-panel tap])
+        on-close #(f/disp [::impl/close-props-panel tap])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
@@ -154,7 +154,7 @@
 
 (defmethod header :debug.type/ref-panel
   [{:debug/keys [self ref]}]
-  (let [on-close #(f/disp [::impl/close-panel ref])
+  (let [on-close #(f/disp [::impl/close-ref-panel self])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
@@ -166,13 +166,34 @@
 (defmulti ref-content
   (comp first :debug/ref))
 
-(defmethod ref-content :default
-  [{:debug/keys [self ref]}]
-  (f/once (f/disp [::impl/ready-to-size self]))
-  (if-let [e @(f/sub [::datai/entity ref])]
+(defmulti ref-lens
+  (fn [{:debug/keys [self]}]
+    @(f/sub [::impl/lens self])))
+
+(defmethod ref-lens :debug.lens/db
+  [{:debug/keys [self ref el]}]
+  (f/once (f/disp [::impl/set-height self el]))
+  (if-let [e @(f/sub [::data-impl/entity ref])]
     [data/value e]
     [:div {:class "reflet-no-data"}
      [:span "No Data"]]))
+
+(defmethod ref-lens :default
+  [{:debug/keys [self ref]}]
+  (let [cb-d #(f/disp [::impl/choose-lens self :debug.lens/db])
+        cb-e #(f/disp [::impl/choose-lens self :debug.lens/events])
+        cb-p #(f/disp [::impl/choose-lens self :debug.lens/pull])
+        cb-f #(f/disp [::impl/choose-lens self :debug.lens/fsm])]
+   (f/once (f/disp [::impl/ready-to-size self]))
+   [:div {:class "reflet-choose-lens"}
+    [:div {:on-click cb-d} "db"]
+    [:div {:on-click cb-e} "events"]
+    [:div {:on-click cb-p} "pull"]
+    [:div {:on-click cb-f} "FSM"]]))
+
+(defmethod ref-content :default
+  [props]
+  [ref-lens props])
 
 (defmethod ref-content :el/uuid
   [{:debug/keys [self ref]}]
@@ -202,34 +223,13 @@
          [handle props]
          (drop-shadow)]))))
 
-(defmethod render :debug.type.context/ref
-  [{:debug/keys [ref pos] :as props}]
-  (f/with-ref* {:debug/id [debug/self]
-                :in       props}
-    [:div {:class "reflet-context"
-           :style pos}
-     [:div
-      [:div "{db}"]
-      [:div "app state"]]
-     [:div
-      [:div "[:e]"]
-      [:div "events"]]
-     [:div
-      [:div "pull"]
-      [:div "queries"]]
-     [:div
-      [:div "FSM"]
-      [:div "transitions"]]]))
-
 (defn- overlay
   []
   [:<>
    (doall
-    (map-indexed
-     (fn [i {id  :debug/self
-             :as node}]
-       ^{:key (or id i)} [render node])
-     @(f/sub [::impl/overlay])))])
+    (for [{id  :debug/self
+           :as node} @(f/sub [::impl/overlay])]
+      ^{:key id} [render node]))])
 
 (defn- body-el
   []
