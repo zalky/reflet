@@ -203,8 +203,9 @@
   [ref-lens props])
 
 (defmethod ref-content :el/uuid
-  [{:debug/keys [self ref]}]
-  (f/once (f/disp [::impl/ready-to-size self]))
+  [{:debug/keys [self el ref]}]
+  (f/once [(f/disp [::impl/set-rect self el])
+           (f/disp [::impl/set-height self el])])
   (if-let [^js el @(f/sub [::i/grab ref])]
     [:div {:class "reflet-html"}
      (.-outerHTML el)]
@@ -316,7 +317,7 @@
   []
   (or (overlay-el)
       (let [el (.createElement js/document "div")]
-        (.setAttribute el "id" "reflet-overlay")
+        (set! (.-id el) "reflet-overlay")
         (.add (.-classList el) "reflet-overlay")
         (.appendChild (body-el) el)
         el)))
