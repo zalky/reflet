@@ -110,7 +110,7 @@
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
      (props-name @props)
-     [g/x {:class         "reflet-control"
+     [g/x {:class         ["reflet-close"]
            :on-mouse-down (f/stop-prop on-close)}]]))
 
 (defn- handle
@@ -161,13 +161,13 @@
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
+     (when @lens
+       [g/back {:class         "reflet-control"
+                :on-mouse-down (f/stop-prop on-back)}])
      [:div {:class "reflet-ref-title"}
       [data/value-ref ref]]
-     (when @lens
-       [g/back {:on-mouse-down (f/stop-prop on-back)
-                :class         "reflet-control"}])
-     [g/x {:on-mouse-down (f/stop-prop on-close)
-           :class         "reflet-control"}]]))
+     [g/x {:class         "reflet-close"
+           :on-mouse-down (f/stop-prop on-close)}]]))
 
 (defmulti ref-content
   (comp first :debug/ref))
@@ -195,7 +195,7 @@
     [:div {:class "reflet-set-lens"}
      [:div {:on-click cb-d} "db"]
      [:div {:on-click cb-e} "events"]
-     [:div {:on-click cb-p} "pull"]
+     [:div {:on-click cb-p} "query"]
      [:div {:on-click cb-f} "FSM"]]))
 
 (defmethod ref-content :default

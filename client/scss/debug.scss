@@ -90,6 +90,7 @@ $control-fade:                  -0.3;
 
         > :nth-child(2n) {
             padding-left: 1rem;
+            padding-right: 0.5rem;
             cursor: pointer;
             color: $font-color;
         }
@@ -203,7 +204,8 @@ $control-fade:                  -0.3;
 }
 
 .reflet-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     position: sticky;
     top: 0;
     left: 0;
@@ -224,11 +226,10 @@ $control-fade:                  -0.3;
 .reflet-props-title, .reflet-ref-title {
     overflow: hidden;
     white-space: nowrap;
-    margin-right: 0.5rem;
     font-weight: $font-weight-bold;
-    flex: 1 1 auto;
+    grid-column: 2 / span 1;
 
-    > :nth-child(2), :nth-child(3) {
+    > :nth-child(n + 2) {
         margin-left: 0.25rem;
         font-weight: $font-weight-normal;
         font-style: italic;
@@ -239,13 +240,21 @@ $control-fade:                  -0.3;
     color: $font-color;
 }
 
-.reflet-control {
+.reflet-close {
+    justify-self: end;
+    grid-column: 3 / span 1;
+}
+
+.reflet-control, .reflet-close {
     width: 0.5rem;
     transition: all 0.3s ease;
     cursor: pointer;
     color: $debug-border-color;
     flex: 0 0 auto;
-    margin-left: 0.75rem;
+
+    .reflet-glyph:not(:last-child) & {
+        margin-right: 0.75rem;
+    }
 
     &:hover {
         color: $debug-color;
