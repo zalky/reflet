@@ -284,13 +284,18 @@
       [:div {:class "reflet-reactive-tap"}])}))
 
 (defn tap
-  "::d/tap must happen after the ::d/untap of the previous react
-  lifecycle. To guarantee this, ::d/tap must not be invoked in the
-  render phase of the react lifecycle. Is is safe to use in either the
-  `:ref` callback, the `:component-did-mount`, or
-  `:component-did-update` phase of the component lifecycle. Must not
-  dispatch ::d/tap in a `with-let`, where it will happen during the
-  first render."
+  "On mount, the tap must be situated in the target dom to access dom
+  relationships like parent, siblings, and position. After that
+  initial tap, the tap element becomes transparent as far as the dom
+  structure is concerned, situated elsewhere using a portal. The
+  reactive tap then updates the debugger with changes in with-ref
+  props. ::d/tap must happen after the ::d/untap of the previous react
+  lifecycle. To guarantee this, ::d/tap must not be dispatched in the
+  render phase, for example in the bindings of a `with-let`, where
+  the ::d/tap handler will run immediately after the first render, but
+  before the previous lifecycle's cleanup. It is safe to use in either
+  the `:ref` callback, the `:component-did-mount`, or
+  `:component-did-update` phase of the component lifecycle."
   [props target]
   (if-not @target
     [:div {:class "reflet-tap"
@@ -318,7 +323,7 @@
 
 (defn load-debugger!
   []
-  (set! d/*debug* tap)
+  (set! d/*tap-fn* tap)
   (upsert-css!)
   (->> (upsert-overlay-el!)
        (dom/render [overlay])))

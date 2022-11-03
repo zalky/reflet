@@ -5,7 +5,7 @@
             [re-frame.core :as f]
             [reflet.db :as db]))
 
-(defonce ^:dynamic *debug*
+(defonce ^:dynamic *tap-fn*
   nil)
 
 (def queue-size
@@ -45,7 +45,7 @@
   [{{event :event} :coeffects
     {db :db}       :effects
     :as            context}]
-  (if (and *debug* db (domain-event? event))
+  (if (and *tap-fn* db (domain-event? event))
     (update-in context
                [:effects :db ::index]
                update-debug-index

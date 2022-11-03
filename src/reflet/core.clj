@@ -112,7 +112,7 @@
 (defn- debug?
   [{:keys [debug]
     :or   {debug true}}]
-  `(and (r*/reactive?) ~debug d/*debug*))
+  `(and (r*/reactive?) ~debug d/*tap-fn*))
 
 (defn- wrap-debug
   [props-sym context env body opts]
@@ -123,7 +123,7 @@
                :debug/line  ~(env-line env)
                :debug/props ~props-sym}]
        [:<>
-        (d/*debug* p# (:target ~context))
+        (d/*tap-fn* p# (:target ~context))
         (do ~@body)])
      (do ~@body)))
 
@@ -181,7 +181,7 @@
   (let [ns (env-namespace &env)
         l  (env-line &env)]
     (when-not (re-find #"^reflet.debug" ns)
-      (-> "Cannot use with-ref* outside reflet debug namespace"
+      (-> "with-ref* used outside reflet debug namespace"
           (ex-info {:ns ns :line l})
           (throw)))
     `(with-ref ~(assoc bindings :debug false)

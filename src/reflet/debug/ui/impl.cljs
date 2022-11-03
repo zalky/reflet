@@ -238,11 +238,12 @@
 (f/reg-sub ::rect-quantize
   ;; Quantize size and position with respect to line-height. For nicer
   ;; visual results when quantizing element height, we preserve
-  ;; whatever height offset the the element originally had from a
-  ;; quantization point. The end result is that the element height
-  ;; will initially fit the content, and then shrink or expand by the
-  ;; quantization factor (line-height). All other dimensions just snap
-  ;; directly to quantization points.
+  ;; whatever offset the the element's content has from a quantization
+  ;; point. The visual effect of this approach is that the height of
+  ;; the element will either exactly fit its content, or shrink or
+  ;; expand by the quantization factor, which is line-height. In
+  ;; contrast, :left, :top, and :width will just snap directly to
+  ;; quantization points, irrespective of the content.
   (fn [[_ self el]]
     [(f/sub [::rect self])
      (f/sub [::i/grab el])])
