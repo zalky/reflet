@@ -33,12 +33,21 @@
       (not)))
 
 (defn- update-debug-index
-  [{touched ::touched-queries
-    :as     index} event]
-  (if touched
-    (letfn [(rf [m q] (update m q qonj queue-size event))
-            (f [m] (reduce rf m touched))]
-      (update index ::q->event f))
+  [{touched-q ::db/touched-queries
+    touched-e ::db/touched-entities
+    tick      ::db/tick
+    :as       index} event]
+  (if (or touched-q touched-e)
+    (letfn [(rf [m q]
+              (->> {:t     tick
+                    :event event}
+                   (update m q qonj queue-size)))
+
+            (f [m refs]
+              (reduce rf m refs))]
+      (-> index
+          (update ::db/q->event f touched-q)
+          (update ::db/e->event f touched-e)))
     index))
 
 (defn- debug-tap-after
@@ -47,7 +56,7 @@
     :as            context}]
   (if (and *tap-fn* db (domain-event? event))
     (update-in context
-               [:effects :db ::index]
+               [:effects :db ::db/index]
                update-debug-index
                event)
     context))
@@ -78,4 +87,11 @@
   (fn [db _]
     (get db ::taps)))
 
+(f/reg-sub ::e->events
+  (constantly db/query-index)
+  (fn [index [_ ref]]
+    (-> index
+        (get-in [::db/e->event ref])
+        (reverse)
+        (not-empty))))
 

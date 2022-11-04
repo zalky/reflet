@@ -19,8 +19,8 @@ $debug-panel-border:            $debug-border-thickness solid $debug-border-colo
 $debug-panel-inner-border:      1px solid $debug-border-color;
 $debug-panel-drop-shadow:       rgba(208, 208, 208, 50%);
 
-$syntax-keyword-namespace:      #9167db;
-$syntax-keyword-name:           #ac4af0; // #cb49f1;
+$syntax-keyword-namespace:      #9167db; // #6786db
+$syntax-keyword-name:           #ac4af0; // #297bf2
 $syntax-ref:                    #ff00e9; // #d04dff;
 $syntax-string:                 #818181;
 
@@ -107,9 +107,10 @@ $control-fade:                  -0.3;
     user-select: none;
 
     > * {
-        font-size: $font-size-sm;
         cursor: pointer;
+        font-size: $font-size-xs;
         font-family: $font-family-monospace;
+        text-transform: uppercase;
     }
 }
 
@@ -282,6 +283,49 @@ $control-fade:                  -0.3;
     }
 }
 
+// Event lens
+
+.reflet-event-lens {
+    display: grid;
+    grid-template-columns: min-content 0.25rem fit-content(100%) fit-content(100%) 0.25rem;
+
+    > div {
+        display: contents;
+
+        > * {
+            display: flex;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        > :nth-child(1) {
+            margin-right: 0.75rem;
+        }
+
+        > :nth-child(2) {
+            font-weight: $font-weight-bold;
+        }
+
+        > :nth-child(3) {
+            margin-right: 0.75rem;
+        }
+
+        > :nth-child(4) {
+            margin-right: 0.75rem;
+        }
+
+        > :nth-child(5) {
+            font-weight: $font-weight-bold;
+        }
+    }
+}
+
+.reflet-event-args {
+    display: flex;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
 // Data formatting
 
 @mixin truncate {
@@ -440,7 +484,6 @@ $control-fade:                  -0.3;
     justify-content: center;
     width: 100%;
     text-transform: uppercase;
-    color: $syntax-string;
 }
 
 .reflet-number {

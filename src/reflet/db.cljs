@@ -277,7 +277,9 @@
 (defn- touch-queries*
   [u-fn index e-ref]
   (if-let [queries (e->q index e-ref)]
-    (u-fn index ::touched-queries set/union queries)
+    (-> index
+        (u-fn ::touched-queries set/union queries)
+        (u-fn ::touched-entities util/conjs e-ref))
     index))
 
 (defn- touch-queries
@@ -682,6 +684,7 @@
       (update ::e->q add-fresh-entities @fresh q-ref)
       (assoc-in [::q->tick q-ref] query-tick)
       (assoc ::touched-queries #{})
+      (assoc ::touched-entities #{})
       (update ::q util/conjs q-ref)))
 
 (defn- acc-refs!

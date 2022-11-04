@@ -93,13 +93,13 @@
    'finally
    `(when-let [ref# (:debug-id ~context)]
       (db/unmount-ref! ref#)
-      (disp [::with-ref-cleanup ref#])
+      (disp [::ref-cleanup ref#])
       (disp [::d/untap ref#]))
 
    `(doseq [[k# ref#] (deref ~refs)]
       (when (and ref# (db/transient? ref#))
         (db/unmount-ref! ref#)
-        (disp [::with-ref-cleanup ref#])))))
+        (disp [::ref-cleanup ref#])))))
 
 (defn- env-namespace
   [env]

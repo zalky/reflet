@@ -1,5 +1,5 @@
 (ns reflet.core
-  "Re-defines re-frame api and provides convenience utilites."
+  "Re-frame and reflet api, and convenience utilites."
   (:refer-clojure :exclude [uuid])
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]
@@ -8,7 +8,7 @@
             [reagent.core :as r]
             [reagent.impl.component :as util]
             [reflet.db :as db]
-            [reflet.debug :as debug]
+            [reflet.debug :as d]
             [reflet.fsm :as fsm]
             [reflet.interceptors :as itor]
             [reflet.interop :as i]
@@ -22,7 +22,7 @@
 
 (def reflet-interceptors
   [db/inject-query-index
-   debug/debug-tap-events
+   d/debug-tap-events
    itor/add-global-interceptors
    fsm/fsm-lifecycle-interceptor])
 
@@ -201,11 +201,18 @@
            (reduce rf {})
            (assoc cofx :random-ref)))))
 
-(reg-event-fx ::with-ref-cleanup
-  (fn [{:keys [db]} [_ ref]]
+(defn- ref-cleanup
+  [db ref]
+  (let [db (db/dissocn db ref)]
+    (if d/*tap-fn*
+      (update-in db [::db/index ::db/e->event] dissoc ref)
+      db)))
+
+(reg-event-fx ::ref-cleanup
+  (fn [{db :db} [_ ref]]
     {::i/cleanup [ref]
-     :db         (db/dissocn db ref)
-     :log        [:debug "Entity cleanup" ref]}))
+     :log        [:debug "Ref cleanup" ref]
+     :db         (ref-cleanup db ref)}))
 
 ;;;; Additional Utilities
 
@@ -240,14 +247,14 @@
   (atom {}))
 
 (defn dispatch-debounced
-  [{[event-id :as event] :dispatch
-    ms                   :ms}]
+  [{[id :as event] :dispatch
+    ms             :ms}]
   {:pre [event ms]}
   (let [debounce-id (random-uuid)]
     (letfn [(dispatch-debounced []
-              (when (= debounce-id (get @debounced-events event-id))
+              (when (= debounce-id (get @debounced-events id))
                 (dispatch event)))]
-      (swap! debounced-events assoc event-id debounce-id)
+      (swap! debounced-events assoc id debounce-id)
       (interop/set-timeout! dispatch-debounced ms))))
 
 (f/reg-fx ::dispatch-debounced

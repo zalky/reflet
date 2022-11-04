@@ -212,7 +212,7 @@
           (update-z-index self)))))
 
 (def max-init-panel-height
-  500)
+  300)
 
 (f/reg-event-db ::set-height
   (fn [db [_ self el]]
@@ -362,12 +362,12 @@
         (update ::panels dissoc tap)
         (dissoc ::selected))))
 
-(f/reg-event-db ::close-ref-panel
-  (fn [db [_ self]]
-    (-> db
-        (update ::panels dissoc self)
-        (dissoc ::selected)
-        (db/dissocn self))))
+(f/reg-event-fx ::close-ref-panel
+  (fn [{db :db} [_ self]]
+    {:db       (-> db
+                   (update ::panels dissoc self)
+                   (dissoc ::selected))
+     :dispatch [::f/ref-cleanup self]}))
 
 (f/reg-sub ::overlay-panels
   (fn [db _]

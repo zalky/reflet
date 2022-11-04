@@ -184,6 +184,27 @@
     [:div {:class "reflet-no-data"}
      [:span "No Data"]]))
 
+(defn- event-trace
+  [t [id & args]]
+  [:div
+   [:div t]
+   [:div "["]
+   [data/value id]
+   [:div {:class "reflet-event-args"} [data/value args]]
+   [:div "]"]])
+
+(defmethod ref-lens :debug.lens/events
+  [{:debug/keys [self ref el]}]
+  (f/once (f/disp [::impl/set-height self el]))
+  (if-let [events @(f/sub [::d/e->events ref])]
+    [:div {:class "reflet-event-lens"}
+     (doall
+      (for [{t :t
+             e :event} events]
+        ^{:key t} [event-trace t e]))]
+    [:div {:class "reflet-no-data"}
+     [:span "No Events"]]))
+
 (defmethod ref-lens :default
   [{:debug/keys [self el]}]
   (let [cb-d #(f/disp [::impl/set-lens self :debug.lens/db])
