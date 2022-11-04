@@ -253,7 +253,8 @@
   (let [debounce-id (random-uuid)]
     (letfn [(dispatch-debounced []
               (when (= debounce-id (get @debounced-events id))
-                (dispatch event)))]
+                (swap! debounced-events dissoc id)
+                (disp event)))]
       (swap! debounced-events assoc id debounce-id)
       (interop/set-timeout! dispatch-debounced ms))))
 
