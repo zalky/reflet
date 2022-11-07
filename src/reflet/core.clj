@@ -112,7 +112,7 @@
 (defn- debug?
   [{:keys [debug]
     :or   {debug true}}]
-  `(and (r*/reactive?) ~debug d/*tap-fn*))
+  `(and (r*/reactive?) ~debug d/tap-fn))
 
 (defn- wrap-debug
   [props-sym context env body opts]
@@ -123,7 +123,7 @@
                :debug/line  ~(env-line env)
                :debug/props ~props-sym}]
        [:<>
-        (d/*tap-fn* p# (:target ~context))
+        (d/tap-fn p# (:target ~context))
         (do ~@body)])
      (do ~@body)))
 

@@ -238,7 +238,13 @@
 (def default-unique-attributes
   #{:system/uuid
     :cmp/uuid
+    :el/uuid
+    :js/uuid
     :debug/id})
+
+(f/reg-sub ::id-attrs
+  (fn [db _]
+    (get db ::id-attrs)))
 
 (defn new-db
   "Returns a new db, optionally with initial data and unique id
@@ -684,8 +690,7 @@
       (update ::e->q add-fresh-entities @fresh q-ref)
       (assoc-in [::q->tick q-ref] query-tick)
       (assoc ::touched-queries #{})
-      (assoc ::touched-entities #{})
-      (update ::q util/conjs q-ref)))
+      (assoc ::touched-entities #{})))
 
 (defn- acc-refs!
   "Accumulates freshly touched entity refs in volatiles."
@@ -720,8 +725,7 @@
         (update ::e->q clear-stale-entities stale q-ref)
         (update ::q->e dissoc q-ref)
         (update ::q->tick dissoc q-ref)
-        (update ::q->event dissoc q-ref)
-        (update ::q disj q-ref))))
+        (update ::q->event dissoc q-ref))))
 
 ;;;; Query index injection interceptor
 

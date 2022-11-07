@@ -1,5 +1,7 @@
 (ns reflet.debug.ui.data
   (:require [reflet.core :as f]
+            [reflet.db :as db]
+            [reflet.db.normalize :as norm]
             [reflet.debug.glyphs :as g]
             [reflet.debug.ui.data.impl :as impl]
             [reflet.debug.ui.impl :as ui]))
@@ -7,9 +9,7 @@
 (defn- ref?
   "Returns true if x is an entity reference."
   [x]
-  (and (vector? x)
-       (= (count x) 2)
-       (keyword? (first x))))
+  (norm/ref? x @(f/sub [::db/id-attrs])))
 
 (defmulti value
   (fn [x]
@@ -55,8 +55,9 @@
    :y (.-clientY e)})
 
 (defn value-ref
-  [[attr value]]
-  [:div {:class "reflet-ref"}
+  [[attr value] & [on-click]]
+  [:div {:class "reflet-ref"
+         :on-click on-click}
    (namespace attr) "@"
    (if (uuid? value)
      (subs (str value) 0 8)
@@ -64,9 +65,7 @@
 
 (defmethod value ::ref
   [ref]
-  (let [cb #(f/disp [::ui/open-ref ref])]
-    [:div {:on-click (f/prevent-default cb)}
-     (value-ref ref)]))
+  (value-ref ref #(f/disp [::ui/open-ref ref])))
 
 (defmethod value Keyword
   [k]
@@ -85,44 +84,34 @@
     (doall
      (map-indexed
       (fn [i [k v]]
-        (map-entry i k v))
+        ^{:key i} [map-entry i k v])
       m))]])
 
 (defmethod value ::coll
   [coll]
-  [:div
-   (doall
-    (map-indexed
-     (fn [i x]
-       [:<> {:key i}
-        [value x]])
-     coll))])
+  [:div {:class (cond
+                  (vector? coll) "reflet-vec"
+                  (list? coll)   "reflet-list"
+                  (set? coll)    "reflet-set"
+                  :else          nil)}
+   [:div {:class "reflet-coll-data"}
+    (doall
+     (map-indexed
+      (fn [i x]
+        ^{:key i} [value x])
+      coll))]])
 
 (defn- expander
   [{:expander/keys [self]} v]
-  (let [e       (g/coll-expander)
-        expand? (f/sub [::impl/expand? self])
-        toggle  #(f/disp [::impl/toggle-expand self])]
+  (let [e      (g/coll-expander)
+        toggle #(f/disp [::impl/toggle-expand self])]
     [:div {:on-click toggle
-           :class    ["reflet-coll-expander"
-                      (when @expand? "reflet-coll-expand")]}
+           :class    "reflet-coll-expander"}
      (cond
        (vector? v) [:<> [:span "["] e [:span "]"]]
        (map? v)    [:<> [:span "{"] e [:span "}"]]
        (list? v)   [:<> [:span "("] e [:span ")"]]
        (set? v)    [:<> [:span "#{"] e [:span "}"]])]))
-
-(defn- expanded
-  [{:expander/keys [self]} v]
-  (let [expand? (f/sub [::impl/expand? self])]
-    [:div {:class ["reflet-coll-expanded"
-                   (when @expand? "reflet-coll-expand")
-                   (cond
-                     (vector? v) "reflet-vec"
-                     (list? v)   "reflet-list"
-                     (set? v)    "reflet-set"
-                     :else       nil)]}
-     [value v]]))
 
 (defmethod map-entry ::coll
   [i k v]
@@ -130,9 +119,9 @@
                 :in       props}
     (let [expand? (f/sub [::impl/expand? self])]
       [:<> {:key i}
-       [:div
+       [:div {:class (when @expand? "reflet-coll-expand")}
         [value k]
         [expander props v]]
        (when @expand?
-         [:div
-          [expanded props v]])])))
+         [:div {:class "reflet-coll-expanded"}
+          [value v]])])))

@@ -26,6 +26,9 @@ $syntax-string:                 #818181;
 
 $control-fade:                  -0.3;
 
+$coll-brace-width:              10px;
+
+
 @mixin disable-safari-transitions {
     // Safari implements janky transitions when combined with certain
     // positioning properties.
@@ -283,48 +286,60 @@ $control-fade:                  -0.3;
     }
 }
 
-// Event lens
+// Ref lenses
 
 .reflet-event-lens {
     display: grid;
-    grid-template-columns: min-content 0.25rem fit-content(100%) fit-content(100%) 0.25rem;
+    grid-template-columns: min-content auto;
+    column-gap: 0.5rem;
 
     > div {
         display: contents;
 
-        > * {
-            display: flex;
-            overflow: hidden;
-            white-space: nowrap;
+        > :not(:first-child) {
+            grid-column: 2;
         }
+    }
 
-        > :nth-child(1) {
-            margin-right: 0.75rem;
-        }
+    .reflet-coll-data {
+        display: flex;
+        flex-direction: row;
 
-        > :nth-child(2) {
-            font-weight: $font-weight-bold;
-        }
-
-        > :nth-child(3) {
-            margin-right: 0.75rem;
-        }
-
-        > :nth-child(4) {
-            margin-right: 0.75rem;
-        }
-
-        > :nth-child(5) {
-            font-weight: $font-weight-bold;
+        > *:not(:first-child) {
+            margin-left: 0.75rem;
+            flex-shrink: 0.5;
         }
     }
 }
 
-.reflet-event-args {
-    display: flex;
-    overflow: hidden;
-    white-space: nowrap;
+.reflet-fsm-lens {
+    display: grid;
+    grid-template-columns: min-content auto;
+    column-gap: 0.5rem;
+
+    > div {
+        display: contents;
+
+        > :not(:first-child) {
+            grid-column: 2;
+        }
+    }
+
+    .reflet-map-data {
+        flex: unset;
+    }
+
+    .reflet-coll-data {
+        display: flex;
+        flex-direction: row;
+
+        > *:not(:first-child) {
+            margin-left: 0.75rem;
+            flex-shrink: 0.5;
+        }
+    }
 }
+
 
 // Data formatting
 
@@ -334,27 +349,37 @@ $control-fade:                  -0.3;
     min-width: 1rem;
 }
 
-.reflet-map, .reflet-vec, .reflet-set {
-    display: grid;
-    grid-template-columns: 6px auto;
-    align-items: center;
-    font-family: $font-family-monospace;
-
-    &::before {
+@mixin brace {
+    &::before, &::after {
         display: flex;
-        justify-self: right;
-        align-self: start;
+        width: $coll-brace-width;
         font-weight: 700;
         white-space: nowrap;
     }
+
+    &::before {
+        justify-content: flex-start;
+        align-self: start;
+    }
+
+    &::after {
+        justify-content: flex-end;
+        align-self: end;
+    }
+}
+
+.reflet-map {
+    display: flex;
+    font-family: $font-family-monospace;
+
+    @include brace;
 }
 
 .reflet-map-data {
     display: grid;
-    position: relative;
     grid-template-columns: auto auto;
     column-gap: 0.5rem;
-    padding: 0 0.1rem;
+    flex: 1;
     font-family: $font-family-monospace;
     color: $font-color;
 
@@ -373,6 +398,59 @@ $control-fade:                  -0.3;
     }
 }
 
+.reflet-vec, .reflet-set, .reflet-list {
+    display: flex;
+    font-family: $font-family-monospace;
+    overflow: hidden;
+
+    @include brace;
+}
+
+.reflet-coll-data {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    white-space: nowrap;
+
+    > * {
+        display: flex;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+}
+
+.reflet-map::before {
+    content: "{";
+}
+
+.reflet-map::after {
+    content: "}";
+}
+
+.reflet-vec::before {
+    content: "[";
+}
+
+.reflet-vec::after {
+    content: "]";
+}
+
+.reflet-set::before {
+    content: "\#{";
+}
+
+.reflet-set::after {
+    content: "}";
+}
+
+.reflet-list::before {
+    content: "(";
+}
+
+.reflet-list::after {
+    content: ")";
+}
+
 .reflet-coll-expander {
     user-select: none;
     cursor: pointer;
@@ -385,11 +463,11 @@ $control-fade:                  -0.3;
         margin: 0 0.5rem;
     }
 
-    &.reflet-coll-expand svg {
+    .reflet-coll-expand & svg {
         transform: scale(1, -1);
     }
 
-    &.reflet-coll-expand > :nth-child(1), &.reflet-coll-expand > :nth-child(3) {
+    .reflet-coll-expand & > :first-child, .reflet-coll-expand & > :last-child {
         opacity: 0.2;
     }
 
@@ -404,37 +482,9 @@ $control-fade:                  -0.3;
     }
 }
 
-.reflet-coll-expanded {
+.reflet-coll-expanded > * {
     grid-column-start: 1;
     grid-column-end: span 2;
-
-    > * {
-        flex-direction: column;
-    }
-}
-
-.reflet-map::before {
-    content: "{";
-}
-
-.reflet-vec::before {
-    content: "[";
-}
-
-.reflet-set::before {
-    content: "\#{";
-}
-
-.reflet-list::before {
-    content: "(";
-}
-
-.reflet-vec, .reflet-set, .reflet-list {
-    display: flex;
-
-    > :not(:first-child) {
-        margin-left: 0.25rem;
-    }
 }
 
 .reflet-ref {

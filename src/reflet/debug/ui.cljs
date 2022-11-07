@@ -185,13 +185,11 @@
      [:span "No Data"]]))
 
 (defn- event-trace
-  [t [id & args]]
+  [{t :t
+    e :event}]
   [:div
    [:div t]
-   [:div "["]
-   [data/value id]
-   [:div {:class "reflet-event-args"} [data/value args]]
-   [:div "]"]])
+   [data/value e]])
 
 (defmethod ref-lens :debug.lens/events
   [{:debug/keys [self ref el]}]
@@ -199,9 +197,30 @@
   (if-let [events @(f/sub [::d/e->events ref])]
     [:div {:class "reflet-event-lens"}
      (doall
-      (for [{t :t
-             e :event} events]
-        ^{:key t} [event-trace t e]))]
+      (for [e events]
+        ^{:key (:t e)} [event-trace e]))]
+    [:div {:class "reflet-no-data"}
+     [:span "No Events"]]))
+
+(defn- transition-trace
+  [{t      :t
+    fsm-v  :fsm-v
+    input  :input
+    clause :clause}]
+  [:div
+   [:div t]
+   [data/value fsm-v]
+   [data/value input]
+   [data/value clause]])
+
+(defmethod ref-lens :debug.lens/fsm
+  [{:debug/keys [self ref el]}]
+  (f/once (f/disp [::impl/set-height self el]))
+  (if-let [transitions @(f/sub [::d/fsm->transitions ref])]
+    [:div {:class "reflet-fsm-lens"}
+     (doall
+      (for [t transitions]
+        ^{:key (:t t)} [transition-trace t]))]
     [:div {:class "reflet-no-data"}
      [:span "No Events"]]))
 
@@ -345,7 +364,7 @@
 
 (defn load-debugger!
   []
-  (set! d/*tap-fn* tap)
+  (set! d/tap-fn tap)
   (upsert-css!)
   (->> (upsert-overlay-el!)
        (dom/render [overlay])))

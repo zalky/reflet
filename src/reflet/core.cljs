@@ -204,7 +204,7 @@
 (defn- ref-cleanup
   [db ref]
   (let [db (db/dissocn db ref)]
-    (if d/*tap-fn*
+    (if d/tap-fn
       (update-in db [::db/index ::db/e->event] dissoc ref)
       db)))
 

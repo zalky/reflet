@@ -5,15 +5,18 @@
             [re-frame.core :as f]
             [reflet.db :as db]))
 
-(defonce ^:dynamic *tap-fn*
+(defonce tap-fn
   nil)
+
+(defonce trace
+  (r/atom {}))
 
 (def queue-size
   "Number of events to tap per query. This should eventually be
   dynamic."
   50)
 
-(defn- qonj
+(defn qonj
   [q n x]
   (cond
     (nil? q)        #queue [x]
@@ -54,7 +57,7 @@
   [{{event :event} :coeffects
     {db :db}       :effects
     :as            context}]
-  (if (and *tap-fn* db (domain-event? event))
+  (if (and tap-fn db (domain-event? event))
     (update-in context
                [:effects :db ::db/index]
                update-debug-index
@@ -88,10 +91,18 @@
     (get db ::taps)))
 
 (f/reg-sub ::e->events
-  (constantly db/query-index)
+  (constantly (r/cursor db/query-index [::db/e->event]))
   (fn [index [_ ref]]
     (-> index
-        (get-in [::db/e->event ref])
+        (get ref)
+        (reverse)
+        (not-empty))))
+
+(f/reg-sub ::fsm->transitions
+  (constantly (r/cursor trace [::fsm->transition]))
+  (fn [index [_ ref]]
+    (-> index
+        (get ref)
         (reverse)
         (not-empty))))
 

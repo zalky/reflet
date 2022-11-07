@@ -206,7 +206,7 @@
             [re-frame.registrar :as reg]
             [reagent.ratom :as r]
             [reflet.db :as db]
-            [reflet.debug :as debug]
+            [reflet.debug :as d]
             [reflet.interceptors :as i]
             [reflet.trie :as t]))
 
@@ -358,10 +358,11 @@
 
 (defn- cond-clause
   [[input clauses]]
-  (->> clauses
-       (remove nil?)
-       (filter (fn [{c :when}] (or (not c) (s/valid? c input))))
-       (first)))
+  (some->> clauses
+           (remove nil?)
+           (filter (fn [{c :when}] (or (not c) (s/valid? c input))))
+           (first)
+           (vector input)))
 
 (defn- match-transition
   "Events are always matched before entities."
@@ -429,6 +430,18 @@
   (doseq [event dispatch-later]
     (fx/dispatch-later event)))
 
+(defn trace
+  [fsm db event input clause]
+  (when d/tap-fn
+    (let [{ref   :ref
+           fsm-v :fsm-v}            fsm
+          {{t ::db/tick} ::db/data} db]
+      (->> {:t      t
+            :fsm-v  fsm-v
+            :input  input
+            :clause clause}
+           (swap! d/trace update-in [::d/fsm->transition ref] d/qonj d/queue-size)))))
+
 (defn advance
   "Given a parsed fsm, a db, and an event, advances the fsm. Else,
   no-op. Do not write to unmounted transient entities."
@@ -436,16 +449,16 @@
     :as   fsm} timeout db event]
   (if (db/transient-unmounted? ref)
     db
-    (if-let [{to  :to
-              :as clause} (match-clause fsm db event)]
-      (do (fsm-dispatch! clause)
+    (if-let [[input {to :to :as clause}] (match-clause fsm db event)]
+      (do (trace fsm db event input clause)
+          (fsm-dispatch! clause)
           (cleanup! fsm timeout to)
           (db/assoc-inn db [ref attr] to))
       db)))
 
 (f/reg-event-fx ::timeout
   [db/inject-query-index
-   debug/debug-tap-events
+   d/debug-tap-events
    i/add-global-interceptors]
   (constantly nil))
 
@@ -462,7 +475,7 @@
 
 (f/reg-event-db ::advance
   [db/inject-query-index
-   debug/debug-tap-events
+   d/debug-tap-events
    i/add-global-interceptors]
   (fn [db [_ fsm-v to]]
     (let [{:keys [ref attr]} (fsm-spec fsm-v)]
