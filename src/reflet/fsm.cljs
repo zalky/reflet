@@ -511,35 +511,34 @@
   (when (i/same-cycle? fsm-v)
     (i/clear-global-interceptor fsm-v)))
 
-(defn check-safe-usage
-  [{{::keys [start stop]
-     db     :db}   :effects
-    {event :event} :coeffects}]
+(defn fsm-safe-usage
+  [{{start ::start-not-safe
+     stop  ::stop-not-safe
+     db    :db}    :effects
+    {event :event} :coeffects
+    :as            context}]
   (when (and db (or start stop))
     (-> "Cannot modify db when starting or stopping an FSM"
         (ex-info {:event event})
-        (throw))))
+        (throw)))
+  context)
 
-(defn fsm-lifecycle-interceptor*
+(def fsm-safe-usage-interceptor
+  (f/->interceptor
+   :id ::check-safe-usage-interceptor
+   :after fsm-safe-usage))
+
+(defn fsm-fx
   "Guards against unsafe usage of FSM lifecycle effects. An FSM can
   never be started or stopped during the event/fx phase when the db is
   also being modified."
-  [{{::keys [start stop]
-     db-fx  :db} :effects
-    {db-cfx :db} :coeffects
-    :as          context}]
-  (letfn [(f [fx]
-            (check-safe-usage context)
-            (conj [db-cfx] fx))]
-    (cond-> context
-      start           (update-in [:effects ::start] f)
-      stop            (update-in [:effects ::stop] f)
-      (or start stop) (update :effects dissoc :db))))
+  [context]
+  (fsm-safe-usage context))
 
-(def fsm-lifecycle-interceptor
+(def fsm-fx-interceptor
   (f/->interceptor
-   :id :add-global-interceptors
-   :after fsm-lifecycle-interceptor*))
+   :id ::fsm-fx-interceptor
+   :after fsm-fx))
 
 (f/reg-fx ::start-not-safe
   ;; Do not use these directly, prefer events
@@ -554,14 +553,14 @@
  (f/reg-event-fx ::start
    ;; Stopping and starting FSMs during the event phase is only safe
    ;; is that is the only thing that is happening.
-   fsm-lifecycle-interceptor
+   fsm-safe-usage-interceptor
    (fn [_ [_ fsm-v]]
      {::start-not-safe fsm-v}))
 
 (f/reg-event-fx ::stop
    ;; Stopping and starting FSMs during the event phase is only safe
    ;; is that is the only thing that is happening.
-  fsm-lifecycle-interceptor
+  fsm-safe-usage-interceptor
   (fn [_ [_ fsm-v]]
     {::stop-not-safe fsm-v}))
 
