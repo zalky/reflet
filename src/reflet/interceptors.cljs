@@ -56,7 +56,7 @@
             (let [globals (vals (reg/get-handler :global-interceptor))]
               (update context :queue cut-in-queue globals)))]
     (f/->interceptor
-     :id :add-global-interceptors
+     :id ::add-global-interceptors
      :before add-global-interceptors*)))
 
 (defn- to-many

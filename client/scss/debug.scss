@@ -298,6 +298,7 @@ $coll-brace-width:              10px;
 
         > :not(:first-child) {
             grid-column: 2;
+            overflow: hidden;
         }
     }
 
@@ -322,6 +323,7 @@ $coll-brace-width:              10px;
 
         > :not(:first-child) {
             grid-column: 2;
+            overflow: hidden;
         }
     }
 

@@ -38,11 +38,10 @@
 (defn- update-debug-index
   [{touched-q ::db/touched-queries
     touched-e ::db/touched-entities
-    tick      ::db/tick
-    :as       index} event]
+    :as       index} event t]
   (if (or touched-q touched-e)
     (letfn [(rf [m q]
-              (->> {:t     tick
+              (->> {:t     t
                     :event event}
                    (update m q qonj queue-size)))
 
@@ -56,12 +55,14 @@
 (defn- debug-tap-after
   [{{event :event} :coeffects
     {db :db}       :effects
+    t              ::event-t
     :as            context}]
   (if (and tap-fn db (domain-event? event))
     (update-in context
                [:effects :db ::db/index]
                update-debug-index
-               event)
+               event
+               t)
     context))
 
 (def debug-tap-events

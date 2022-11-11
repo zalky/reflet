@@ -386,12 +386,47 @@
 (defn- match-clause
   "Given the current state of the fsm in the db, returns a matching
   clause. Care must be taken to handle the `nil` state."
+  [fsm current-state db event]
+  (some->> (get-transition fsm current-state)
+           (match-transition db event)
+           (cond-clause)))
+
+(defn advance-fx
+  "Given a parsed fsm, a timeout reference, a db, and an event, computes
+  that FSM's advance fx, if any. After advance fx have been collected
+  for all FSMs, they are all realized at the same time by
+  `reflet.fsm/advance`, and their results merged. This effectively
+  advances all FSMs at the same time, based on the same db value. Or,
+  framed another way, makes FSM advance computations commutative. If
+  we advance the FSM direclty here, FSM logic is imperative, and not
+  commutative. Do not write to unmounted transient entities."
   [{:keys [ref attr]
-    :as   fsm} db event]
-  (let [state (db/get-inn db [ref attr])]
-    (some->> (get-transition fsm state)
-             (match-transition db event)
-             (cond-clause))))
+    :as   fsm} timeout db event]
+  (when-not (db/transient-unmounted? ref)
+    (let [state (db/get-inn db [ref attr])]
+      (when-let [[input clause] (match-clause fsm state db event)]
+        {:fsm        fsm
+         :input      input
+         :clause     clause
+         :timeout    timeout
+         :prev-state state}))))
+
+(defn- fsm-safe-usage
+  [{{start ::start-not-safe
+     stop  ::stop-not-safe
+     db    :db}    :effects
+    {event :event} :coeffects
+    :as            context}]
+  (when (and db (or start stop))
+    (-> "Cannot modify db when starting or stopping an FSM"
+        (ex-info {:event event})
+        (throw)))
+  context)
+
+(def fsm-safe-usage-interceptor
+  (f/->interceptor
+   :id ::fsm-safe-usage-interceptor
+   :after fsm-safe-usage))
 
 (defn- get-timeout
   [fsm state]
@@ -430,36 +465,59 @@
   (doseq [event dispatch-later]
     (fx/dispatch-later event)))
 
-(defn trace
-  [fsm db event input clause]
+(defn- trace
+  [fsm t event prev-state input clause]
   (when d/tap-fn
-    (let [{ref   :ref
-           fsm-v :fsm-v}            fsm
-          {{t ::db/tick} ::db/data} db]
-      (->> {:t      t
-            :fsm-v  fsm-v
-            :input  input
-            :clause clause}
+    (let [{:keys [ref fsm-v]} fsm]
+      (->> {:t          t
+            :fsm-v      fsm-v
+            :input      input
+            :clause     clause
+            :prev-state prev-state}
            (swap! d/trace update-in [::d/fsm->transition ref] d/qonj d/queue-size)))))
 
-(defn advance
-  "Given a parsed fsm, a db, and an event, advances the fsm. Else,
-  no-op. Do not write to unmounted transient entities."
-  [{:keys [ref attr]
-    :as   fsm} timeout db event]
-  (if (db/transient-unmounted? ref)
-    db
-    (if-let [[input {to :to :as clause}] (match-clause fsm db event)]
-      (do (trace fsm db event input clause)
-          (fsm-dispatch! clause)
-          (cleanup! fsm timeout to)
-          (db/assoc-inn db [ref attr] to))
-      db)))
+(defn- advance-rf
+  [t event]
+  (fn [db {{:keys [ref attr]
+            :as   fsm}    :fsm
+           {:keys [to]
+            :as   clause} :clause
+           :keys          [input timeout prev-state]}]
+    (trace fsm t event prev-state input clause)
+    (fsm-dispatch! clause)
+    (cleanup! fsm timeout to)
+    (db/assoc-inn db [ref attr] to)))
 
-(f/reg-event-fx ::timeout
+(defn- advance
+  "Performs FSM advance."
+  [{{db-fx :db}      :effects
+    {db-cofx :db
+     event   :event} :coeffects
+    advance-fx       ::advance-fx
+    :as              context}]
+  (fsm-safe-usage context)
+  (if (not-empty advance-fx)
+    (let [db  (or db-fx db-cofx)
+          t   (get-in db [::db/data ::db/tick])
+          db* (reduce (advance-rf t event) db advance-fx)]
+      (-> context
+          (assoc-in [:effects :db] db*)
+          (assoc-in [::d/event-t] t)))
+    context))
+
+(def advance-interceptor
+  (f/->interceptor
+   :id ::advance-interceptor
+   :after advance))
+
+(def fsm-interceptors
   [db/inject-query-index
    d/debug-tap-events
-   i/add-global-interceptors]
+   advance-interceptor
+   i/add-global-interceptors])
+
+(f/reg-event-fx ::timeout
+  fsm-interceptors
   (constantly nil))
 
 ;;;; Effects
@@ -474,9 +532,7 @@
         (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
 (f/reg-event-db ::advance
-  [db/inject-query-index
-   d/debug-tap-events
-   i/add-global-interceptors]
+  fsm-interceptors
   (fn [db [_ fsm-v to]]
     (let [{:keys [ref attr]} (fsm-spec fsm-v)]
       (db/assoc-inn db [ref attr] to))))
@@ -493,6 +549,23 @@
   [fsm-v]
   (i/global-interceptor-registered? fsm-v))
 
+(defn- advance-fx-interceptor*
+  [f]
+  (fn [{{db-fx :db}      :effects
+        {db-cofx :db
+         event   :event} :coeffects
+        :as              context}]
+    (let [db (or db-fx db-cofx)
+          a  (f db event)]
+      (cond-> context
+        a (update ::advance-fx util/conjs a)))))
+
+(defn- advance-fx-interceptor
+  [f]
+  (f/->interceptor
+   :id (gensym :_)
+   :after (advance-fx-interceptor* f)))
+
 (defn- start!
   "Do not use directly. Prefer ::start event or subscription."
   [db fsm-v]
@@ -500,8 +573,8 @@
     (when-not (started? fsm-v)
       (let [timeout (atom nil)]
         (init! fsm timeout db)
-        (->> (partial advance fsm timeout)
-             (f/enrich)
+        (->> (partial advance-fx fsm timeout)
+             (advance-fx-interceptor)
              (i/reg-global-interceptor fsm-v))
         (fsm-dispatch! fsm)))))
 
@@ -510,35 +583,6 @@
   [fsm-v]
   (when (i/same-cycle? fsm-v)
     (i/clear-global-interceptor fsm-v)))
-
-(defn fsm-safe-usage
-  [{{start ::start-not-safe
-     stop  ::stop-not-safe
-     db    :db}    :effects
-    {event :event} :coeffects
-    :as            context}]
-  (when (and db (or start stop))
-    (-> "Cannot modify db when starting or stopping an FSM"
-        (ex-info {:event event})
-        (throw)))
-  context)
-
-(def fsm-safe-usage-interceptor
-  (f/->interceptor
-   :id ::check-safe-usage-interceptor
-   :after fsm-safe-usage))
-
-(defn fsm-fx
-  "Guards against unsafe usage of FSM lifecycle effects. An FSM can
-  never be started or stopped during the event/fx phase when the db is
-  also being modified."
-  [context]
-  (fsm-safe-usage context))
-
-(def fsm-fx-interceptor
-  (f/->interceptor
-   :id ::fsm-fx-interceptor
-   :after fsm-fx))
 
 (f/reg-fx ::start-not-safe
   ;; Do not use these directly, prefer events

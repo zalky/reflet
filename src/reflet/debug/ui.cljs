@@ -197,20 +197,24 @@
   (if-let [events @(f/sub [::d/e->events ref])]
     [:div {:class "reflet-event-lens"}
      (doall
-      (for [e events]
-        ^{:key (:t e)} [event-trace e]))]
+      (map-indexed
+       (fn [i e]
+         ^{:key i} [event-trace e])
+       events))]
     [:div {:class "reflet-no-data"}
      [:span "No Events"]]))
 
 (defn- transition-trace
-  [{t      :t
-    fsm-v  :fsm-v
-    input  :input
-    clause :clause}]
+  [{t          :t
+    fsm-v      :fsm-v
+    prev-state :prev-state
+    input      :input
+    clause     :clause}]
   [:div
    [:div t]
    [data/value fsm-v]
    [data/value input]
+   [data/value prev-state]
    [data/value clause]])
 
 (defmethod ref-lens :debug.lens/fsm
@@ -219,8 +223,10 @@
   (if-let [transitions @(f/sub [::d/fsm->transitions ref])]
     [:div {:class "reflet-fsm-lens"}
      (doall
-      (for [t transitions]
-        ^{:key (:t t)} [transition-trace t]))]
+      (map-indexed
+       (fn [i t]
+         ^{:key i} [transition-trace t])
+       transitions))]
     [:div {:class "reflet-no-data"}
      [:span "No Events"]]))
 

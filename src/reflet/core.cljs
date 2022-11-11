@@ -23,7 +23,7 @@
 (def reflet-interceptors
   [db/inject-query-index
    d/debug-tap-events
-   fsm/fsm-fx-interceptor
+   fsm/advance-interceptor
    itor/add-global-interceptors])
 
 (defn reg-event-db

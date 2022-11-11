@@ -1,6 +1,5 @@
 (ns reflet.fsm-test
-  (:require [reflet.fixtures :as fix]
-            [cljs.spec.alpha :as s]
+  (:require [cljs.spec.alpha :as s]
             [cljs.test :as t :refer [is]]
             [day8.re-frame.test :as rft]
             [re-frame.db :as dbr]
@@ -8,15 +7,8 @@
             [reagent.ratom :as r]
             [reflet.core :as f]
             [reflet.db :as db]
-            [reflet.debug :as debug]
-            [reflet.fsm :as fsm]
-            [reflet.interceptors :as itor]))
-
-(def interceptors
-  [db/inject-query-index
-   debug/debug-tap-events
-   itor/add-global-interceptors
-   fsm/fsm-lifecycle-interceptor])
+            [reflet.fixtures :as fix]
+            [reflet.fsm :as fsm]))
 
 (f/reg-event-fx ::next-state
   (constantly nil))
