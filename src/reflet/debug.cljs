@@ -52,10 +52,16 @@
           (update ::db/e->event f touched-e)))
     index))
 
+(defn- debug-tap-before
+  [context]
+  (->> (swap! trace update ::event-t inc)
+       (::event-t)
+       (assoc-in context [:coeffects ::event-t])))
+
 (defn- debug-tap-after
-  [{{event :event} :coeffects
+  [{{t     ::event-t
+     event :event} :coeffects
     {db :db}       :effects
-    t              ::event-t
     :as            context}]
   (if (and tap-fn db (domain-event? event))
     (update-in context
@@ -68,6 +74,7 @@
 (def debug-tap-events
   (f/->interceptor
    :id ::debug-tap
+   :before debug-tap-before
    :after debug-tap-after))
 
 (f/reg-event-db ::tap

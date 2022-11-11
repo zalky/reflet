@@ -466,7 +466,7 @@
     (fx/dispatch-later event)))
 
 (defn- trace
-  [fsm t event prev-state input clause]
+  [t fsm input clause prev-state]
   (when d/tap-fn
     (let [{:keys [ref fsm-v]} fsm]
       (->> {:t          t
@@ -477,13 +477,13 @@
            (swap! d/trace update-in [::d/fsm->transition ref] d/qonj d/queue-size)))))
 
 (defn- advance-rf
-  [t event]
+  [t]
   (fn [db {{:keys [ref attr]
             :as   fsm}    :fsm
            {:keys [to]
             :as   clause} :clause
            :keys          [input timeout prev-state]}]
-    (trace fsm t event prev-state input clause)
+    (trace t fsm input clause prev-state)
     (fsm-dispatch! clause)
     (cleanup! fsm timeout to)
     (db/assoc-inn db [ref attr] to)))
@@ -492,17 +492,16 @@
   "Performs FSM advance."
   [{{db-fx :db}      :effects
     {db-cofx :db
+     t       ::d/event-t
      event   :event} :coeffects
     advance-fx       ::advance-fx
     :as              context}]
   (fsm-safe-usage context)
   (if (not-empty advance-fx)
-    (let [db  (or db-fx db-cofx)
-          t   (get-in db [::db/data ::db/tick])
-          db* (reduce (advance-rf t event) db advance-fx)]
-      (-> context
-          (assoc-in [:effects :db] db*)
-          (assoc-in [::d/event-t] t)))
+    (let [db (or db-fx db-cofx)]
+      (->> advance-fx
+           (reduce (advance-rf t) db)
+           (assoc-in context [:effects :db])))
     context))
 
 (def advance-interceptor

@@ -207,9 +207,9 @@
 (defn- transition-trace
   [{t          :t
     fsm-v      :fsm-v
-    prev-state :prev-state
     input      :input
-    clause     :clause}]
+    clause     :clause
+    prev-state :prev-state}]
   [:div
    [:div t]
    [data/value fsm-v]
