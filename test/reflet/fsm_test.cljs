@@ -361,9 +361,10 @@
          {:ref  self
           :stop ::done
           :fsm  {nil       {[::kick-off self] ::running}
-                 ::running {[candidate] {:to       ::done
-                                         :when     ::threshold
-                                         :dispatch [::elected candidate]}}}}))
+                 ::running {:* {:to       ::done
+                                :pull     [candidate]
+                                :when     ::threshold
+                                :dispatch [::elected candidate]}}}}))
 
      (f/reg-no-op ::kick-off)
 
@@ -380,8 +381,8 @@
          [[:votes :elected]
           ref]))
 
-     (f/with-ref {:cmp/uuid [fsm/self]
-                  :system/uuid    [test/candidate]}
+     (f/with-ref {:cmp/uuid    [fsm/self]
+                  :system/uuid [test/candidate]}
        (let [state (f/sub [::election self candidate])
              c     (f/sub [::candidate candidate])]
          (is (nil? @state))
@@ -411,19 +412,25 @@
        (fn [self]
          {:ref  self
           :stop ::done
-          :fsm  {nil    {[self] [{:to   ::even
-                                  :when ::even}
-                                 {:to   ::odd
-                                  :when ::odd}]}
-                 ::odd  {[self] [{:to   ::done
-                                  :when ::four?}
-                                 {:to   ::even
-                                  :when ::even}]}
-                 ::even {[self] [{:to   ::done
-                                  :when ::four?}
-                                 {:to   ::odd
-                                  :when ::odd}]}
-                 ::done {[self] [{:to ::odd}]}}}))
+          :fsm  {nil    {:* [{:to   ::even
+                              :pull [self]
+                              :when ::even}
+                             {:to   ::odd
+                              :pull [self]
+                              :when ::odd}]}
+                 ::odd  {:* [{:to   ::done
+                              :pull [self]
+                              :when ::four?}
+                             {:to   ::even
+                              :pull [self]
+                              :when ::even}]}
+                 ::even {:* [{:to   ::done
+                              :pull [self]
+                              :when ::four?}
+                             {:to   ::odd
+                              :pull [self]
+                              :when ::odd}]}
+                 ::done {:* [{:to ::odd}]}}}))
 
      (f/reg-event-db ::set
        (fn [db [_ self n]]
@@ -489,8 +496,9 @@
          {:ref  self
           :stop ::finish
           :fsm  {nil      {[::advance self] ::middle}
-                 ::middle {[self] {:to   ::start
-                                   :when ::threshold}
+                 ::middle {:* {:to   ::start
+                               :pull [self]
+                               :when ::threshold}
 
                            [::fsm/timeout self 1 ::middle]
                            {:to       ::finish

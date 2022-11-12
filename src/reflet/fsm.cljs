@@ -231,7 +231,7 @@
           :ms     ::ms
           :more   (s/* any?))))
 
-(s/def ::entity-vec
+(s/def ::pull
   (s/coll-of ::s*/ref :kind vector?))
 
 (s/def ::dispatch
@@ -255,7 +255,7 @@
 (s/def ::transition-to-expanded
   (s*/any-cardinality
    (s/keys :req-un [::to]
-           :opt-un [::when ::dispatch ::dispatch-later])
+           :opt-un [::when ::pull ::dispatch ::dispatch-later])
    :coerce-many true))
 
 (s/def ::transition-to
@@ -270,17 +270,17 @@
 (s/def ::event-transition
   (s/tuple ::event ::transition-to))
 
-(s/def ::entity-transition
-  (s/tuple (s/coll-of ::s*/ref) ::transition-to))
+(s/def ::wildcard-transition
+  (s/tuple #{:*} ::transition-to))
 
 (s/def ::timeout-transition
   (s/tuple ::timeout ::transition-to))
 
 (s/def ::transition
   (s*/conform-to
-    (s/or :event   ::event-transition
-          :entity  ::entity-transition
-          :timeout ::timeout-transition)
+    (s/or :event    ::event-transition
+          :wildcard ::wildcard-transition
+          :timeout  ::timeout-transition)
     (fn [[t form]]
       (with-meta form {:type t}))))
 
@@ -294,30 +294,32 @@
          (count)
          (>= 1))))
 
-(s/def ::max-one-entity-transition
+(s/def ::max-one-wildcard-transition
   (fn [transitions]
     (->> transitions
-         (filter (comp #{:entity} -type))
+         (filter (comp #{:wildcard} -type))
          (count)
          (>= 1))))
 
 (defn- compile-transitions
   [transitions]
   (letfn [(f [t [k v]]
-            (t/add t k [k v]))]
+            (if (not= k :*)
+              (t/add t k [k v])
+              t))]
     (-> (group-by -type transitions)
         (update :timeout ffirst)
-        (update :entity first)
+        (update :wildcard first)
         (assoc :event (reduce f (t/trie) transitions))
         (set/rename-keys
-         {:event  :event-trie
-          :entity :entity-transition}))))
+         {:event    :event-trie
+          :wildcard :wildcard-transition}))))
 
 (s/def ::transitions
   (s/and (s/conformer seq)
          (s/coll-of ::transition)
          ::max-one-timeout-transition
-         ::max-one-entity-transition
+         ::max-one-wildcard-transition
          (s/conformer compile-transitions)))
 
 (defn distribute-transitions
@@ -356,23 +358,27 @@
   (-> (s*/parse ::fsm fsm)
       (assoc :fsm-unparsed fsm)))
 
+(defn- eval-clause
+  [db input {p :pull
+             c :when}]
+  (or (not c)
+      (if p
+        (s/valid? c (map #(db/getn db %) p))
+        (s/valid? c input))))
+
 (defn- cond-clause
-  [[input clauses]]
+  [db [input clauses]]
   (some->> clauses
            (remove nil?)
-           (filter (fn [{c :when}] (or (not c) (s/valid? c input))))
+           (filter (partial eval-clause db input))
            (first)
            (vector input)))
 
 (defn- match-transition
   "Events are always matched before entities."
-  [db event {trie     :event-trie
-             entity-t :entity-transition}]
-  (or (t/match trie event)
-      (when entity-t
-        (->> (partial db/getn db)
-             (partial map)
-             (update entity-t 0)))))
+  [db event {trie :event-trie
+             wct  :wildcard-transition}]
+  (or (t/match trie event) wct))
 
 (defn- get-transition
   [{state-map :fsm
@@ -389,7 +395,7 @@
   [fsm current-state db event]
   (some->> (get-transition fsm current-state)
            (match-transition db event)
-           (cond-clause)))
+           (cond-clause db)))
 
 (defn advance-fx
   "Given a parsed fsm, a timeout reference, a db, and an event, computes
