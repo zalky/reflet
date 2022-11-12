@@ -212,7 +212,7 @@
           (update-z-index self)))))
 
 (def max-init-panel-height
-  300)
+  350)
 
 (f/reg-event-db ::set-height
   (fn [db [_ self el]]
@@ -235,7 +235,7 @@
   [lh el]
   (mod (panel-content-height el) lh))
 
-(f/reg-sub ::rect-quantize
+(f/reg-sub ::rect-quantized
   ;; Quantize size and position with respect to line-height. For nicer
   ;; visual results when quantizing element height, we preserve
   ;; whatever offset the the element's content has from a quantization

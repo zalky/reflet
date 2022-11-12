@@ -139,7 +139,7 @@
   (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect  (f/sub [::impl/rect-quantize self el])
+    (let [rect  (f/sub [::impl/rect-quantized self el])
           state (f/sub [::impl/panel-fsm self el tap])]
       (f/once (f/disp [::impl/set-props self props]))
       (when (display? @state)
@@ -188,6 +188,7 @@
   [{t :t
     e :event}]
   [:div
+   [:div {:class "reflet-divider"}]
    [:div t]
    [data/value e]])
 
@@ -204,18 +205,27 @@
     [:div {:class "reflet-no-data"}
      [:span "No Events"]]))
 
-(defn- transition-trace
-  [{t          :t
-    fsm-v      :fsm-v
-    input      :input
-    clause     :clause
-    prev-state :prev-state}]
-  [:div
-   [:div t]
-   [data/value fsm-v]
-   [data/value input]
+(defn- fsm-transition
+  [{:keys [clause prev-state]}]
+  [:div {:class "reflet-transition"}
    [data/value prev-state]
-   [data/value clause]])
+   [:div "\u0394"]
+   [data/value (:to clause)]])
+
+(defn- fsm-trace
+  [[[t event] transitions]]
+  [:div
+   [:div {:class "reflet-divider"}]
+   [:div t]
+   [data/value event]
+   (doall
+    (map-indexed
+     (fn [i t]
+       [:<> {:key i}
+        [g/fsm {:class "reflet-fsm-glyph"}]
+        [data/value (:fsm-v t)]
+        [fsm-transition t]])
+     transitions))])
 
 (defmethod ref-lens :debug.lens/fsm
   [{:debug/keys [self ref el]}]
@@ -225,7 +235,7 @@
      (doall
       (map-indexed
        (fn [i t]
-         ^{:key i} [transition-trace t])
+         ^{:key i} [fsm-trace t])
        transitions))]
     [:div {:class "reflet-no-data"}
      [:span "No Events"]]))
@@ -263,7 +273,7 @@
   (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect  (f/sub [::impl/rect-quantize self el])
+    (let [rect  (f/sub [::impl/rect-quantized self el])
           state (f/sub [::impl/panel-fsm self el ref])]
       (f/once (f/disp [::impl/set-props self props]))
       (when (display? @state)

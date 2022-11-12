@@ -370,8 +370,7 @@
   (some->> clauses
            (remove nil?)
            (filter (partial eval-clause db input))
-           (first)
-           (vector input)))
+           (first)))
 
 (defn- match-transition
   "More specific events are always matched before wildcard."
@@ -396,7 +395,7 @@
            (match-transition db event)
            (cond-clause db)))
 
-(defn advance-fx
+(defn- advance-fx
   "Given a parsed fsm, a timeout reference, a db, and an event, computes
   that FSM's advance fx, if any. After advance fx have been collected
   for all FSMs, they are all realized at the same time by
@@ -409,9 +408,8 @@
     :as   fsm} timeout db event]
   (when-not (db/transient-unmounted? ref)
     (let [state (db/get-inn db [ref attr])]
-      (when-let [[input clause] (match-clause fsm state db event)]
+      (when-let [clause (match-clause fsm state db event)]
         {:fsm        fsm
-         :input      input
          :clause     clause
          :timeout    timeout
          :prev-state state}))))
@@ -471,24 +469,24 @@
     (fx/dispatch-later event)))
 
 (defn- trace
-  [t fsm input clause prev-state]
+  [t event fsm clause prev-state]
   (when d/tap-fn
     (let [{:keys [ref fsm-v]} fsm]
       (->> {:t          t
             :fsm-v      fsm-v
-            :input      input
+            :event      event
             :clause     clause
             :prev-state prev-state}
            (swap! d/trace update-in [::d/fsm->transition ref] d/qonj d/queue-size)))))
 
 (defn- advance-rf
-  [t]
+  [t event]
   (fn [db {{:keys [ref attr]
             :as   fsm}    :fsm
            {:keys [to]
             :as   clause} :clause
-           :keys          [input timeout prev-state]}]
-    (trace t fsm input clause prev-state)
+           :keys          [timeout prev-state]}]
+    (trace t event fsm clause prev-state)
     (fsm-dispatch! clause)
     (cleanup! fsm timeout to)
     (db/assoc-inn db [ref attr] to)))
@@ -505,7 +503,7 @@
   (if (not-empty advance-fx)
     (let [db (or db-fx db-cofx)]
       (->> advance-fx
-           (reduce (advance-rf t) db)
+           (reduce (advance-rf t event) db)
            (assoc-in context [:effects :db])))
     context))
 

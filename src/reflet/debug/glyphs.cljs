@@ -3,7 +3,7 @@
 
 (def path-opts
   {:vector-effect     "non-scaling-stroke"
-   :fill              "transparent"
+   :fill              "none"
    :stroke            "currentColor"
    :stroke-width      "1.5px"
    :stroke-linecap    "round"
@@ -42,13 +42,21 @@
   [& [props]]
   [:div (glyph-props props)
    [:svg {:view-box "0 0 10 10"}
-    [:path (stroke {:d "M 8,2 A 7,7 0 0 1 2,8 M 6,2 A 5,5 0 0 1 2,6"})]]])
+    [:path (stroke {:d "M 8,4 L 8,8 4,8"})]]])
 
 (defn coll-expander
   [& [props]]
   [:div (glyph-props props)
    [:svg {:view-box "0 0 20 10"}
     [:path (stroke {:d            "M 2,2 L 10,8 L 18,2"
+                    :stroke-width "1px"})]]])
+
+(defn fsm
+  [& [props]]
+  [:div (glyph-props props)
+   [:svg {:view-box "0 0 16 32"}
+    [:circle {:cx 6 :cy 8 :r 3}]
+    [:path (stroke {:d            "M 6,10 L 6,21 L 6,25 15,25 M 12,22 L 15,25 12,28"
                     :stroke-width "1px"})]]])
 
 (defn back

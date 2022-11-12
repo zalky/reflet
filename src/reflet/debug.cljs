@@ -109,8 +109,8 @@
 (f/reg-sub ::fsm->transitions
   (constantly (r/cursor trace [::fsm->transition]))
   (fn [index [_ ref]]
-    (-> index
-        (get ref)
-        (reverse)
-        (not-empty))))
+    (->> (get index ref)
+         (group-by (juxt :t :event))
+         (sort-by ffirst #(compare %2 %1))
+         (not-empty))))
 
