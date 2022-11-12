@@ -14,9 +14,10 @@
        :attr :kr/votes
        :stop #{::accepted ::cancelled}
        :fsm  {nil        {[:voted self] ::review}
-              ::review   {[self] {:to       ::review
-                                  :when     ::review-threshold
-                                  :dispatch [:notify self]}}
+              ::review   {:* {:to       ::review
+                              :pull     [self]
+                              :when     ::review-threshold
+                              :dispatch [:notify self]}}
               ::decision {[:accepted self]          ::accepted
                           [:revisit self]           {:to      ::review
                                                      :dipatch [:reset self]}
@@ -91,15 +92,13 @@
   the same event that manually set the FSM state. But this use case is
   pretty niche.
 
-  Each transition for a given state is a map between an input, and one
-  or more output clauses.
+  Each transition for a given state is a map between an input event,
+  and one or more output clauses.
 
-  There three types of transitions currently implemented, each
-  corresponding to their input type:
+  There are two different types of event inputs currently defined:
 
   1. Event transitions
-  2. Entity transitions
-  3. Timeout transitions
+  2. Timeout transitions
 
   Event transitions match a recieved event against a set of event
   stems. Each stem either matches the event exactly, or an event with
@@ -117,12 +116,7 @@
 
   [:voted self first-pref]
 
-  Entity transitions match the state of their input entities against
-  the conditionals defined in their output clauses. The input entities
-  are expressed as a vector of entity references, each reference being
-  a tuple with a unique attribute and a uuid. To keep things fast, no
-  joins are traversed when retrieving the entity state from the db:
-  you only get a flat map.
+  You can match any event with the special keyword :*.
 
   Timeout transitions are just like event transitions, except the first
   three positional elements of their event vector are:
@@ -144,11 +138,12 @@
   timeout will be matched just like a regular event. This way you can
   listen for timeouts from other FSMs.
 
-  Only one entity or timeout transition is allowed in a state's
-  transition map. However, a state's transition map can have an
-  arbitrary number of event transitions. If a state defines both an
-  entity and event transitions, the event transitions will always be
-  matched before the entity transition.
+  Only one wildcard or timeout transition is allowed in a state's
+  transition map. Otherwise, a state's transition map can have an
+  arbitrary number of event transitions. If a state defines both a
+  wildcard and a set of event transitions, the event transitions will
+  always be matched before the wildcard transition. As before: the
+  most specific match will win.
 
   All transitions define one or more output clauses. Each output
   clause be expresed in either simple or expanded form.
@@ -160,13 +155,17 @@
             The next state to transition to [required]
 
   `:when`
-
             The id of a Clojure spec that must return s/valid? true
             for the transition input in order for the transition to
-            fire. For event inputs, this is simply the full recieved
-            event vector. For entity inputs, the entity references are
-            pulled from the db, and passed to the Clojure spec.
+            fire. By default, the input will be the event vector that
+            triggered the transition. See :pull for alternative.
             [optional]
+
+  `:pull`
+            A list of entity references. These entities are then
+            passed as inputs to the :when conditional, in place of
+            the trigger event. This allows you to build FSMs that use
+            the state of other FSMs as inputs to their transitions.  
 
   `:dispatch`
             An event vector to dispatch on a succesful transition
@@ -375,7 +374,7 @@
            (vector input)))
 
 (defn- match-transition
-  "Events are always matched before entities."
+  "More specific events are always matched before wildcard."
   [db event {trie :event-trie
              wct  :wildcard-transition}]
   (or (t/match trie event) wct))
