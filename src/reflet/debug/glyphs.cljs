@@ -21,7 +21,7 @@
 (defn mark-icon
   [& [{:keys [group]
        :as   props}]]
-  [:div (glyph-props props)
+  [:div (glyph-props (dissoc props :group))
    [:svg {:view-box "0 0 20 30"}
     [:circle {:cx   10
               :cy   10
@@ -55,7 +55,7 @@
   [& [props]]
   [:div (glyph-props props)
    [:svg {:view-box "0 0 16 32"}
-    [:path (stroke {:d            "M 15,10 L 6,10 L 6,21 L 6,25 15,25 M 12,22 L 15,25 12,28"
+    [:path (stroke {:d            "M 15,8 L 6,8 L 6,21 L 6,25 15,25 M 12,22 L 15,25 12,28"
                     :stroke-width "1px"})]]])
 
 (defn back
