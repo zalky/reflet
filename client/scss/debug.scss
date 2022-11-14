@@ -8,7 +8,7 @@
 
 $debug-color:                   #454545;
 
-$debug-mark-color:              #3733ff; // #8967f4; // #a267f4;
+$debug-mark-color:              #325bff; // #3733ff; // #8967f4; // #a267f4;
 $debug-marks-bg:                rgba(245, 247, 255, 94%); // rgba(245, 245, 246, 96%);
 $debug-radius:                  8px;
 $debug-panel-radius:            0;
@@ -324,8 +324,8 @@ $coll-brace-width:              10px;
         flex-direction: row;
 
         > *:not(:first-child) {
-            margin-left: 0.75rem;
-            flex-shrink: 0.5;
+            margin-left: 0.5rem;
+            flex-shrink: 0.25;
         }
     }
 }
@@ -372,8 +372,8 @@ $coll-brace-width:              10px;
         flex-direction: row;
 
         > *:not(:first-child) {
-            margin-left: 0.75rem;
-            flex-shrink: 0.5;
+            margin-left: 0.5rem;
+            flex-shrink: 0.25;
         }
     }
 
@@ -390,12 +390,12 @@ $coll-brace-width:              10px;
 
     > :first-child {
         flex: 1 1 0;
-        display: flex;
-        justify-content: end;
     }
 
     > :last-child {
         flex: 1 1 0;
+        display: flex;
+        justify-content: end;
     }
 
     > :nth-child(2) {
@@ -413,6 +413,7 @@ $coll-brace-width:              10px;
 // Data formatting
 
 @mixin truncate {
+    display: inline;
     overflow: hidden;
     text-overflow: ellipsis;
     min-width: 1rem;
@@ -545,8 +546,6 @@ $coll-brace-width:              10px;
     }
 
     svg {
-        // Add a bit of margin to help center align with the monospace
-        // collection characters
         width: 12px;
     }
 }
@@ -559,6 +558,7 @@ $coll-brace-width:              10px;
 .reflet-ref {
     font-family: $font-family-monospace;
     color: $syntax-ref;
+    @include truncate;
 
     :not(.reflet-ref-title) > & {
         cursor: pointer;
@@ -570,7 +570,7 @@ $coll-brace-width:              10px;
     overflow: hidden;
     font-family: $font-family-monospace;
 
-    > :nth-child(2):not(:last-child) {
+    > :last-child {
         @include truncate;
         direction: rtl;
     }

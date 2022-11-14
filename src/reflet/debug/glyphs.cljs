@@ -55,8 +55,7 @@
   [& [props]]
   [:div (glyph-props props)
    [:svg {:view-box "0 0 16 32"}
-    [:circle {:cx 6 :cy 8 :r 3}]
-    [:path (stroke {:d            "M 6,10 L 6,21 L 6,25 15,25 M 12,22 L 15,25 12,28"
+    [:path (stroke {:d            "M 15,10 L 6,10 L 6,21 L 6,25 15,25 M 12,22 L 15,25 12,28"
                     :stroke-width "1px"})]]])
 
 (defn back

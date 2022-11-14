@@ -198,10 +198,10 @@
 (defn- panel-content-height
   [el]
   (let [b (* 2 (px el :border-width))]
-    (->> (.. el -firstChild -children)
-         (array-seq)
-         (map #(px % :height))
-         (reduce + b))))
+     (->> (.. el -firstChild -children)
+               (array-seq)
+               (map #(px % :height))
+               (reduce + b))))
 
 (f/reg-event-db ::set-rect
   (fn [db [_ self & args]]
@@ -212,7 +212,7 @@
           (update-z-index self)))))
 
 (def max-init-panel-height
-  350)
+  275)
 
 (f/reg-event-db ::set-height
   (fn [db [_ self el]]
@@ -231,32 +231,45 @@
   (fn [rect]
     (select-keys rect [:left :top :width :height :z-index])))
 
-(defn- v-offset
-  [lh el]
-  (mod (panel-content-height el) lh))
+(defn- adjusted-quant-factor
+  "This adjusts the vertical quantization factor so that the bottom of
+  the panel aligns with the horizontal dividers in FSM, query and
+  event panels. It will be fractionally off for the data panels, but
+  because they don't have dividers, it will not be perceptible, even
+  when zoomed in."
+  [el lh]
+  (-> el
+      (.. -firstChild -children)
+      (aget 1)
+      (px :padding-top)
+      (* 2)
+      (+ 1) ; for border width
+      (+ lh)
+      (/  2)))
+
+(defn- height-qfn
+  [height el lh]
+  (let [h      (adjusted-quant-factor el lh)
+        offset (mod (panel-content-height el) h)]
+    (+ (quant height h) offset)))
 
 (f/reg-sub ::rect-quantized
   ;; Quantize size and position with respect to line-height. For nicer
-  ;; visual results when quantizing element height, we preserve
-  ;; whatever offset the the element's content has from a quantization
-  ;; point. The visual effect of this approach is that the height of
-  ;; the element will either exactly fit its content, or shrink or
-  ;; expand by the quantization factor, which is line-height. In
-  ;; contrast, :left, :top, and :width will just snap directly to
-  ;; quantization points, irrespective of the content.
+  ;; visual results when quantizing element height, use a qunatization
+  ;; algorithm that dynamically accounts for content borders and
+  ;; padding.
   (fn [[_ self el]]
     [(f/sub [::rect self])
      (f/sub [::i/grab el])])
   (fn [[rect ^js el] _]
     (when (and el (not-empty rect))
-      (let [qfn    (comp int quant)
-            lh     (px el :line-height)
-            offset (v-offset lh el)]
+      (let [qfn (comp int quant)
+            lh  (px el :line-height)]
         (-> rect
             (update :left qfn lh)
             (update :top qfn lh)
             (update :width qfn lh)
-            (update :height #(+ (quant % lh) offset)))))))
+            (update :height height-qfn el lh))))))
 
 (f/reg-event-db ::set-props
   (fn [db [_ self props]]

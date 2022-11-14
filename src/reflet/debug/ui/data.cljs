@@ -71,11 +71,7 @@
   [k]
   [:div {:class "reflet-keyword"}
    [:span ":"]
-   (when-let [ns (namespace k)]
-     [:<>
-      [:span ns]
-      [:span "/"]])
-   [:span (name k)]])
+   [:span (apply str (rest (str k)))]])
 
 (defmethod value ::map
   [m]

@@ -238,7 +238,7 @@
          ^{:key i} [fsm-trace t])
        transitions))]
     [:div {:class "reflet-no-data"}
-     [:span "No Events"]]))
+     [:span "No Transitions"]]))
 
 (defmethod ref-lens :default
   [{:debug/keys [self el]}]
