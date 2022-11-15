@@ -205,14 +205,14 @@
   [db ref]
   (let [db (db/dissocn db ref)]
     (if d/tap-fn
-      (update-in db [::db/index ::db/e->event] dissoc ref)
+      (update-in db [::d/trace ::d/e->event] dissoc ref)
       db)))
 
 (reg-event-fx ::ref-cleanup
   (fn [{db :db} [_ ref]]
-    {::i/cleanup [ref]
-     :log        [:debug "Ref cleanup" ref]
-     :db         (ref-cleanup db ref)}))
+    {:log        [:debug "Ref cleanup" ref]
+     :db         (ref-cleanup db ref)
+     ::i/cleanup [ref]}))
 
 ;;;; Additional Utilities
 

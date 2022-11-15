@@ -198,10 +198,10 @@
 (defn- panel-content-height
   [el]
   (let [b (* 2 (px el :border-width))]
-     (->> (.. el -firstChild -children)
-               (array-seq)
-               (map #(px % :height))
-               (reduce + b))))
+    (->> (.. el -firstChild -children)
+         (array-seq)
+         (map #(px % :height))
+         (reduce + b))))
 
 (f/reg-event-db ::set-rect
   (fn [db [_ self & args]]

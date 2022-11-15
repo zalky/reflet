@@ -332,7 +332,7 @@ $coll-brace-width:              10px;
 
 .reflet-fsm-lens {
     display: grid;
-    grid-template-columns: min-content 1rem auto;
+    grid-template-columns: min-content auto;
     column-gap: 0.5rem;
 
     > div:first-child > .reflet-divider {
@@ -343,23 +343,20 @@ $coll-brace-width:              10px;
         display: contents;
 
         > .reflet-divider {
-            grid-column: 1 / span 3;
+            grid-column: 1 / span 2;
             border-top: 1px dotted $debug-border-color;
             margin: 0.5rem -0.75rem;
         }
 
         > :nth-child(n + 3) {
-            grid-column: 3;
+            grid-column: 2;
             overflow: hidden;
         }
 
-        > :nth-child(3) {
-            grid-column: 2 / span 2;
-        }
-
         .reflet-fsm-glyph {
-            grid-column: 2;
+            grid-column: 1;
             grid-row-end: span 2;
+            width: 1rem;
         }
     }
 

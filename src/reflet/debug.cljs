@@ -8,7 +8,7 @@
 (defonce tap-fn
   nil)
 
-(defonce trace
+(defonce trace-index
   (r/atom {}))
 
 (def queue-size
@@ -25,8 +25,8 @@
 
 (defn- debug-tag?
   [id]
-  (->> (str id)
-       (str/starts-with? ":reflet.debug")))
+  (-> (str id)
+      (str/starts-with? ":reflet.debug")))
 
 (defn- domain-event?
   [event]
@@ -35,40 +35,44 @@
       (debug-tag?)
       (not)))
 
-(defn- update-debug-index
-  [{touched-q ::db/touched-queries
-    touched-e ::db/touched-entities
-    :as       index} event t]
-  (if (or touched-q touched-e)
-    (letfn [(rf [m q]
-              (->> {:t     t
-                    :event event}
-                   (update m q qonj queue-size)))
-
-            (f [m refs]
-              (reduce rf m refs))]
-      (-> index
-          (update ::db/q->event f touched-q)
-          (update ::db/e->event f touched-e)))
-    index))
+(defn trace?
+  [event]
+  (and tap-fn (domain-event? event)))
 
 (defn- debug-tap-before
-  [context]
-  (->> (swap! trace update ::event-t inc)
-       (::event-t)
-       (assoc-in context [:coeffects ::event-t])))
+  [{{event :event} :coeffects
+    :as            context}]
+  (if (trace? event)
+    (->> inc
+         (update @trace-index ::t)
+         (assoc-in context [:coeffects :db ::trace]))
+    context))
+
+(defn- update-trace!
+  [index event {t ::t :as trace}]
+  (letfn [(rf [m q]
+            (->> {:t     t
+                  :event event}
+                 (update m q qonj queue-size)))
+
+          (f [m refs]
+            (reduce rf m refs))]
+    (when trace
+      (some->> index
+               (::db/touched-entities)
+               (update trace ::e->event f)
+               (reset! trace-index)))))
 
 (defn- debug-tap-after
-  [{{t     ::event-t
-     event :event} :coeffects
-    {db :db}       :effects
-    :as            context}]
-  (if (and tap-fn db (domain-event? event))
-    (update-in context
-               [:effects :db ::db/index]
-               update-debug-index
-               event
-               t)
+  [{{event :event}   :coeffects
+    {{index ::db/index
+      trace ::trace
+      :as   db} :db} :effects
+    :as              context}]
+  (if (and db (trace? event))
+    (do (update-trace! index event trace)
+        (->> (dissoc db ::trace)
+             (assoc-in context [:effects :db])))
     context))
 
 (def debug-tap-events
@@ -99,17 +103,17 @@
     (get db ::taps)))
 
 (f/reg-sub ::e->events
-  (constantly (r/cursor db/query-index [::db/e->event]))
-  (fn [index [_ ref]]
-    (-> index
+  (constantly (r/cursor trace-index [::e->event]))
+  (fn [trace [_ ref]]
+    (-> trace
         (get ref)
         (reverse)
         (not-empty))))
 
 (f/reg-sub ::fsm->transitions
-  (constantly (r/cursor trace [::fsm->transition]))
-  (fn [index [_ ref]]
-    (->> (get index ref)
+  (constantly (r/cursor trace-index [::fsm->transition]))
+  (fn [trace [_ ref]]
+    (->> (get trace ref)
          (group-by (juxt :t :event))
          (sort-by ffirst #(compare %2 %1))
          (not-empty))))

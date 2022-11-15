@@ -724,8 +724,7 @@
     (-> index
         (update ::e->q clear-stale-entities stale q-ref)
         (update ::q->e dissoc q-ref)
-        (update ::q->tick dissoc q-ref)
-        (update ::q->event dissoc q-ref))))
+        (update ::q->tick dissoc q-ref))))
 
 ;;;; Query index injection interceptor
 

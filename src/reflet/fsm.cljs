@@ -468,34 +468,37 @@
   (doseq [event dispatch-later]
     (fx/dispatch-later event)))
 
-(defn- trace
-  [t event fsm clause prev-state]
-  (when d/tap-fn
-    (let [{:keys [ref fsm-v]} fsm]
-      (->> {:t          t
-            :fsm-v      fsm-v
-            :event      event
-            :clause     clause
-            :prev-state prev-state}
-           (swap! d/trace update-in [::d/fsm->transition ref] d/qonj d/queue-size)))))
+(defn- fsm-trace
+  [db fsm event clause prev-state]
+  (if (d/trace? event)
+    (->> {:t          (get-in db [::d/trace ::d/t])
+          :fsm-v      (get fsm :fsm-v)
+          :event      event
+          :clause     clause
+          :prev-state prev-state}
+         (update-in db
+                    [::d/trace ::d/fsm->transition (get fsm :ref)]
+                    d/qonj
+                    d/queue-size))
+    db))
 
 (defn- advance-rf
-  [t event]
+  [event]
   (fn [db {{:keys [ref attr]
             :as   fsm}    :fsm
            {:keys [to]
             :as   clause} :clause
            :keys          [timeout prev-state]}]
-    (trace t event fsm clause prev-state)
     (fsm-dispatch! clause)
     (cleanup! fsm timeout to)
-    (db/assoc-inn db [ref attr] to)))
+    (-> db
+        (db/assoc-inn [ref attr] to)
+        (fsm-trace fsm event clause prev-state))))
 
 (defn- advance
   "Performs FSM advance."
   [{{db-fx :db}      :effects
     {db-cofx :db
-     t       ::d/event-t
      event   :event} :coeffects
     advance-fx       ::advance-fx
     :as              context}]
@@ -503,7 +506,7 @@
   (if (not-empty advance-fx)
     (let [db (or db-fx db-cofx)]
       (->> advance-fx
-           (reduce (advance-rf t event) db)
+           (reduce (advance-rf event) db)
            (assoc-in context [:effects :db])))
     context))
 
