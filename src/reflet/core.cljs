@@ -22,8 +22,8 @@
 
 (def reflet-interceptors
   [db/inject-query-index
-   d/debug-tap-events
-   fsm/advance-interceptor
+   d/debug-trace
+   fsm/advance
    itor/add-global-interceptors])
 
 (defn reg-event-db
@@ -201,17 +201,13 @@
            (reduce rf {})
            (assoc cofx :random-ref)))))
 
-(defn- ref-cleanup
-  [db ref]
-  (let [db (db/dissocn db ref)]
-    (if d/tap-fn
-      (update-in db [::d/trace ::d/e->event] dissoc ref)
-      db)))
-
-(reg-event-fx ::ref-cleanup
+(f/reg-event-fx ::ref-cleanup
+  [db/inject-query-index
+   fsm/advance
+   itor/add-global-interceptors]
   (fn [{db :db} [_ ref]]
     {:log        [:debug "Ref cleanup" ref]
-     :db         (ref-cleanup db ref)
+     :db         (db/dissocn db ref)
      ::i/cleanup [ref]}))
 
 ;;;; Additional Utilities

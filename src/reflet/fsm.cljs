@@ -18,10 +18,10 @@
                               :pull     [self]
                               :when     ::review-threshold
                               :dispatch [:notify self]}}
-              ::decision {[:accepted self]          ::accepted
+              ::decision {[::fsm/timeout self 1000] ::cancelled
+                          [:accepted self]          ::accepted
                           [:revisit self]           {:to      ::review
-                                                     :dipatch [:reset self]}
-                          [::fsm/timeout self 1000] [:to ::cancelled]}}}))
+                                                     :dipatch [:reset self]}}}}))
 
   This spec requires the following attributes:
 
@@ -468,7 +468,7 @@
   (doseq [event dispatch-later]
     (fx/dispatch-later event)))
 
-(defn- fsm-trace
+(defn- trace
   [db fsm event clause prev-state]
   (if (d/trace? event)
     (->> {:t          (get-in db [::d/trace ::d/t])
@@ -488,14 +488,15 @@
             :as   fsm}    :fsm
            {:keys [to]
             :as   clause} :clause
-           :keys          [timeout prev-state]}]
+           timeout        :timeout
+           prev-state     :prev-state}]
     (fsm-dispatch! clause)
     (cleanup! fsm timeout to)
     (-> db
         (db/assoc-inn [ref attr] to)
-        (fsm-trace fsm event clause prev-state))))
+        (trace fsm event clause prev-state))))
 
-(defn- advance
+(defn- advance-after
   "Performs FSM advance."
   [{{db-fx :db}      :effects
     {db-cofx :db
@@ -510,15 +511,15 @@
            (assoc-in context [:effects :db])))
     context))
 
-(def advance-interceptor
+(def advance
   (f/->interceptor
-   :id ::advance-interceptor
-   :after advance))
+   :id ::advance
+   :after advance-after))
 
 (def fsm-interceptors
   [db/inject-query-index
-   d/debug-tap-events
-   advance-interceptor
+   d/debug-trace
+   advance
    i/add-global-interceptors])
 
 (f/reg-event-fx ::timeout
@@ -532,8 +533,8 @@
   (let [[id & args] fsm-v]
     (or (some-> (reg/get-handler ::fsm-fn id)
                 (apply args)
-                (util/assoc-nil :attr ::state)
-                (assoc :fsm-v fsm-v))
+                (assoc :fsm-v fsm-v)
+                (util/assoc-nil :attr ::state))
         (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
 (f/reg-event-db ::advance

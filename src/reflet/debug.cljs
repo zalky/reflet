@@ -23,32 +23,26 @@
     (= n (count q)) (conj (pop q) x)
     :else           (conj q x)))
 
-(defn- debug-tag?
-  [id]
-  (-> (str id)
-      (str/starts-with? ":reflet.debug")))
-
-(defn- domain-event?
+(defn- trace-event?
   [event]
-  (-> event
-      (first)
-      (debug-tag?)
-      (not)))
+  (let [id (first event)]
+    (or (= id ::trace-cleanup)
+        (let [ns (namespace id)]
+          (not (str/starts-with? ns "reflet.debug"))))))
 
 (defn trace?
   [event]
-  (and tap-fn (domain-event? event)))
+  (and tap-fn (trace-event? event)))
 
-(defn- debug-tap-before
+(defn- debug-trace-before
   [{{event :event} :coeffects
     :as            context}]
   (if (trace? event)
-    (->> inc
-         (update @trace-index ::t)
+    (->> (update @trace-index ::t inc)
          (assoc-in context [:coeffects :db ::trace]))
     context))
 
-(defn- update-trace!
+(defn- commit-trace!
   [index event {t ::t :as trace}]
   (letfn [(rf [m q]
             (->> {:t     t
@@ -58,45 +52,54 @@
           (f [m refs]
             (reduce rf m refs))]
     (when trace
-      (some->> index
-               (::db/touched-entities)
-               (update trace ::e->event f)
-               (reset! trace-index)))))
+      (->> index
+           (::db/touched-entities)
+           (update trace ::e->event f)
+           (reset! trace-index)))))
 
-(defn- debug-tap-after
+(defn- debug-trace-after
   [{{event :event}   :coeffects
     {{index ::db/index
       trace ::trace
       :as   db} :db} :effects
     :as              context}]
   (if (and db (trace? event))
-    (do (update-trace! index event trace)
-        (->> (dissoc db ::trace)
-             (assoc-in context [:effects :db])))
+    (do (commit-trace! index event trace)
+        (update-in context [:effects :db] dissoc ::trace))
     context))
 
-(def debug-tap-events
+(def debug-trace
   (f/->interceptor
-   :id ::debug-tap
-   :before debug-tap-before
-   :after debug-tap-after))
+   :id ::debug-trace
+   :before debug-trace-before
+   :after debug-trace-after))
 
 (f/reg-event-db ::tap
-  ;; ::d/tap must happen after the ::d/untap of the previous react
-  ;; lifecycle. To guarantee this, ::d/tap must be invoked in either
-  ;; the `:ref` callback, or the `:component-did-mount` phase of the
-  ;; component lifecycle. Must not dispatch in a `with-let`, where it
-  ;; will happen during the first render.
+  ;; ::d/tap must happen after the ::d/tap-cleanup of the previous
+  ;; react lifecycle. To guarantee this, ::d/tap must be invoked in
+  ;; either the `:ref` callback, or the `:component-did-mount` phase
+  ;; of the component lifecycle. Must not dispatch in a `with-let`,
+  ;; where it will happen during the first render.
+  [db/inject-query-index]
   (fn [db [_ ref tap]]
     (-> db
         (update-in [::taps ref] merge tap)
         (db/mergen tap))))
 
-(f/reg-event-fx ::untap
-  (fn [{db :db} [_ ref]]
-    {:db (-> db
-             (update ::taps dissoc ref)
-             (db/dissocn ref))}))
+(f/reg-event-db ::tap-cleanup
+  [db/inject-query-index]
+  (fn [db [_ ref]]
+    (-> db
+        (update ::taps dissoc ref)
+        (db/dissocn ref))))
+
+(f/reg-event-db ::trace-cleanup
+  ;; Only debug event specifically enabled in `trace-event?`
+  [debug-trace]
+  (fn [db [_ ref]]
+    (-> db
+        (update-in [::trace ::e->event] dissoc ref)
+        (update-in [::trace ::fsm->transition] dissoc ref))))
 
 (f/reg-sub ::taps
   (fn [db _]
