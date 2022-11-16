@@ -478,7 +478,7 @@
           :prev-state prev-state}
          (update-in db
                     [::d/trace ::d/fsm->transition (get fsm :ref)]
-                    d/qonj
+                    util/qonj
                     d/queue-size))
     db))
 

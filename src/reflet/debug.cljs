@@ -16,13 +16,6 @@
   dynamic."
   50)
 
-(defn qonj
-  [q n x]
-  (cond
-    (nil? q)        #queue [x]
-    (= n (count q)) (conj (pop q) x)
-    :else           (conj q x)))
-
 (defn- trace-event?
   [event]
   (let [id (first event)]
@@ -47,7 +40,7 @@
   (letfn [(rf [m q]
             (->> {:t     t
                   :event event}
-                 (update m q qonj queue-size)))
+                 (update m q util/qonj queue-size)))
 
           (f [m refs]
             (reduce rf m refs))]
