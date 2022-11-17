@@ -257,7 +257,7 @@
   [{:keys [clause prev-state]}]
   [:div {:class "reflet-transition"}
    [data/value prev-state]
-   [:div "\u0394"]
+   [:div "\u2192"]
    [data/value (:to clause)]])
 
 (defn- fsm-traces

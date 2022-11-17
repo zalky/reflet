@@ -326,7 +326,7 @@ $coll-brace-width:              10px;
 
         > *:not(:first-child) {
             margin-left: 0.5rem;
-            flex-shrink: 0.25;
+            flex-shrink: 0.35;
         }
     }
 }
@@ -360,6 +360,10 @@ $coll-brace-width:              10px;
             grid-column: 1;
             padding-top: 0.25rem;
 
+            .reflet-control:hover path {
+                fill: currentColor;
+            }
+
             .reflet-glyph:not(:last-child) {
                 margin-right: 0.25rem;
             }
@@ -384,7 +388,7 @@ $coll-brace-width:              10px;
 
         > *:not(:first-child) {
             margin-left: 0.5rem;
-            flex-shrink: 0.25;
+            flex-shrink: 0.35;
         }
     }
 
@@ -411,7 +415,6 @@ $coll-brace-width:              10px;
 
     > :nth-child(2) {
         margin: 0 0.75rem;
-        font-weight: 600;
     }
 
     > .reflet-keyword {

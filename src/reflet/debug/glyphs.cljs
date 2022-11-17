@@ -68,4 +68,4 @@
   [& [props]]
   [:div (glyph-props props)
    [:svg {:view-box "0 0 8 10"}
-    [:path (stroke {:d "M 5,1 L 1,5 L 5,9"})]]])
+    [:path (stroke {:d "M 5,1 L 1,5 L 5,9 Z"})]]])

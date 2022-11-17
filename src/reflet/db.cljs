@@ -314,8 +314,7 @@
             (reduce rf m refs))
 
           (rf [m q]
-            (->> {:t     t
-                  :event event}
+            (->> {:t t :event event}
                  (update m q util/qonj queue-size)))]
     (when trace
       (->> index
