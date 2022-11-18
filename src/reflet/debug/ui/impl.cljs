@@ -306,6 +306,20 @@
   (fn [self]
     [:debug/lens self]))
 
+(f/reg-pull ::query-n
+  (fn [self]
+    [:debug/query-n self])
+  (fn [n]
+    (or n 0)))
+
+(f/reg-event-db ::inc-query-n
+  (fn [db [_ self max-n]]
+    (db/update-inn db [self :debug/query-n] #(min (inc %) max-n))))
+
+(f/reg-event-db ::dec-query-n
+  (fn [db [_ self]]
+    (db/update-inn db [self :debug/query-n] #(max (dec %) 0))))
+
 (f/reg-no-op ::open ::close ::ready-to-size)
 
 (def cluster-opts

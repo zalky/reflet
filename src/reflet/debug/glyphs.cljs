@@ -58,6 +58,12 @@
     [:path (stroke {:d            "M 15,8 L 6,8 L 6,21 L 6,25 15,25 M 12,22 L 15,25 12,28"
                     :stroke-width "1px"})]]])
 
+(defn menu
+  [& [props]]
+  [:div (glyph-props props)
+   [:svg {:view-box "0 0 10 10"}
+    [:path (stroke {:d "M 1,1 L 9,1 M 1,5 L 9,5 M 1,9 L 9,9"})]]])
+
 (defn back
   [& [props]]
   [:div (glyph-props props)

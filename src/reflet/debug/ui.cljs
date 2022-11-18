@@ -162,7 +162,7 @@
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
      (when @lens
-       [g/back {:class         "reflet-control"
+       [g/menu {:class         "reflet-control"
                 :on-mouse-down (f/stop-prop on-back)}])
      [:div {:class "reflet-ref-title"}
       [data/value-ref ref]]
@@ -205,6 +205,40 @@
     [:div {:class "reflet-no-data"}
      [:span "No Events"]]))
 
+(defn- query-traces
+  [traces]
+  (f/with-ref* {:cmp/uuid [trace/self]}
+    (let [max-n       (dec (count traces))
+          next        #(f/disp [::impl/inc-query-n self max-n])
+          prev        #(f/disp [::impl/dec-query-n self])
+          n           (f/sub [::impl/query-n self])
+          {t :t
+           q :query-v
+           r :result} (nth traces @n)]
+      [:div
+       [:div {:class "reflet-divider"}]
+       [:div t]
+       [data/value q]
+       [:div {:class "reflet-query-control"}
+        [g/back {:class    "reflet-control"
+                 :on-click next}]
+        [g/back {:class    "reflet-control"
+                 :on-click prev}]]
+       [data/value r]])))
+
+(defmethod ref-lens :debug.lens/query
+  [{:debug/keys [self ref el]}]
+  (f/once (f/disp [::impl/set-height self el]))
+  (if-let [queries @(f/sub [::d/e->queries ref])]
+    [:div {:class "reflet-query-lens"}
+     (doall
+      (map-indexed
+       (fn [i traces]
+         ^{:key i} [query-traces traces])
+       queries))]
+    [:div {:class "reflet-no-data"}
+     [:span "No Queries"]]))
+
 (defn- fsm-transition
   [{:keys [clause prev-state]}]
   [:div {:class "reflet-transition"}
@@ -244,7 +278,7 @@
   [{:debug/keys [self el]}]
   (let [cb-d #(f/disp [::impl/set-lens self :debug.lens/db])
         cb-e #(f/disp [::impl/set-lens self :debug.lens/events])
-        cb-p #(f/disp [::impl/set-lens self :debug.lens/pull])
+        cb-p #(f/disp [::impl/set-lens self :debug.lens/query])
         cb-f #(f/disp [::impl/set-lens self :debug.lens/fsm])]
     (f/once [(f/disp [::impl/set-rect self el])
              (f/disp [::impl/set-height self el])])

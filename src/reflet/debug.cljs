@@ -114,3 +114,14 @@
          (sort-by ffirst #(compare %2 %1))
          (not-empty))))
 
+(f/reg-sub ::e->queries
+  (fn [_]
+    [(r/cursor db/query-index [::db/e->q])
+     (r/cursor db/query-index [::db/q->trace])])
+  (fn [[e->q q->trace] [_ ref]]
+    (->> (get e->q ref)
+         (map (partial get q->trace))
+         (mapcat vals)
+         (map (partial sort-by :t #(compare %2 %1)))
+         (not-empty))))
+

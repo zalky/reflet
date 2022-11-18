@@ -627,7 +627,8 @@
       (start! (.-state db) fsm-v*)
       (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
                         #(do [return %])
-                        fsm-v))))
+                        fsm-v
+                        (db/query-ref)))))
 
 (defn reg-fsm
   [id fsm-fn]

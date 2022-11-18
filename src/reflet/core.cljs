@@ -136,9 +136,9 @@
   (reg/get-handler ::result-fn id))
 
 (defn result-reaction
-  [input-r [id :as query-v]]
+  [input-r [id :as query-v] q-ref]
   (if-let [f (get-result-fn id)]
-    (db/result-reaction input-r f query-v)
+    (db/result-reaction input-r f query-v q-ref)
     input-r))
 
 (defn pull-reaction
@@ -146,9 +146,10 @@
    (-> (get-expr-fn id)
        (pull-reaction query-v)))
   ([expr-fn query-v]
-   (-> (get-config)
-       (db/pull-reaction expr-fn query-v)
-       (result-reaction query-v))))
+   (let [q-ref (db/query-ref)]
+     (-> (get-config)
+         (db/pull-reaction expr-fn query-v q-ref)
+         (result-reaction query-v q-ref)))))
 
 (defn reg-pull*
   "Prefer reg-pull macro."

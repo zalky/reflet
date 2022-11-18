@@ -797,20 +797,43 @@
         (cons args)
         (vec))))
 
+(def queue-size
+  "Number of query-results to trace per query. This should eventually be
+  dynamic."
+  50)
+
+(defn- trace
+  [q-ref query-v q-tick result]
+  (swap! query-index
+         update-in
+         [::q->trace q-ref query-v]
+         util/qonj
+         queue-size
+         {:result  result
+          :query-v query-v
+          :t       q-tick})
+  result)
+
+(defn- untrace
+  [q-ref query-v result]
+  (swap! query-index update ::q->trace dissoc q-ref))
+
 (defn result-reaction
-  [input-r result-fn query-v]
-  (let [result-v (get-result-v query-v)]
+  [input-r result-fn query-v q-ref]
+  (let [result-v (get-result-v query-v)
+        q-tick   (query-tick q-ref)]
     (traced-reaction nil result-v
       (fn []
         (->> (rest result-v)
              (map maybe-deref)
-             (apply result-fn @input-r))))))
+             (apply result-fn @input-r)
+             (trace q-ref result-v (.-state q-tick))))
+      (fn []
+        (untrace q-ref result-v q-ref)))))
 
 (defn query-ref
-  [query-v rx-id]
-  (-> (random-ref :query/uuid)
-      (with-meta {:query-v query-v
-                  :rx-id   rx-id})))
+  []
+  (random-ref :query/uuid))
 
 (defn pull-reaction
   "Returns a differential pull reaction. `expr-fn` is a function that
@@ -823,9 +846,8 @@
   the pull reaction is dependent on the db and query index values, it
   is not reactive to them. Instead, it is reactive to changes the
   query tick, which tracks the db-tick and synced."
-  [config expr-fn query-v]
+  [config expr-fn query-v q-ref]
   (let [rx-id  (atom nil)
-        q-ref  (query-ref query-v rx-id)
         q-tick (query-tick q-ref)]
     (traced-reaction rx-id query-v
       (fn []
@@ -836,11 +858,14 @@
                       :e-ref      (second expr-r)
                       :q-ref      q-ref
                       :query-tick @q-tick}
-              out    (pull-reactive (merge config in))]
-          (reset! query-index (:index out))
-          (:result out)))
+
+              {i :index
+               r :result} (pull-reactive (merge config in))]
+          (reset! query-index i)
+          (trace q-ref query-v (.-state q-tick) r)))
       (fn []
         (swap! query-index dispose-query q-ref)
+        (untrace q-ref query-v q-ref)
         (when-let [f (:on-dispose config)]
           (f))))))
 
