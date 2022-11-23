@@ -4,6 +4,7 @@
             [reagent.dom :as dom]
             [reflet.core :as f]
             [reflet.debug :as d]
+            [reflet.db :as db]
             [reflet.debug.glyphs :as g]
             [reflet.debug.ui.data :as data]
             [reflet.debug.ui.data.impl :as data-impl]
@@ -209,9 +210,9 @@
   [traces]
   (f/with-ref* {:cmp/uuid [trace/self]}
     (let [max-n       (dec (count traces))
-          next        #(f/disp [::impl/inc-query-n self max-n])
-          prev        #(f/disp [::impl/dec-query-n self])
-          n           (f/sub [::impl/query-n self])
+          next        #(f/disp [::impl/inc-trace-n self max-n])
+          prev        #(f/disp [::impl/dec-trace-n self])
+          n           (f/sub [::impl/trace-n self])
           {t :t
            q :query-v
            r :result} (nth traces @n)]
@@ -228,16 +229,19 @@
 
 (defmethod ref-lens :debug.lens/query
   [{:debug/keys [self ref el]}]
-  (f/once (f/disp [::impl/set-height self el]))
-  (if-let [queries @(f/sub [::d/e->queries ref])]
-    [:div {:class "reflet-query-lens"}
-     (doall
-      (map-indexed
-       (fn [i traces]
-         ^{:key i} [query-traces traces])
-       queries))]
-    [:div {:class "reflet-no-data"}
-     [:span "No Queries"]]))
+  (let [cb     #(f/disp [::impl/set-height self el])
+        traces @(f/sub [::d/e->queries ref])]
+    (if traces
+      [:div {:ref   #(when % (cb))
+             :class "reflet-query-lens"}
+       (doall
+        (map-indexed
+         (fn [i traces]
+           ^{:key i} [query-traces traces])
+         traces))]
+      [:div {:ref   #(when % (cb))
+             :class "reflet-no-data"}
+       [:span "No Queries"]])))
 
 (defn- fsm-transition
   [{:keys [clause prev-state]}]
@@ -246,31 +250,40 @@
    [:div "\u0394"]
    [data/value (:to clause)]])
 
-(defn- fsm-trace
-  [[[t event] transitions]]
-  [:div
-   [:div {:class "reflet-divider"}]
-   [:div t]
-   [data/value event]
-   (doall
-    (map-indexed
-     (fn [i t]
-       [:<> {:key i}
-        [g/fsm {:class "reflet-fsm-glyph"}]
-        [data/value (:fsm-v t)]
-        [fsm-transition t]])
-     transitions))])
+(defn- fsm-traces
+  [traces]
+  (f/with-ref* {:cmp/uuid [trace/self]}
+    (let [max-n            (dec (count traces))
+          next             #(f/disp [::impl/inc-trace-n self max-n])
+          prev             #(f/disp [::impl/dec-trace-n self])
+          n                (f/sub [::impl/trace-n self])
+          {t   :t
+           v   :fsm-v
+           e   :event
+           r   :result
+           :as transition} (nth traces @n)]
+      [:div
+       [:div {:class "reflet-divider"}]
+       [:div t]
+       [data/value v]
+       [:div {:class "reflet-query-control"}
+        [g/back {:class    "reflet-control"
+                 :on-click next}]
+        [g/back {:class    "reflet-control"
+                 :on-click prev}]]
+       [data/value e]
+       [fsm-transition transition]])))
 
 (defmethod ref-lens :debug.lens/fsm
   [{:debug/keys [self ref el]}]
   (f/once (f/disp [::impl/set-height self el]))
-  (if-let [transitions @(f/sub [::d/fsm->transitions ref])]
-    [:div {:class "reflet-fsm-lens"}
+  (if-let [traces @(f/sub [::d/fsm->transitions ref])]
+    [:div {:class "reflet-query-lens"}
      (doall
       (map-indexed
-       (fn [i t]
-         ^{:key i} [fsm-trace t])
-       transitions))]
+       (fn [i traces]
+         ^{:key i} [fsm-traces traces])
+       traces))]
     [:div {:class "reflet-no-data"}
      [:span "No Transitions"]]))
 
@@ -414,7 +427,7 @@
 
 (defn load-debugger!
   []
-  (set! d/tap-fn tap)
+  (set! db/tap-fn tap)
   (upsert-css!)
   (->> (upsert-overlay-el!)
        (dom/render [overlay])))

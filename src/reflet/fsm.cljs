@@ -468,33 +468,49 @@
   (doseq [event dispatch-later]
     (fx/dispatch-later event)))
 
-(defn- trace
-  [db fsm event clause prev-state]
-  (if (d/trace? event)
-    (->> {:t          (get-in db [::d/trace ::d/t])
-          :fsm-v      (get fsm :fsm-v)
-          :event      event
-          :clause     clause
-          :prev-state prev-state}
-         (update-in db
-                    [::d/trace ::d/fsm->transition (get fsm :ref)]
-                    util/qonj
-                    d/queue-size))
-    db))
-
 (defn- advance-rf
   [event]
   (fn [db {{:keys [ref attr]
             :as   fsm}    :fsm
            {:keys [to]
             :as   clause} :clause
-           timeout        :timeout
-           prev-state     :prev-state}]
+           timeout        :timeout}]
     (fsm-dispatch! clause)
     (cleanup! fsm timeout to)
+    (db/assoc-inn db [ref attr] to)))
+
+(defn- after-fx
+  [event advance-fx db]
+  (reduce (advance-rf event) db advance-fx))
+
+(defn- trace-rf
+  [t event]
+  (fn [db {{ref   :ref
+            fsm-v :fsm-v} :fsm
+           :keys          [clause timeout prev-state]}]
+    (->> {:t          t
+          :fsm-v      fsm-v
+          :event      event
+          :clause     clause
+          :prev-state prev-state}
+         (update-in db
+                    [::db/trace ::db/fsm->transition ref fsm-v]
+                    util/qonj
+                    db/queue-size))))
+
+(defn- after-trace
+  "Each FSM advance fx will incrememt the ::db/tick. But for debugging
+  purposes, what we really want is the resultant ::db/tick after all
+  the FSMs have been advanced. This unfortunately requires us to
+  iterate twice through the fx set, though this is still fairly
+  fast. When not debugging, this extra trace loop is bypassed."
+  [event advance-fx db]
+  (if (db/trace? event)
     (-> db
-        (db/assoc-inn [ref attr] to)
-        (trace fsm event clause prev-state))))
+        (get-in [::db/index ::db/tick])
+        (trace-rf event)
+        (reduce db advance-fx))
+    db))
 
 (defn- advance-after
   "Performs FSM advance."
@@ -505,10 +521,10 @@
     :as              context}]
   (fsm-safe-usage context)
   (if (not-empty advance-fx)
-    (let [db (or db-fx db-cofx)]
-      (->> advance-fx
-           (reduce (advance-rf event) db)
-           (assoc-in context [:effects :db])))
+    (->> (or db-fx db-cofx)
+         (after-fx event advance-fx)
+         (after-trace event advance-fx)
+         (assoc-in context [:effects :db]))
     context))
 
 (def advance
@@ -518,7 +534,7 @@
 
 (def fsm-interceptors
   [db/inject-query-index
-   d/debug-trace
+   db/trace-event
    advance
    i/add-global-interceptors])
 

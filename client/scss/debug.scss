@@ -331,7 +331,7 @@ $coll-brace-width:              10px;
     }
 }
 
-.reflet-fsm-lens {
+.reflet-query-lens {
     display: grid;
     grid-template-columns: min-content auto;
     column-gap: 0.5rem;
@@ -354,10 +354,19 @@ $coll-brace-width:              10px;
             overflow: hidden;
         }
 
-        .reflet-fsm-glyph {
+        .reflet-query-control {
+            display: flex;
+            align-items: flex-start;
             grid-column: 1;
-            grid-row-end: span 2;
-            width: 1rem;
+            padding-top: 0.25rem;
+
+            .reflet-glyph:not(:last-child) {
+                margin-right: 0.25rem;
+            }
+
+            > :last-child {
+                transform: scaleX(-1);
+            }
         }
     }
 
@@ -405,60 +414,6 @@ $coll-brace-width:              10px;
         > * {
             color: $syntax-fsm-state;
         }
-    }
-}
-
-.reflet-query-lens {
-    display: grid;
-    grid-template-columns: min-content auto;
-    column-gap: 0.5rem;
-
-    > div:first-child > .reflet-divider {
-        display: none;
-    }
-
-    > div {
-        display: contents;
-
-        > .reflet-divider {
-            grid-column: 1 / span 2;
-            border-top: 1px dotted $debug-border-color;
-            margin: 0.5rem -0.75rem;
-        }
-
-        > :nth-child(n + 3) {
-            grid-column: 2;
-            overflow: hidden;
-        }
-
-        .reflet-query-control {
-            display: flex;
-            align-items: flex-start;
-            grid-column: 1;
-            padding-top: 0.25rem;
-
-            > :last-child {
-                transform: scaleX(-1);
-            }
-        }
-    }
-
-    .reflet-map-data {
-        flex: unset;
-    }
-
-    .reflet-coll-data {
-        display: flex;
-        flex-direction: row;
-
-        > *:not(:first-child) {
-            margin-left: 0.5rem;
-            flex-shrink: 0.35;
-        }
-    }
-
-    svg text {
-        font-size: 8px;
     }
 }
 

@@ -67,5 +67,5 @@
 (defn back
   [& [props]]
   [:div (glyph-props props)
-   [:svg {:view-box "0 0 10 10"}
-    [:path (stroke {:d "M 9,1 L 1,5 L 9,9"})]]])
+   [:svg {:view-box "0 0 8 10"}
+    [:path (stroke {:d "M 5,1 L 1,5 L 5,9"})]]])

@@ -306,19 +306,19 @@
   (fn [self]
     [:debug/lens self]))
 
-(f/reg-pull ::query-n
+(f/reg-pull ::trace-n
   (fn [self]
-    [:debug/query-n self])
+    [:debug/trace-n self])
   (fn [n]
     (or n 0)))
 
-(f/reg-event-db ::inc-query-n
+(f/reg-event-db ::inc-trace-n
   (fn [db [_ self max-n]]
-    (db/update-inn db [self :debug/query-n] #(min (inc %) max-n))))
+    (db/update-inn db [self :debug/trace-n] #(min (inc %) max-n))))
 
-(f/reg-event-db ::dec-query-n
+(f/reg-event-db ::dec-trace-n
   (fn [db [_ self]]
-    (db/update-inn db [self :debug/query-n] #(max (dec %) 0))))
+    (db/update-inn db [self :debug/trace-n] #(max (dec %) 0))))
 
 (f/reg-no-op ::open ::close ::ready-to-size)
 

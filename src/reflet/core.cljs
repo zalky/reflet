@@ -8,7 +8,6 @@
             [reagent.core :as r]
             [reagent.impl.component :as util]
             [reflet.db :as db]
-            [reflet.debug :as d]
             [reflet.fsm :as fsm]
             [reflet.interceptors :as itor]
             [reflet.interop :as i]
@@ -22,7 +21,7 @@
 
 (def reflet-interceptors
   [db/inject-query-index
-   d/debug-trace
+   db/trace-event
    fsm/advance
    itor/add-global-interceptors])
 

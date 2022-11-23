@@ -131,20 +131,18 @@
 
   Finally, this algorithm is implemented entirely via existing reagent
   and re-frame machinery."
-  (:require [clojure.set :as set]
+  (:require [cinch.core :as util]
+            [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.walk :as walk]
             [re-frame.core :as f]
             [re-frame.db :as db]
-            [re-frame.interop :as interop]
-            [re-frame.trace :as trace]
             [reagent.core :as r*]
             [reagent.ratom :as r]
             [reflet.db.normalize :as norm]
-            [cinch.core :as util]
-            [reflet.db.tx :as tx]
             [reflet.util.transients :as t]
             [taoensso.timbre :as log])
-    (:require-macros [reflet.db :refer [traced-reaction]]))
+  (:require-macros [reflet.db :refer [traced-reaction]]))
 
 (defmulti random-ref*
   "Extend this to produce different kinds of random entity references
@@ -277,6 +275,96 @@
 (defn- q->tick
   [index q-ref & [or]]
   (get-in index [::q->tick q-ref] or))
+
+;;;; Trace
+
+(defonce tap-fn
+  nil)
+
+(defonce trace-index
+  (r/atom {}))
+
+(def queue-size
+  "Number of events to tap per query. This should eventually be
+  dynamic."
+  50)
+
+(defn- trace-v?
+  [v]
+  (let [id (first v)]
+    (or (= id ::trace-cleanup)
+        (let [ns (namespace id)]
+          (not (str/starts-with? ns "reflet.debug"))))))
+
+(defn trace?
+  [v]
+  (and tap-fn (trace-v? v)))
+
+(defn- trace-event-before
+  [{{event :event} :coeffects
+    :as            context}]
+  (if (trace? event)
+    (->> (update @trace-index ::t inc)
+         (assoc-in context [:coeffects :db ::trace]))
+    context))
+
+(defn- commit-trace!
+  [{t ::tick :as index} event trace]
+  (letfn [(f [m refs]
+            (reduce rf m refs))
+
+          (rf [m q]
+            (->> {:t     t
+                  :event event}
+                 (update m q util/qonj queue-size)))]
+    (when trace
+      (->> index
+           (::touched-entities)
+           (update trace ::e->event f)
+           (reset! trace-index)))))
+
+(defn- trace-event-after
+  [{{event :event}   :coeffects
+    {{index ::index
+      trace ::trace
+      :as   db} :db} :effects
+    :as              context}]
+  (if (and db (trace? event))
+    (do (commit-trace! index event trace)
+        (update-in context [:effects :db] dissoc ::trace))
+    context))
+
+(def trace-event
+  (f/->interceptor
+   :id ::trace-event
+   :before trace-event-before
+   :after trace-event-after))
+
+(f/reg-event-db ::trace-cleanup
+  ;; Only debug event specifically enabled in `trace-v?`
+  [trace-event]
+  (fn [db [_ ref]]
+    (-> db
+        (update-in [::trace ::e->event] dissoc ref)
+        (update-in [::trace ::fsm->transition] dissoc ref))))
+
+(defn- trace-query
+  [q-ref query-v q-tick result]
+  (when (trace? query-v)
+    (->> {:result  result
+          :query-v query-v
+          :t       q-tick}
+         (swap! query-index
+                update-in
+                [::q->trace q-ref query-v]
+                util/qonj
+                queue-size)))
+  result)
+
+(defn- untrace-query
+  [q-ref query-v result]
+  (when (trace? query-v)
+    (swap! query-index update ::q->trace dissoc q-ref)))
 
 ;;;; Write API
 
@@ -797,27 +885,6 @@
         (cons args)
         (vec))))
 
-(def queue-size
-  "Number of query-results to trace per query. This should eventually be
-  dynamic."
-  50)
-
-(defn- trace
-  [q-ref query-v q-tick result]
-  (swap! query-index
-         update-in
-         [::q->trace q-ref query-v]
-         util/qonj
-         queue-size
-         {:result  result
-          :query-v query-v
-          :t       q-tick})
-  result)
-
-(defn- untrace
-  [q-ref query-v result]
-  (swap! query-index update ::q->trace dissoc q-ref))
-
 (defn result-reaction
   [input-r result-fn query-v q-ref]
   (let [result-v (get-result-v query-v)
@@ -827,9 +894,9 @@
         (->> (rest result-v)
              (map maybe-deref)
              (apply result-fn @input-r)
-             (trace q-ref result-v (.-state q-tick))))
+             (trace-query q-ref result-v (.-state q-tick))))
       (fn []
-        (untrace q-ref result-v q-ref)))))
+        (untrace-query q-ref result-v q-ref)))))
 
 (defn query-ref
   []
@@ -862,10 +929,10 @@
               {i :index
                r :result} (pull-reactive (merge config in))]
           (reset! query-index i)
-          (trace q-ref query-v (.-state q-tick) r)))
+          (trace-query q-ref query-v (.-state q-tick) r)))
       (fn []
         (swap! query-index dispose-query q-ref)
-        (untrace q-ref query-v q-ref)
+        (untrace-query q-ref query-v q-ref)
         (when-let [f (:on-dispose config)]
           (f))))))
 

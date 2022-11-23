@@ -101,7 +101,7 @@
         (db/unmount-ref! ref#)
         (disp [::ref-cleanup ref#]))
       (when (:debug-id ~context)
-        (disp [::d/trace-cleanup ref#])))))
+        (disp [::db/trace-cleanup ref#])))))
 
 (defn- env-namespace
   [env]
@@ -114,7 +114,7 @@
 (defn- debug?
   [{:keys [debug]
     :or   {debug true}}]
-  `(and (r*/reactive?) ~debug d/tap-fn))
+  `(and (r*/reactive?) ~debug db/tap-fn))
 
 (defn- wrap-debug
   [props-sym context env body opts]
@@ -125,7 +125,7 @@
                :debug/line  ~(env-line env)
                :debug/props ~props-sym}]
        [:<>
-        (d/tap-fn p# (:target ~context))
+        (db/tap-fn p# (:target ~context))
         (do ~@body)])
      (do ~@body)))
 
