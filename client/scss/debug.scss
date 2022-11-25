@@ -364,8 +364,12 @@ $coll-brace-width:              10px;
                 margin-right: 0.25rem;
             }
 
-            > :last-child {
+            > :nth-child(2) {
                 transform: scaleX(-1);
+            }
+
+            .reflet-control-disabled {
+                color: $font-color-disabled;
             }
         }
     }

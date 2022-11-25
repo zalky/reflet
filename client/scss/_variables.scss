@@ -16,6 +16,7 @@ $font-family-sans-serif:      "Source Sans Pro", -apple-system, BlinkMacSystemFo
 // $font-family-monospace:       "Fira Mono";
 $font-family-monospace:       "IBM Plex Mono", "Fira Mono";
 $font-color:                  $black;
+$font-color-disabled:         color.adjust($font-color, $lightness: 40);
 $font-weight-light:           200;
 $font-weight-normal:          400;
 $font-weight-bold:            600;

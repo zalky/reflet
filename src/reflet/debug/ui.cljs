@@ -206,13 +206,27 @@
     [:div {:class "reflet-no-data"}
      [:span "No Events"]]))
 
+(defn- trace-controls
+  [{:keys [trace/self]} traces]
+  (let [max-n (dec (count traces))
+        prev  #(f/disp [::impl/inc-trace-n self max-n])
+        next  #(f/disp [::impl/dec-trace-n self])
+        n     (f/sub [::impl/trace-n self])]
+    [:div {:class "reflet-query-control"}
+     [g/back {:on-click prev
+              :class    ["reflet-control"
+                         (when (= @n max-n)
+                           "reflet-control-disabled")]}]
+     [g/back {:on-click next
+              :class    ["reflet-control"
+                         (when (= @n 0)
+                           "reflet-control-disabled")]}]]))
+
 (defn- query-traces
   [traces]
-  (f/with-ref* {:cmp/uuid [trace/self]}
-    (let [max-n       (dec (count traces))
-          next        #(f/disp [::impl/inc-trace-n self max-n])
-          prev        #(f/disp [::impl/dec-trace-n self])
-          n           (f/sub [::impl/trace-n self])
+  (f/with-ref* {:cmp/uuid [trace/self]
+                :in       props}
+    (let [n           (f/sub [::impl/trace-n self])
           {t :t
            q :query-v
            r :result} (nth traces @n)]
@@ -220,11 +234,7 @@
        [:div {:class "reflet-divider"}]
        [:div t]
        [data/value q]
-       [:div {:class "reflet-query-control"}
-        [g/back {:class    "reflet-control"
-                 :on-click next}]
-        [g/back {:class    "reflet-control"
-                 :on-click prev}]]
+       [trace-controls props traces]
        [data/value r]])))
 
 (defmethod ref-lens :debug.lens/query
@@ -252,11 +262,9 @@
 
 (defn- fsm-traces
   [traces]
-  (f/with-ref* {:cmp/uuid [trace/self]}
-    (let [max-n            (dec (count traces))
-          next             #(f/disp [::impl/inc-trace-n self max-n])
-          prev             #(f/disp [::impl/dec-trace-n self])
-          n                (f/sub [::impl/trace-n self])
+  (f/with-ref* {:cmp/uuid [trace/self]
+                :in       props}
+    (let [n                (f/sub [::impl/trace-n self])
           {t   :t
            v   :fsm-v
            e   :event
@@ -266,11 +274,7 @@
        [:div {:class "reflet-divider"}]
        [:div t]
        [data/value v]
-       [:div {:class "reflet-query-control"}
-        [g/back {:class    "reflet-control"
-                 :on-click next}]
-        [g/back {:class    "reflet-control"
-                 :on-click prev}]]
+       [trace-controls props traces]
        [data/value e]
        [fsm-transition transition]])))
 
