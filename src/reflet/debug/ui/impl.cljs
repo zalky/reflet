@@ -221,9 +221,7 @@
                    (panel-content-height)
                    (min max-init-panel-height)
                    (assoc r :height)))]
-      (-> db
-          (db/update-inn [self :debug/rect] f)
-          (update-z-index self)))))
+      (db/update-inn db [self :debug/rect] f))))
 
 (f/reg-pull ::rect
   (fn [self]
