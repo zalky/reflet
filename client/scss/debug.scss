@@ -1,5 +1,6 @@
 
 @use "sass:color";
+@use "sass:math";
 
 @import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:ital,wght@0,200;0,400;0,600;1,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&display=swap');
@@ -214,6 +215,15 @@ $coll-brace-width:              10px;
     }
 }
 
+@function bordered-radius($radius) {
+    $r: ($radius - $debug-border-thickness);
+    @if $r >= 0 {
+        @return $r;
+    } @else {
+        @return 0;
+    }
+}
+
 .reflet-header {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -221,8 +231,8 @@ $coll-brace-width:              10px;
     top: 0;
     left: 0;
     padding: 0.25rem 0.75rem;
-    border-top-left-radius: $debug-panel-radius - $debug-border-thickness;
-    border-top-right-radius: $debug-panel-radius - $debug-border-thickness;
+    border-top-left-radius: bordered-radius($debug-panel-radius);
+    border-top-right-radius: bordered-radius($debug-panel-radius);
     border-bottom: $debug-panel-inner-border;
     background: $body-color;
     z-index: 1;
