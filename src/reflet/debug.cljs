@@ -4,18 +4,18 @@
             [reflet.db :as db]))
 
 (f/reg-event-db ::tap
-  ;; ::d/tap must happen after the ::d/tap-cleanup of the previous
-  ;; react lifecycle. To guarantee this, ::d/tap must be invoked in
-  ;; either the `:ref` callback, or the `:component-did-mount` phase
-  ;; of the component lifecycle. Must not dispatch in a `with-let`,
-  ;; where it will happen during the first render.
+  ;; ::d/tap must happen after the ::d/untap of the previous react
+  ;; lifecycle. To guarantee this, ::d/tap must be invoked in either
+  ;; the `:ref` callback, or the `:component-did-mount` phase of the
+  ;; component lifecycle. Must not dispatch in a `with-let`, where it
+  ;; will happen during the first render.
   [db/inject-query-index]
   (fn [db [_ ref tap]]
     (-> db
         (update-in [::taps ref] merge tap)
         (db/mergen tap))))
 
-(f/reg-event-db ::tap-cleanup
+(f/reg-event-db ::untap
   [db/inject-query-index]
   (fn [db [_ ref]]
     (-> db

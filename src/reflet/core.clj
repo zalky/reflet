@@ -94,14 +94,14 @@
    `(when-let [ref# (:debug-id ~context)]
       (db/unmount-ref! ref#)
       (disp [::ref-cleanup ref#])
-      (disp [::d/tap-cleanup ref#]))
+      (disp [::d/untap ref#]))
 
    `(doseq [[_# ref#] (deref ~refs)]
       (when (and ref# (db/transient? ref#))
         (db/unmount-ref! ref#)
         (disp [::ref-cleanup ref#]))
       (when (:debug-id ~context)
-        (disp [::db/trace-cleanup ref#])))))
+        (disp [::db/untrace-event ref#])))))
 
 (defn- env-namespace
   [env]

@@ -408,7 +408,7 @@
   initial tap, the tap element becomes transparent as far as the dom
   structure is concerned, situated elsewhere using a portal. The
   reactive tap then updates the debugger with changes in with-ref
-  props. ::d/tap must happen after the ::d/tap-cleanup of the previous
+  props. ::d/tap must happen after the ::d/untap of the previous
   react lifecycle. To guarantee this, ::d/tap must not be dispatched
   in the render phase, for example in the bindings of a `with-let`,
   where the ::d/tap handler will run immediately after the first

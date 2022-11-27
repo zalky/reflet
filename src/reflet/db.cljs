@@ -292,7 +292,7 @@
 (defn- trace-v?
   [v]
   (let [id (first v)]
-    (or (= id ::trace-cleanup)
+    (or (= id ::untrace-event)
         (let [ns (namespace id)]
           (not (str/starts-with? ns "reflet.debug"))))))
 
@@ -304,12 +304,29 @@
   [{{event :event} :coeffects
     :as            context}]
   (if (trace? event)
-    (->> (update @trace-index ::t inc)
-         (assoc-in context [:coeffects :db ::trace]))
+    (assoc-in context
+              [:coeffects :db ::trace]
+              @trace-index)
     context))
 
+(defn- event-refs
+  "Includes both refs touched by event db mutations, as well as
+  positional parameters in the event vector."
+  [index [id :as event] id-attrs]
+  (when-not (= id ::untrace-event)
+    (set/union
+     (some->> (rest event)
+              (filter #(norm/ref? % id-attrs))
+              (not-empty)
+              (set))
+     (::touched-entities index))))
+
 (defn- commit-trace!
-  [{t ::tick :as index} event trace]
+  [{{t   ::tick
+     :as index} ::index
+    trace       ::trace
+    id-attrs    ::id-attrs
+    :as         db} event]
   (letfn [(f [m refs]
             (reduce rf m refs))
 
@@ -317,19 +334,16 @@
             (->> {:t t :event event}
                  (update m q util/qonj queue-size)))]
     (when trace
-      (->> index
-           (::touched-entities)
+      (->> (event-refs index event id-attrs)
            (update trace ::e->event f)
            (reset! trace-index)))))
 
 (defn- trace-event-after
-  [{{event :event}   :coeffects
-    {{index ::index
-      trace ::trace
-      :as   db} :db} :effects
-    :as              context}]
+  [{{event :event} :coeffects
+    {db :db}       :effects
+    :as            context}]
   (if (and db (trace? event))
-    (do (commit-trace! index event trace)
+    (do (commit-trace! db event)
         (update-in context [:effects :db] dissoc ::trace))
     context))
 
@@ -339,7 +353,7 @@
    :before trace-event-before
    :after trace-event-after))
 
-(f/reg-event-db ::trace-cleanup
+(f/reg-event-db ::untrace-event
   ;; Only debug event specifically enabled in `trace-v?`
   [trace-event]
   (fn [db [_ ref]]
