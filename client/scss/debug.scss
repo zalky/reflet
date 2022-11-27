@@ -9,7 +9,7 @@
 
 $debug-color:                   #454545;
 
-$debug-mark-color:              #325bff; // #3733ff; // #8967f4; // #a267f4;
+$debug-mark-color:              #7732ff; // #d632ff; // #325bff; // #3733ff; // #8967f4; // #a267f4;
 $debug-marks-bg:                rgba(245, 247, 255, 94%); // rgba(245, 245, 246, 96%);
 $debug-radius:                  8px;
 $debug-panel-radius:            0;
@@ -74,11 +74,11 @@ $coll-brace-width:              10px;
     height: fit-content;
 
     padding: 0.75rem;
-    border-radius: 2 * $debug-radius;
+    border-radius: 0; // 2 * $debug-radius;
 
-    $shadow: color.adjust($body-color, $alpha: -0.2);
     background: $debug-marks-bg;
     font-size: $font-size-xs;
+    box-shadow: 4px 4px $debug-panel-drop-shadow;
 
     > div {
         display: contents;
@@ -341,7 +341,7 @@ $coll-brace-width:              10px;
     }
 }
 
-.reflet-query-lens {
+.reflet-query-lens, .reflet-fsm-lens {
     display: grid;
     grid-template-columns: min-content auto;
     column-gap: 0.5rem;

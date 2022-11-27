@@ -292,7 +292,7 @@
   (f/with-ref* {:el/uuid [el]}
     (if-let [traces @(f/sub [::d/fsm->transitions ref])]
       [:div {:ref   (i/el! el :cb (set-height props))
-             :class "reflet-query-lens"}
+             :class "reflet-fsm-lens"}
        (doall
         (map-indexed
          (fn [i traces]
