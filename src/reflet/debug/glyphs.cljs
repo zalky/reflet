@@ -69,3 +69,9 @@
   [:div (glyph-props props)
    [:svg {:view-box "0 0 8 10"}
     [:path (stroke {:d "M 5,1 L 1,5 L 5,9 Z"})]]])
+
+(defn close-all
+  [& [props]]
+  [:div (glyph-props props)
+   [:svg {:view-box "0 0 20 15"}
+    [:path (stroke {:d "M 1,1 L 16,1 16,11 1,11 Z M 19,3 L 19,14 3,14 M 9,4 L 13,8 M 9,8 L 13,4"})]]])

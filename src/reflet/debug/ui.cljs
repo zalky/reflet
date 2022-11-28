@@ -42,7 +42,7 @@
 (defn- mark-expanded
   [{:debug/keys [tap]}]
   (let [t (f/sub [::impl/tap tap])]
-    [:div {:on-click #(f/disp [::impl/open-prop tap])}
+    [:div {:on-click #(f/disp [::impl/open-prop-panel tap])}
      [g/mark-icon]
      [:div (some-> @t props-name)]]))
 
@@ -62,9 +62,7 @@
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
                 :on-mouse-leave #(f/disp [::impl/close self])
                 :on-click       #(f/disp [::impl/select el])
-                :class          ["reflet-mark"
-                                 (when (= @state ::impl/open)
-                                   "reflet-open")]}
+                :class          "reflet-mark"}
           [:div {:class "reflet-context"}
            [mark-expanded props]]
           [g/mark-icon]]]))))
@@ -93,9 +91,7 @@
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
                 :on-mouse-leave #(f/disp [::impl/close self])
                 :on-click       #(f/disp [::impl/select el])
-                :class          ["reflet-mark-group"
-                                 (when (= @state ::impl/open)
-                                   "reflet-open")]}
+                :class          "reflet-mark-group"}
           [marks-expanded props]
           [g/mark-icon {:group true}]]]))))
 
@@ -348,6 +344,17 @@
           [ref-content props]]
          [handle props]
          (drop-shadow)]))))
+
+(defmethod render :debug.type/global-controls
+  [props]
+  (f/with-ref* {:debug/id [debug/self]
+                :in       props}
+    (let [cb #(f/disp [::impl/close-all-panels])]
+      (f/once (f/disp [::impl/set-props self props]))
+      [:div {:class    "reflet-global-control"
+             :on-click cb}
+       [g/close-all {:class "reflet-control"}]
+       [:span "Close All"]])))
 
 (defn- overlay
   []

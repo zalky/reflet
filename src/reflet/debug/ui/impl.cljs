@@ -292,14 +292,6 @@
      :fsm {nil    {[::set-props self] ::open}
            ::open {[::close-panel tap] nil}}}))
 
-(f/reg-event-db ::set-lens
-  (fn [db [_ self lens]]
-    (db/assoc-inn db [self :debug/lens] lens)))
-
-(f/reg-event-db ::clear-lens
-  (fn [db [_ self]]
-    (db/updaten db self dissoc :debug/lens)))
-
 (f/reg-pull ::lens
   (fn [self]
     [:debug/lens self]))
@@ -309,6 +301,14 @@
     [:debug/trace-n self])
   (fn [n]
     (or n 0)))
+
+(f/reg-event-db ::set-lens
+  (fn [db [_ self lens]]
+    (db/assoc-inn db [self :debug/lens] lens)))
+
+(f/reg-event-db ::clear-lens
+  (fn [db [_ self]]
+    (db/updaten db self dissoc :debug/lens)))
 
 (f/reg-event-db ::inc-trace-n
   (fn [db [_ self max-n]]
@@ -327,18 +327,6 @@
    :min-points 2
    :epsilon    50})
 
-(defn create-ref-panel
-  [[a v :as ref]]
-  {:debug/type :debug.type/ref-panel
-   :debug/self (db/random-ref :debug/id)
-   :debug/ref  ref})
-
-(defn create-props-panel
-  [[a v :as ref]]
-  {:debug/type :debug.type/props-panel
-   :debug/self [:debug/id (str "props-panel" v)]
-   :debug/tap  ref})
-
 (defn create-mark
   [m]
   (let [[a v :as ref] (find m :debug/id)]
@@ -354,34 +342,37 @@
      :debug/group    (map create-mark xs)
      :debug/centroid c}))
 
-(f/reg-pull ::props-panel
-  (fn [self]
-    [{:debug/tap
-      [:debug/id
-       :debug/ns
-       :debug/line
-       :debug/props]}
-     self]))
+(defn create-ref-panel
+  [[a v :as ref]]
+  {:debug/type :debug.type/ref-panel
+   :debug/self (db/random-ref :debug/id)
+   :debug/ref  ref})
 
-(f/reg-pull ::tap
-  (fn [tap]
-    [[:debug/id
-      :debug/ns
-      :debug/line]
-     tap]))
+(defn create-props-panel
+  [[a v :as ref]]
+  {:debug/type :debug.type/props-panel
+   :debug/self [:debug/id (str "props-panel" v)]
+   :debug/tap  ref})
 
-(f/reg-event-db ::open-prop
+(defn create-global-controls
+  []
+  {:debug/type :debug.type/global-controls
+   :debug/self [:debug/id "global-controls"]})
+
+(f/reg-event-db ::open-prop-panel
   (fn [db [_ ref]]
     (->> ref
          (create-props-panel)
          (assoc-in db [::panels ref]))))
 
-(f/reg-event-db ::open-ref
+(f/reg-event-db ::open-ref-panel
   (fn [db [_ ref]]
     (let [p (create-ref-panel ref)]
       (assoc-in db [::panels (:debug/self p)] p))))
 
 (f/reg-event-db ::close-props-panel
+  ;; Do not clean up after props panel. Props panels retain state,
+  ;; such as position.
   (fn [db [_ tap]]
     (-> db
         (update ::panels dissoc tap)
@@ -394,6 +385,34 @@
                    (dissoc ::selected))
      :dispatch [::f/ref-cleanup self]}))
 
+(defn- get-ref-panels
+  [db]
+  (->> (::panels db)
+       (keys)
+       (filter (comp uuid? second))))
+
+(f/reg-event-fx ::close-all-panels
+  (fn [{db :db} _]
+    (let [refs (get-ref-panels db)]
+      {:db         (dissoc db ::panels ::selected)
+       :dispatch-n (for [r refs] [::f/ref-cleanup r])})))
+
+(f/reg-pull ::tap
+  (fn [tap]
+    [[:debug/id
+      :debug/ns
+      :debug/line]
+     tap]))
+
+(f/reg-pull ::props-panel
+  (fn [self]
+    [{:debug/tap
+      [:debug/id
+       :debug/ns
+       :debug/line
+       :debug/props]}
+     self]))
+
 (f/reg-sub ::overlay-panels
   (fn [db _]
     (vals (get db ::panels))))
@@ -405,8 +424,9 @@
     (let [t      (vals taps)
           g      (c/cluster t cluster-opts)
           marks  (map create-mark (:noise g))
-          groups (map create-mark-group (vals (dissoc g :noise)))]
-      (concat marks groups))))
+          groups (map create-mark-group (vals (dissoc g :noise)))
+          ctrls  (create-global-controls)]
+      (concat marks groups [ctrls]))))
 
 (f/reg-sub ::overlay
   (fn [_]

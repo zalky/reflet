@@ -65,7 +65,7 @@
 
 (defmethod value ::ref
   [ref]
-  (value-ref ref #(f/disp [::ui/open-ref ref])))
+  (value-ref ref #(f/disp [::ui/open-ref-panel ref])))
 
 (defmethod value Keyword
   [k]
