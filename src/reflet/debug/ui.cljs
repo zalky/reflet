@@ -327,6 +327,16 @@
     [:div {:class "reflet-no-data"}
      [:span "No Element"]]))
 
+(defmethod ref-content :js/uuid
+  [{:debug/keys [self el ref]}]
+  (f/once [(f/disp [::impl/set-rect self el])
+           (f/disp [::impl/set-height self el])])
+  (if-let [obj @(f/sub [::i/grab ref])]
+    [:div {:class "reflet-no-data"}
+     [:span "JS Object Exists"]]
+    [:div {:class "reflet-no-data"}
+     [:span "No JS Object"]]))
+
 (defmethod render :debug.type/ref-panel
   [{:debug/keys [ref] :as props}]
   (f/with-ref* {:debug/id [debug/self]
