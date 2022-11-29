@@ -928,16 +928,16 @@
   query tick, which tracks the db-tick and synced."
   [config expr-fn query-v q-ref]
   (let [rx-id  (atom nil)
-        q-tick (query-tick q-ref)]
+        q-tick (query-tick q-ref)
+        expr-r (apply expr-fn (rest query-v))]
     (traced-reaction rx-id query-v
       (fn []
-        (let [expr-r (apply expr-fn (rest query-v))
-              in     {:db         (.-state db/app-db)
-                      :index      (.-state query-index)
-                      :expr       (first expr-r)
-                      :e-ref      (second expr-r)
-                      :q-ref      q-ref
-                      :query-tick @q-tick}
+        (let [in {:db         (.-state db/app-db)
+                  :index      (.-state query-index)
+                  :expr       (first expr-r)
+                  :e-ref      (second expr-r)
+                  :q-ref      q-ref
+                  :query-tick @q-tick}
 
               {i :index
                r :result} (pull-reactive (merge config in))]

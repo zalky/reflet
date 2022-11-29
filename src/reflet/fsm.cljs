@@ -634,7 +634,7 @@
 
 (defn- fsm-reaction-handler
   [db fsm-v]
-  (let [{:keys [attr return]
+  (let [{:keys [ref attr return]
          :or   {return attr}
          :as   fsm} (fsm-spec fsm-v)]
     ;; Get the value of the db for a one time init, but should not be
@@ -642,7 +642,7 @@
     (let [fsm-v* (i/new-cycle-id fsm-v)]
       (start! (.-state db) fsm-v*)
       (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
-                        #(do [return %])
+                        #(vector return ref)
                         fsm-v
                         (db/query-ref)))))
 

@@ -58,6 +58,14 @@ $coll-brace-width:              10px;
 
 .reflet-node {
     position: fixed;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+
+    .reflet-marks-on & {
+        visibility: visible;
+        opacity: 1;
+    }
 }
 
 .reflet-glyph {
@@ -69,9 +77,8 @@ $coll-brace-width:              10px;
     position: absolute;
     display: grid;
     grid-template-columns: auto auto;
+    grid-template-rows: 4 * $debug-radius;
     align-items: start;
-    width: fit-content;
-    height: fit-content;
     border-radius: 0;
 
     background: $debug-control-bg;
@@ -84,7 +91,6 @@ $coll-brace-width:              10px;
 
         > * {
             padding: $debug-radius;
-            height: 100%;
         }
 
         &:hover > * {
@@ -99,7 +105,7 @@ $coll-brace-width:              10px;
         > :nth-child(2n) {
             cursor: pointer;
             color: $font-color;
-
+            height: 100%;
 
             > :last-child {
                 padding-right: 0.5rem;
@@ -127,6 +133,15 @@ $coll-brace-width:              10px;
     user-select: none;
     text-transform: uppercase;
     cursor: pointer;
+
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+
+    .reflet-marks-on & {
+        visibility: visible;
+        opacity: 1;
+    }
 
     .reflet-control, svg {
         width: 1rem;

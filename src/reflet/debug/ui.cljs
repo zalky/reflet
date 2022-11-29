@@ -359,11 +359,14 @@
 
 (defn- overlay
   []
-  [:<>
-   (doall
-    (for [{id  :debug/self
-           :as node} @(f/sub [::impl/overlay])]
-      ^{:key id} [render node]))])
+  (let [marks-on? (f/sub [::impl/toggle-marks-fsm])
+        xs        (f/sub [::impl/overlay])]
+    [:div {:class ["reflet-overlay"
+                   (when @marks-on? "reflet-marks-on")]}
+     (doall
+      (for [{id  :debug/self
+             :as node} @xs]
+        ^{:key id} [render node]))]))
 
 (defn- body-el
   []
@@ -444,7 +447,6 @@
   (or (overlay-el)
       (let [el (.createElement js/document "div")]
         (set! (.-id el) "reflet-overlay")
-        (.add (.-classList el) "reflet-overlay")
         (.appendChild (body-el) el)
         el)))
 
@@ -452,5 +454,6 @@
   []
   (set! db/tap-fn tap)
   (upsert-css!)
+  (f/disp [::impl/config])
   (->> (upsert-overlay-el!)
        (dom/render [overlay])))

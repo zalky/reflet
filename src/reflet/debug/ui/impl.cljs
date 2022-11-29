@@ -232,8 +232,8 @@
     (select-keys rect [:left :top :width :height :z-index])))
 
 (defn- get-content-el
-  "Returns either a list of children if they exist, or the parent
-  content element."
+  "Returns either the first child if it exists, or the parent content
+  element."
   [el]
   (or (aget (.. el -firstChild -children) 1)
       (.. el -firstChild)))
@@ -457,4 +457,29 @@
   (fn [[nodes panels] _]
     (concat nodes panels)))
 
-(f/reg-sub ::render)
+(fsm/reg-fsm ::toggle-marks-fsm
+  (fn []
+    {:ref  [:debug/id ::toggle]
+     :attr :overlay.toggle/marks
+     :fsm  {nil  {[::toggle-marks] ::on}
+            ::on {[::toggle-marks] nil}}}))
+
+(f/reg-no-op ::toggle-marks)
+
+(defn- hotkey?
+  [^js e c]
+  (and (= (.-key e) c)
+       (.-ctrlKey e)
+       (not (.-repeat e))))
+
+(defn- overlay-toggle
+  [^js e]
+  (when (hotkey? e \j)
+    (.preventDefault e)
+    (f/disp [::toggle-marks])))
+
+(f/reg-event-db ::config
+  (fn [db _]
+    (when-not (::configured db)
+      (.addEventListener js/window "keydown" overlay-toggle)
+      (assoc db ::configured true))))
