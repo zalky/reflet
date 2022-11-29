@@ -1,5 +1,6 @@
 (ns reflet.debug.ui.impl
   (:require [cinch.core :as util]
+            [reagent.ratom :as r]
             [reflet.core :as f]
             [reflet.db :as db]
             [reflet.debug :as d]
@@ -136,7 +137,7 @@
   (fn [db _]
     (dissoc db ::dragging)))
 
-;;;; Component queries and mutations
+;;;; Events and queries
 
 (defn rect
   "Keep in mind that .getBoundingClientRect will return zeros during
@@ -177,10 +178,11 @@
   (+ (or pos (/ (get (viewport-size) dim) 4)) 50))
 
 (defmethod get-rect ::panel
-  [db _ el]
-  (let [source-el (::selected db)
+  [db _ _]
+  (let [sel-ref   (::selected db)
+        sel-el    (db/get-inn db [sel-ref :debug/el])
         {t :top
-         l :left} (some-> source-el i/grab rect)]
+         l :left} (some-> sel-el i/grab rect)]
     {:left  (pos-or-default l :height)
      :top   (pos-or-default t :width)
      :width 300}))
@@ -229,6 +231,13 @@
   (fn [rect]
     (select-keys rect [:left :top :width :height :z-index])))
 
+(defn- get-content-el
+  "Returns either a list of children if they exist, or the parent
+  content element."
+  [el]
+  (or (aget (.. el -firstChild -children) 1)
+      (.. el -firstChild)))
+
 (defn- adjusted-quant-factor
   "This adjusts the vertical quantization factor so that the bottom of
   the panel aligns with the horizontal dividers in FSM, query and
@@ -236,12 +245,10 @@
   because they don't have dividers, it will not be perceptible, even
   when zoomed in."
   [el lh]
-  (-> el
-      (.. -firstChild -children)
-      (aget 1)
+  (-> (get-content-el el)
       (px :padding-top)
       (* 2)
-      (+ 1) ; for border width
+      (+ 1)                             ; for border width
       (+ lh)
       (/  2)))
 
@@ -272,7 +279,7 @@
 (f/reg-event-db ::set-props
   (fn [db [_ self props]]
     (as-> (apply assoc props self) %
-      (dissoc % :debug/el :debug/self)
+      (dissoc % :debug/self)
       (db/mergen db %))))
 
 (def state-hierarchy
@@ -291,6 +298,23 @@
     {:ref self
      :fsm {nil    {[::set-props self] ::open}
            ::open {[::close-panel tap] nil}}}))
+
+(f/reg-no-op ::open ::close ::ready-to-size)
+
+(def observer-config
+  #js {:attributes true
+       :childList  true
+       :subtree    true})
+
+(f/reg-sub-raw ::observe
+  (fn [_ [_ el]]
+    (let [tick     (r/atom 0)
+          observer (js/MutationObserver. #(swap! tick inc))]
+      (.observe observer el observer-config)
+      (r/make-reaction
+        (fn [] @tick)
+        :on-dispose
+        (fn [] (.disconnect observer))))))
 
 (f/reg-pull ::lens
   (fn [self]
@@ -317,8 +341,6 @@
 (f/reg-event-db ::dec-trace-n
   (fn [db [_ self]]
     (db/update-inn db [self :debug/trace-n] #(max (dec %) 0))))
-
-(f/reg-no-op ::open ::close ::ready-to-size)
 
 (def cluster-opts
   {:attrs      {:id #(find % :debug/id)

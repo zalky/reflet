@@ -61,7 +61,7 @@
                :style @rect}
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
                 :on-mouse-leave #(f/disp [::impl/close self])
-                :on-click       #(f/disp [::impl/select el])
+                :on-click       #(f/disp [::impl/select self])
                 :class          "reflet-mark"}
           [:div {:class "reflet-context"}
            [mark-expanded props]]
@@ -90,7 +90,7 @@
                :style @rect}
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
                 :on-mouse-leave #(f/disp [::impl/close self])
-                :on-click       #(f/disp [::impl/select el])
+                :on-click       #(f/disp [::impl/select self])
                 :class          "reflet-mark-group"}
           [marks-expanded props]
           [g/mark-icon {:group true}]]]))))
@@ -142,7 +142,7 @@
       (when (display? @state)
         [:div {:ref      (i/el! el)
                :style    @rect
-               :on-click #(f/disp [::impl/select el])
+               :on-click #(f/disp [::impl/select self])
                :class    ["reflet-panel" (dragging-class)]}
          [:div {:class "reflet-content"}
           [header props]
@@ -320,9 +320,10 @@
   [{:debug/keys [self el ref]}]
   (f/once [(f/disp [::impl/set-rect self el])
            (f/disp [::impl/set-height self el])])
-  (if-let [^js el @(f/sub [::i/grab ref])]
-    [:div {:class "reflet-html"}
-     (.-outerHTML el)]
+  (if-let [^js observing @(f/sub [::i/grab ref])]
+    (do @(f/sub [::impl/observe observing])
+        [:div {:class "reflet-html"}
+         (.-outerHTML observing)])
     [:div {:class "reflet-no-data"}
      [:span "No Element"]]))
 
@@ -337,7 +338,7 @@
       (when (display? @state)
         [:div {:ref      (i/el! el)
                :style    @rect
-               :on-click #(f/disp [::impl/select el])
+               :on-click #(f/disp [::impl/select self])
                :class    ["reflet-panel" (dragging-class)]}
          [:div {:class "reflet-content"}
           [header props]
