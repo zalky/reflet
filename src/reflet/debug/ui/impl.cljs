@@ -376,10 +376,35 @@
    :debug/self [:debug/id (str "props-panel" v)]
    :debug/tap  ref})
 
+(defn create-context
+  [value {:keys [x y]} z]
+  {:debug/type  :debug.type.context/ref
+   :debug/self  (db/random-ref :debug/id)
+   :debug/value value
+   :debug/pos   {:left    x
+                 :top     y
+                 :z-index z}})
+
 (defn create-global-controls
   []
   {:debug/type :debug.type/global-controls
    :debug/self [:debug/id "global-controls"]})
+
+(f/reg-event-fx ::open-context
+  (fn [{db :db} [_ value pos]]
+    (letfn [(f [e]
+              (.removeEventListener js/document "click" f)
+              (f/disp [::close-context]))]
+      (.addEventListener js/document "click" f)
+      (let [z (get-z-index db)]
+        {:db (-> (->> z
+                      (create-context value pos)
+                      (assoc db ::context))
+                 (assoc ::z-index (inc z)))}))))
+
+(f/reg-event-db ::close-context
+  (fn [db _]
+    (dissoc db ::context)))
 
 (f/reg-event-db ::open-prop-panel
   (fn [db [_ ref]]
@@ -450,12 +475,19 @@
           ctrls  (create-global-controls)]
       (concat marks groups [ctrls]))))
 
+(f/reg-sub ::overlay-context
+  (fn [db _]
+    (some-> db
+            (get ::context)
+            (vector))))
+
 (f/reg-sub ::overlay
   (fn [_]
     [(f/sub [::overlay-nodes])
-     (f/sub [::overlay-panels])])
-  (fn [[nodes panels] _]
-    (concat nodes panels)))
+     (f/sub [::overlay-panels])
+     (f/sub [::overlay-context])])
+  (fn [[nodes panels context] _]
+    (concat nodes panels context)))
 
 (fsm/reg-fsm ::toggle-marks-fsm
   (fn []

@@ -20,8 +20,8 @@
   ;; We need a separate starting state in addition to ::paused
   ;; and ::playing. This is true both because we do not want to start
   ;; playing if a track has not been selected, but also because the
-  ;; browser will complain if we try to mutate the AudioContext object
-  ;; before a user event has been triggered.
+  ;; browser will complain (by design) if we try to mutate the
+  ;; AudioContext object before a user event has been triggered.
   (fn [self]
     {:ref  self
      :attr :player/state

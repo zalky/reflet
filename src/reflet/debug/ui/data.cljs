@@ -26,6 +26,22 @@
       ::coll
       :default)))
 
+(defn- pos
+  [e]
+  {:x (.-clientX e)
+   :y (.-clientY e)})
+
+(defn on-click
+  [ref]
+  (fn [e]
+    (f/disp [::ui/open-ref-panel ref])))
+
+(defn on-context-click
+  [value]
+  (fn [e]
+    (.preventDefault e)
+    (f/disp [::ui/open-context value (pos e)])))
+
 (defmethod map-entry :default
   [i k v]
   [:div {:key i}
@@ -34,7 +50,8 @@
 
 (defmethod value :default
   [x]
-  [:div (str x)])
+  [:div {:on-context-menu (on-context-click x)}
+   (str x)])
 
 (defmethod value nil
   [_]
@@ -42,22 +59,21 @@
 
 (defmethod value js/Number
   [n]
-  [:div {:class "reflet-number"} n])
+  [:div {:class           "reflet-number"
+         :on-context-menu (on-context-click n)}
+   n])
 
 (defmethod value js/String
   [s]
-  [:div {:class "reflet-string"}
+  [:div {:class           "reflet-string"
+         :on-context-menu (on-context-click s)}
    [:span (str \" s \")]])
 
-(defn- pos
-  [e]
-  {:x (.-clientX e)
-   :y (.-clientY e)})
-
 (defn value-ref
-  [[attr value] & [on-click]]
-  [:div {:class "reflet-ref"
-         :on-click on-click}
+  [[attr value :as ref] & {:keys [on-click]}]
+  [:div {:class           "reflet-ref"
+         :on-click        on-click
+         :on-context-menu (on-context-click ref)}
    (namespace attr) "@"
    (if (uuid? value)
      (subs (str value) 0 8)
@@ -65,11 +81,12 @@
 
 (defmethod value ::ref
   [ref]
-  (value-ref ref #(f/disp [::ui/open-ref-panel ref])))
+  (value-ref ref :on-click (on-click ref) ))
 
 (defmethod value Keyword
   [k]
-  [:div {:class "reflet-keyword"}
+  [:div {:class           "reflet-keyword"
+         :on-context-menu (on-context-click k)}
    [:span ":"]
    [:span (apply str (rest (str k)))]])
 

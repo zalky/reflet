@@ -10,7 +10,7 @@
 $debug-color:                   #454545;
 
 $debug-mark-color:              #7732ff; // #d632ff; // #325bff; // #3733ff; // #8967f4; // #a267f4;
-$debug-control-bg:              rgba(248, 250, 255, 94%); // rgba(245, 245, 246, 96%);
+$debug-control-bg:              rgba(248, 250, 255, 96%); // rgba(245, 245, 246, 96%);
 $debug-control-bg-hover:        color.adjust($debug-control-bg, $lightness: -1);
 $debug-radius:                  8px;
 $debug-stack-height:            $debug-radius;
@@ -74,44 +74,15 @@ $coll-brace-width:              10px;
 }
 
 .reflet-context {
+    display: flex;
     position: absolute;
-    display: grid;
-    grid-template-columns: auto auto;
-    grid-template-rows: 4 * $debug-radius;
-    align-items: start;
+    padding: 0.5rem 1rem;
     border-radius: 0;
 
     background: $debug-control-bg;
-    font-size: $font-size-xs;
     box-shadow: 4px 4px $debug-panel-drop-shadow;
-
-    > div {
-        display: contents;
-        cursor: pointer;
-
-        > * {
-            padding: $debug-radius;
-        }
-
-        &:hover > * {
-            background: $debug-control-bg-hover;
-        }
-
-        > :nth-child(2n+1) {
-            color: $debug-mark-color;
-            font-weight: 600;
-        }
-
-        > :nth-child(2n) {
-            cursor: pointer;
-            color: $font-color;
-            height: 100%;
-
-            > :last-child {
-                padding-right: 0.5rem;
-            }
-        }
-    }
+    font-size: $font-size-xs;
+    font-family: $font-family-monospace;
 
     > * {
         white-space: nowrap;
@@ -152,16 +123,45 @@ $coll-brace-width:              10px;
     }
 }
 
-.reflet-set-lens {
-    display: flex;
-    justify-content: space-evenly;
-    user-select: none;
+.reflet-mark-list {
+    position: absolute;
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: 4 * $debug-radius;
+    align-items: start;
+    border-radius: 0;
+
+    background: $debug-control-bg;
+    font-size: $font-size-xs;
+    box-shadow: 4px 4px $debug-panel-drop-shadow;
+
+    > div {
+        display: contents;
+        cursor: pointer;
+
+        > * {
+            padding: $debug-radius;
+            height: 100%;
+        }
+
+        &:hover > * {
+            background: $debug-control-bg-hover;
+        }
+
+        > :nth-child(2n+1) {
+            color: $debug-mark-color;
+            font-weight: 600;
+        }
+
+        > :nth-child(2n) {
+            cursor: pointer;
+            color: $font-color;
+            padding-right: 1rem;
+        }
+    }
 
     > * {
-        cursor: pointer;
-        font-size: $font-size-xs;
-        font-family: $font-family-monospace;
-        text-transform: uppercase;
+        white-space: nowrap;
     }
 }
 
@@ -184,13 +184,18 @@ $coll-brace-width:              10px;
         }
     }
 
-    .reflet-context {
+    .reflet-mark-list {
         margin-left: -$debug-radius;
         margin-top: -$debug-radius;
         transition: all 0.3s linear;
         visibility: hidden;
         opacity: 0;
         @include disable-safari-transitions;
+
+        
+        > div > :nth-child(2n+1) {
+            padding-left: 0.5rem;
+        }
     }
 
     &:hover {
@@ -199,7 +204,7 @@ $coll-brace-width:              10px;
             visibility: hidden;
         }
 
-        .reflet-context {
+        .reflet-mark-list {
             visibility: visible;
             opacity: 1;
         }
@@ -350,6 +355,19 @@ $coll-brace-width:              10px;
 }
 
 // Ref lenses
+
+.reflet-set-lens {
+    display: flex;
+    justify-content: space-evenly;
+    user-select: none;
+
+    > * {
+        cursor: pointer;
+        font-size: $font-size-xs;
+        font-family: $font-family-monospace;
+        text-transform: uppercase;
+    }
+}
 
 .reflet-event-lens {
     display: grid;

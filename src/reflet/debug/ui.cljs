@@ -63,13 +63,13 @@
                 :on-mouse-leave #(f/disp [::impl/close self])
                 :on-click       #(f/disp [::impl/select self])
                 :class          "reflet-mark"}
-          [:div {:class "reflet-context"}
+          [:div {:class "reflet-mark-list"}
            [mark-expanded props]]
           [g/mark-icon]]]))))
 
 (defn- marks-expanded
   [{:debug/keys [group]}]
-  [:div {:class "reflet-context"}
+  [:div {:class "reflet-mark-list"}
    (doall
     (for [{id  :debug/self
            :as n} group]
@@ -366,6 +366,15 @@
              :on-click cb}
        [g/close-all {:class "reflet-control"}]
        [:span "Close All"]])))
+
+(defmethod render :debug.type.context/ref
+  [{:debug/keys [pos value] :as props}]
+  (f/with-ref* {:debug/id [debug/self]
+                :in       props}
+    [:div {:class    "reflet-context"
+           :style    pos
+           :on-click #(.stopPropagation %)}
+     (prn-str value)]))
 
 (defn- overlay
   []
