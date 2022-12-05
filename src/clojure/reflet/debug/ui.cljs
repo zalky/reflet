@@ -2,6 +2,7 @@
   (:require [react-dom :as react-dom]
             [reagent.core :as r]
             [reagent.dom :as dom]
+            [reflet.css.bundled :as bundled]
             [reflet.core :as f]
             [reflet.debug :as d]
             [reflet.db :as db]
@@ -453,13 +454,18 @@
         (r/as-element)
         (react-dom/createPortal (body-el)))))
 
+(defn- upsert-css-el!
+  []
+  (or (js/document.getElementById "reflet-css")
+      (let [el (js/document.createElement "style")]
+        (set! (.-id el) "reflet-css")
+        (js/document.body.appendChild el)
+        el)))
+
 (defn- upsert-css!
   []
-  (when-not (js/document.getElementById "reflet-css")
-    (let [el (js/document.createElement "style")]
-      (set! (.-id el) "reflet-css")
-      (set! (.-innerHTML el) "")        ; Nothing for now
-      (js/document.body.appendChild el))))
+  (let [el (upsert-css-el!)]
+    (set! (.-innerHTML el) bundled/css)))
 
 (defn- upsert-overlay-el!
   []
