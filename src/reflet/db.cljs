@@ -137,6 +137,7 @@
             [clojure.walk :as walk]
             [re-frame.core :as f]
             [re-frame.db :as db]
+            [re-frame.registrar :as reg]
             [reagent.core :as r*]
             [reagent.ratom :as r]
             [reflet.db.normalize :as norm]
@@ -284,10 +285,13 @@
 (defonce trace-index
   (r/atom {}))
 
-(def queue-size
+(defn queue-size
   "Number of events to tap per query. This should eventually be
   dynamic."
-  50)
+  []
+  (-> :reflet.core/config
+      (reg/get-handler :reflet.core/config)
+      (get :trace-queue-size 50)))
 
 (defn- trace-v?
   [v]
@@ -332,7 +336,7 @@
 
           (rf [m q]
             (->> {:t t :event event}
-                 (update m q util/qonj queue-size)))]
+                 (update m q util/qonj (queue-size))))]
     (when trace
       (->> (event-refs index event id-attrs)
            (update trace ::e->event f)
@@ -371,7 +375,7 @@
                 update-in
                 [::q->trace q-ref query-v]
                 util/qonj
-                queue-size)))
+                (queue-size))))
   result)
 
 (defn- untrace-query

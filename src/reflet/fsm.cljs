@@ -496,7 +496,7 @@
          (update-in db
                     [::db/trace ::db/fsm->transition ref fsm-v]
                     util/qonj
-                    db/queue-size))))
+                    (db/queue-size)))))
 
 (defn- after-trace
   "Each FSM advance fx will incrememt the ::db/tick. But for debugging

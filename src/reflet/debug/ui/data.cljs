@@ -70,14 +70,15 @@
    [:span (str \" s \")]])
 
 (defn value-ref
-  [[attr value :as ref] & {:keys [on-click]}]
-  [:div {:class           "reflet-ref"
-         :on-click        on-click
-         :on-context-menu (on-context-click ref)}
-   (namespace attr) "@"
-   (if (uuid? value)
-     (subs (str value) 0 8)
-     (str value))])
+  [ref & {:keys [on-click]}]
+  (let [[attr value] ref]
+    [:div {:class           "reflet-ref"
+           :on-click        on-click
+           :on-context-menu (on-context-click ref)}
+     (namespace attr) "@"
+     (if (uuid? value)
+       (subs (str value) 0 8)
+       (str value))]))
 
 (defmethod value ::ref
   [ref]

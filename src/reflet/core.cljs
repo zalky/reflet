@@ -113,6 +113,10 @@
 
 (reg-fx ::reg-config reg-config)
 
+(reg-event-fx ::reg-config
+  (fn [_ [_ config]]
+    {::reg-config config}))
+
 (defn reg-expr-fn
   [id expr-fn]
   (reg/register-handler ::expr-fn id expr-fn))

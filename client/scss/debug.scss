@@ -78,15 +78,13 @@ $coll-brace-width:              10px;
     position: absolute;
     padding: 0.5rem 1rem;
     border-radius: 0;
+    max-width: 500px;
 
     background: $debug-control-bg;
     box-shadow: 4px 4px $debug-panel-drop-shadow;
     font-size: $font-size-xs;
     font-family: $font-family-monospace;
 
-    > * {
-        white-space: nowrap;
-    }
 }
 
 .reflet-global-control {
