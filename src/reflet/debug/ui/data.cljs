@@ -115,6 +115,14 @@
         ^{:key i} [value x])
       coll))]])
 
+(defn- inline-coll
+  [coll]
+  [:div (doall
+         (map-indexed
+          (fn [i x]
+            ^{:key i} [value x])
+          coll))])
+
 (defn- expander
   [{:expander/keys [self]} v]
   (let [e      (g/coll-expander)
@@ -122,10 +130,10 @@
     [:div {:on-click toggle
            :class    "reflet-coll-expander"}
      (cond
-       (vector? v) [:<> [:span "["] e [:span "]"]]
-       (map? v)    [:<> [:span "{"] e [:span "}"]]
-       (list? v)   [:<> [:span "("] e [:span ")"]]
-       (set? v)    [:<> [:span "#{"] e [:span "}"]])]))
+       (vector? v) [:<> [:span "["] (inline-coll v) e [:span "]"]]
+       (map? v)    [:<> [:span "{"] (inline-coll (flatten (seq v))) e [:span "}"]]
+       (list? v)   [:<> [:span "("] (inline-coll v) e [:span ")"]]
+       (set? v)    [:<> [:span "#{"] (inline-coll v) e [:span "}"]])]))
 
 (defmethod map-entry ::coll
   [i k v]

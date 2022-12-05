@@ -29,7 +29,7 @@ $syntax-fsm-state:              #3733ff; // #0c56fc;
 
 $control-fade:                  -0.3;
 
-$coll-brace-width:              10px;
+$coll-brace-width:              0.5rem;
 
 
 @mixin disable-safari-transitions {
@@ -508,6 +508,7 @@ $coll-brace-width:              10px;
     &::before, &::after {
         display: flex;
         width: $coll-brace-width;
+        flex-shrink: 0;
         font-weight: 700;
         white-space: nowrap;
     }
@@ -592,6 +593,7 @@ $coll-brace-width:              10px;
 
 .reflet-set::before {
     content: "\#{";
+    width: $coll-brace-width + 0.35rem;
 }
 
 .reflet-set::after {
@@ -611,22 +613,43 @@ $coll-brace-width:              10px;
     cursor: pointer;
 
     > *, svg {
+        display: flex;
         transition: all 0.3s ease;
+        white-space: nowrap;
     }
 
     > :nth-child(2) {
-        margin: 0 0.5rem;
+        flex: 1 0 0;
+        overflow: hidden;
+
+        > * {
+            overflow: visible;
+            transition: all 0.3s ease;
+
+            &:not(:last-child) {
+                margin-right: 0.5rem;
+            }
+
+            .reflet-coll-expand & {
+                opacity: 0.1;
+            }
+        }
     }
 
     .reflet-coll-expand & svg {
         transform: scale(1, -1);
     }
 
-    .reflet-coll-expand & > :first-child, .reflet-coll-expand & > :last-child {
-        opacity: 0.2;
+    > :first-child, > :last-child {
+        font-weight: 700;
+
+        .reflet-coll-expand & {
+            opacity: 0.2;
+        }
     }
 
     .reflet-glyph {
+        margin: 0 0.5rem;
         padding-top: 1px;
     }
 
