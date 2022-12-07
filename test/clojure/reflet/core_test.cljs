@@ -306,6 +306,69 @@
        (let [r (f/sub [::result-fn join])]
          (is (= @r ":joinjoin updatedlabel")))))))
 
+(deftest reg-pull-effects-test
+  (fix/run-test-sync
+   ;; Note: outside a reactive context, reactions are re-run every
+   ;; time they are dereferenced. Therefore some of the reactive
+   ;; properties of pull queries are only really testable in a mounted
+   ;; application.
+
+   (let [db (atom [])]
+     (f/reg-config {:effects-fn
+                    (fn [params {ref :ref}]
+                      (swap! db conj [params ref]))})
+
+     (f/reg-event-db ::init
+       (fn [db [_ id join n1 n2 n3]]
+         (-> db
+             (db/mergen {:system/uuid    (second id)
+                         :kr/name        "name"
+                         :kr/description "description"
+                         :kr/join        {:system/uuid (second join)
+                                          :kr/name     "join"
+                                          :kr/label    "label"
+                                          :kr/join     [{:system/uuid (second n1)
+                                                         :kr/name     "nested 1"}
+                                                        {:system/uuid (second n2)
+                                                         :kr/name     "nested 2"
+                                                         :kr/join     {:system/uuid    (second n3)
+                                                                       :kr/name        "nested 3"
+                                                                       :kr/description "leaf"}}]}})
+             (db/assocn ::link id))))
+
+     (f/with-ref {:system/uuid [id join n1 n2 n3]}
+       (f/disp [::init id join n1 n2 n3])
+
+       (testing "Query effects"
+         (f/reg-pull ::join
+           (fn [id]
+             [([:system/uuid
+                :kr/name
+                (:kr/description {:id ::e2})
+                ({:kr/join [:system/uuid
+                            :kr/name
+                            :kr/label
+                            {:kr/join ([:kr/name] {:id ::e4})}]}
+                 {:id ::e3})]
+               {:id ::e1})
+              id]))
+
+         (let [r (f/sub [::join id])]
+           (is (= @r
+                  {:system/uuid    (second id)
+                   :kr/name        "name"
+                   :kr/description "description"
+                   :kr/join        {:system/uuid (second join)
+                                    :kr/name     "join"
+                                    :kr/label    "label"
+                                    :kr/join     [{:kr/name "nested 1"}
+                                                  {:kr/name "nested 2"}]}}))
+           (is (= @db [[{:id ::e1} [:system/uuid :id]]
+                       [{:id ::e2} [:system/uuid :id]]
+                       [{:id ::e3} [:system/uuid :id]]
+                       [{:id ::e4} [:system/uuid :n1]]
+                       [{:id ::e4} [:system/uuid :n2]]]))))))))
+
 (deftest reg-comp-test
   (fix/run-test-sync
 

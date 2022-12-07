@@ -193,7 +193,7 @@
   [expr]
   (w/postwalk
    (fn [x]
-     (if (and (list? x) (keyword? (first x)))
+     (if (and (list? x) (not (symbol? (first x))))
        (cons 'list x)
        x))
    expr))

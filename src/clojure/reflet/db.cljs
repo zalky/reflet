@@ -561,12 +561,12 @@
   (= expr '*))
 
 (defn- pull-props
-  [{:keys [db ref acc-refs!] :as context} pattern result]
+  [{:keys [db ref acc-fn] :as context} pattern result]
   (let [c (assoc context
                  :entity (get db ref)
                  :pattern pattern)]
-    (when (and acc-refs! ref)
-      (acc-refs! ref))
+    (when (and acc-fn ref)
+      (acc-fn ref))
     (reduce (fn [result expr]
               (pull* c expr result))
             result
@@ -579,19 +579,22 @@
       (assoc result attr v)
       result)))
 
-(defn- pull-sync!
-  "Parses sync expression and dispatches sync init. Only dispatch
-  side-effects if they have been explicitly configured. The default
-  pull implementation should be pure."
-  [{:keys [db ref sync-start!] :as context} sync result]
-  (let [[id expr & args] (case (first sync) ; Account for quoted list expressions
-                           list (rest sync)
-                           sync)]
-    (when sync-start!
-      (sync-start! {:id   id
-                    :db   db
-                    :ref  ref
-                    :args args}))
+(defn- unquote-list
+  [effect]
+  (case (first effect)
+    list (rest effect)
+    effect))
+
+(defn- pull-effects
+  "Parses effect expression and runs effect-fn, if configured, for side
+  effects. The effects-fn has two args: a map of effect parameters,
+  and a subset of the query context. The default pull implementation
+  should have no effects configured, and is pure."
+  [{:keys [db ref effects-fn]
+    :as   context} effect result]
+  (let [[expr params] (unquote-list effect)]
+    (when effects-fn
+      (effects-fn params {:db db :ref ref}))
     (pull* context expr result)))
 
 (defn- pull-join
@@ -648,10 +651,10 @@
         (walk-attr result attr expr)))))
 
 (defn- pull-link
-  [{:keys [db acc-refs!] :as context} link result]
+  [{:keys [db acc-fn] :as context} link result]
   (let [[[attr]] (seq link)]
-    (when (and acc-refs! attr)
-      (acc-refs! attr))
+    (when (and acc-fn attr)
+      (acc-fn attr))
     (-> context
         (assoc :entity db)
         (pull-join link result)
@@ -667,7 +670,7 @@
   ([{ref :ref :as context} expr result]
    (cond
      (link? ref expr) (pull-link context expr result)
-     (list? expr)     (pull-sync! context expr result)
+     (list? expr)     (pull-effects context expr result)
      (vector? expr)   (pull-props context expr result)
      (keyword? expr)  (pull-prop context expr result)
      (wildcard? expr) (pull-wildcard context expr result)
@@ -680,7 +683,7 @@
   (cond
     (keyword? expr) expr
     (map? expr)     (ffirst expr)
-    (list? expr)    (attr-expr (second expr))
+    (list? expr)    (attr-expr (first expr))
     :else           nil))
 
 (defn- pull!
@@ -695,15 +698,15 @@
             traversal. If it is omitted, the query is considered
             to be a link query.  [Optional]
 
-  :acc-refs!
+  :acc-fn
             Fn that accumulates entity references via side
             effects [Optional]
 
-  :sync-start!
-            Fn that dispatches sync events [Optional]
+  :effects-fn
+            Fn that handles pull side effects [Optional]
 
   By default, this implementation is a pure function of the given
-  `:db` value. However, if `:acc-refs!` and `:sync-start!` are
+  `:db` value. However, if `:acc-fn` and `:effects-fn` are
   provided in the context map, this implementation runs them for
   side-effects. This means the entire impl must also be eager. This
   function is not part of the api and not meant to be used directly."
@@ -797,7 +800,7 @@
       (assoc ::touched-queries #{})
       (assoc ::touched-entities #{})))
 
-(defn- acc-refs!
+(defn- acc-fn
   "Accumulates freshly touched entity refs in volatiles."
   [fresh stale]
   (fn [e-ref]
@@ -810,14 +813,14 @@
   tracked entities to the query index, updates the given query tick
   for the given query, clears stale entities from the previous pull,
   and clears touched queries."
-  [{:keys [db index expr e-ref q-ref query-tick sync-start!]}]
+  [{:keys [db index expr e-ref q-ref query-tick effects-fn]}]
   (let [fresh  (volatile! #{})
         stale  (volatile! (q->e index q-ref #{}))
-        result (pull! {:id-attrs    (::id-attrs db)
-                       :db          (::data db)
-                       :ref         e-ref
-                       :acc-refs!   (acc-refs! fresh stale)
-                       :sync-start! sync-start!}
+        result (pull! {:id-attrs   (::id-attrs db)
+                       :db         (::data db)
+                       :ref        e-ref
+                       :acc-fn     (acc-fn fresh stale)
+                       :effects-fn effects-fn}
                       expr)]
     {:db     db
      :result result
