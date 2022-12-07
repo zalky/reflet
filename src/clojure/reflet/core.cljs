@@ -104,12 +104,20 @@
   registered before application boot. Currently supported
   configuration options:
 
-  :sync-start!
-            Sync expressions within pull syntax are dispatched via a
-            sync-start!. Default is nil, which means sync expressions
-            are ignored."
+  :effects-fn
+            Handles effects expressions within pull syntax, evaluating
+            for side-effects. Default is nil, which means effects
+            expressions are ignored.
+
+  :pull-fn
+            Overrides the default pull implementation. This can be used
+            to swap in a fully conformed EQL query parser, for example.
+
+  :trace-queue-size
+            Sets the trace queue size for the debugger panels.
+            Default is 50."
   [config]
-  (reg/register-handler ::config ::config config))
+  (reg/register-handler :reflet/config :reflet/config config))
 
 (reg-fx ::reg-config reg-config)
 
@@ -127,7 +135,7 @@
 
 (defn get-config
   []
-  (reg/get-handler ::config ::config))
+  (reg/get-handler :reflet/config :reflet/config))
 
 (defn get-expr-fn
   [id]

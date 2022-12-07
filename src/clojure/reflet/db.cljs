@@ -285,12 +285,15 @@
 (defonce trace-index
   (r/atom {}))
 
+(defn get-config
+  []
+  (reg/get-handler :reflet/config :reflet/config))
+
 (defn queue-size
   "Number of events to tap per query. This should eventually be
   dynamic."
   []
-  (-> :reflet.core/config
-      (reg/get-handler :reflet.core/config)
+  (-> (get-config)
       (get :trace-queue-size 50)))
 
 (defn- trace-v?
@@ -686,24 +689,30 @@
     (list? expr)    (attr-expr (first expr))
     :else           nil))
 
-(defn- pull!
+(defn- default-pull-impl
   "Evaluates the pull expression specified by `expr` against a given
   context. A context will contain at least:
 
   :db
             DB value against which the expression is evaluated
 
+  :id-attrs
+            A set of unique id attributes that represent joins
+            to other entities.
+
+  And optionally:
+
   :ref
             Root entity reference with which to start the graph
             traversal. If it is omitted, the query is considered
-            to be a link query.  [Optional]
+            to be a link query. [Optional]
 
   :acc-fn
             Fn that accumulates entity references via side
-            effects [Optional]
+            effects. [Optional]
 
   :effects-fn
-            Fn that handles pull side effects [Optional]
+            Fn that handles pull side effects. [Optional]
 
   By default, this implementation is a pure function of the given
   `:db` value. However, if `:acc-fn` and `:effects-fn` are
@@ -715,6 +724,12 @@
     (-> (pull* context [expr])
         (get attr))
     (pull* context expr)))
+
+(defn pull-fn
+  "Retrieves configured pull fn, or default implementation."
+  []
+  (-> (get-config)
+      (get :pull-fn default-pull-impl)))
 
 (defn getn
   "Pulls the normalized entity from the db at the given path. Uses get
@@ -764,10 +779,11 @@
   ([db expr]
    (pull db expr nil))
   ([db expr e-ref]
-   (pull! {:id-attrs (::id-attrs db)
-           :db       (::data db)
-           :ref      e-ref}
-          expr)))
+   (let [pull! (pull-fn)]
+     (pull! {:id-attrs (::id-attrs db)
+             :db       (::data db)
+             :ref      e-ref}
+            expr))))
 
 (defn- clear-stale-entities
   [index stale-entities q-ref]
@@ -816,6 +832,7 @@
   [{:keys [db index expr e-ref q-ref query-tick effects-fn]}]
   (let [fresh  (volatile! #{})
         stale  (volatile! (q->e index q-ref #{}))
+        pull!  (pull-fn)
         result (pull! {:id-attrs   (::id-attrs db)
                        :db         (::data db)
                        :ref        e-ref
