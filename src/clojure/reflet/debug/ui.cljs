@@ -475,10 +475,10 @@
         (.appendChild (body-el) el)
         el)))
 
-(defn load-debugger!
+(defn render-debug
   []
-  (set! db/tap-fn tap)
-  (upsert-css!)
-  (f/disp [::impl/config])
-  (->> (upsert-overlay-el!)
-       (dom/render [overlay])))
+  (when db/tap-fn
+    (upsert-css!)
+    (f/disp [::impl/config])
+    (->> (upsert-overlay-el!)
+         (dom/render [overlay]))))
