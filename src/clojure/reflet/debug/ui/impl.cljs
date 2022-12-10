@@ -185,7 +185,7 @@
          l :left} (some-> sel-el i/grab rect)]
     {:left  (pos-or-default l :height)
      :top   (pos-or-default t :width)
-     :width 300}))
+     :width 315}))
 
 (defmethod get-rect :debug.type/mark-group
   [_ _ el {:keys [x y]}]

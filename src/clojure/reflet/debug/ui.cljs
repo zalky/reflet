@@ -260,11 +260,27 @@
        [:span "No Queries"]])))
 
 (defn- fsm-transition
-  [{:keys [clause prev-state]}]
+  [{{to   :to
+     c    :when
+     pull :pull} :clause
+    e            :event
+    from         :prev-state
+    :as          transition}]
   [:div {:class "reflet-transition"}
-   [data/value prev-state]
-   [:div "\u2192"]
-   [data/value (:to clause)]])
+   (if (contains? transition :init-state)
+     [:div
+      [:div {:class "reflet-fsm-init-state"}
+       "initialized"]
+      [:div "\u2192"]
+      [data/value (:init-state transition)]]
+     [:div
+      [data/value from]
+      [:div "\u2192"]
+      [data/value to]])
+   [:div
+    (when e    [:<> [:div "event:"] [data/value e]])
+    (when c    [:<> [:div "when:"]  [data/value c]])
+    (when pull [:<> [:div "pull:"]  [data/value pull]])]])
 
 (defn- fsm-traces
   [traces]
@@ -273,15 +289,12 @@
     (let [n                (f/sub [::impl/trace-n self])
           {t   :t
            v   :fsm-v
-           e   :event
-           r   :result
            :as transition} (nth traces @n)]
       [:div
        [:div {:class "reflet-divider"}]
        [:div t]
        [data/value v]
        [trace-controls props traces]
-       [data/value e]
        [fsm-transition transition]])))
 
 (defmethod ref-lens :debug.lens/fsm
@@ -486,6 +499,6 @@
 
 (defn activate!
   "Configures the debugger. This needs to be called before any react
-  elements are renered to the dom, for example in a preload."
+  elements are rendered to the dom, for example in a preload."
   []
   (set! db/tap-fn tap))

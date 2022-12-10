@@ -443,7 +443,7 @@
   (some-> @timeout (js/clearTimeout)))
 
 (defn- set-timeout!
-  [fsm timeout state]
+  [timeout fsm state]
   (when-let [[_ ref ms :as event-v] (get-timeout fsm state)]
     (when (= (:ref fsm) ref)
       (clear-timeout! timeout)
@@ -458,7 +458,7 @@
     :as   fsm} timeout state]
   (if (contains? stop state)
     (stop! fsm-v)
-    (set-timeout! fsm timeout state)))
+    (set-timeout! timeout fsm state)))
 
 (defn- fsm-dispatch!
   "Must happen after interceptor has been registered."
@@ -506,8 +506,7 @@
   fast. When not debugging, this extra trace loop is bypassed."
   [event advance-fx db]
   (if (db/trace? event)
-    (-> db
-        (get-in [::db/index ::db/tick])
+    (-> (get-in db [::db/data ::db/tick])
         (trace-rf event)
         (reduce db advance-fx))
     db))
@@ -559,13 +558,25 @@
     (let [{:keys [ref attr]} (fsm-spec fsm-v)]
       (db/assoc-inn db [ref attr] to))))
 
-(defn- init!
-  [{:keys [ref attr fsm-v]
+(defn- init-trace!
+  [{:keys [ref fsm-v]} state t]
+  (->> #queue [{:t          t
+                :fsm-v      fsm-v
+                :init-state state}]
+       (swap! db/trace-index
+              assoc-in
+              [::db/fsm->transition ref fsm-v])))
+
+(defn- start-impl!
+  [{:keys [ref attr fsm-v to]
     :as   fsm} timeout db]
-  (->> (db/get-inn db [ref attr])
-       (set-timeout! fsm timeout))
-  (when (contains? fsm :to)
-    (f/dispatch [::advance fsm-v (:to fsm)])))
+  (let [state (db/get-inn db [ref attr])]
+    (set-timeout! timeout fsm state)
+    (when db/tap-fn
+      (->> (get-in db [::db/data ::db/tick])
+           (init-trace! fsm state)))
+    (when (contains? fsm :to)
+      (f/dispatch [::advance fsm-v to]))))
 
 (defn started?
   [fsm-v]
@@ -594,10 +605,11 @@
   (let [fsm (parse (fsm-spec fsm-v))]
     (when-not (started? fsm-v)
       (let [timeout (atom nil)]
-        (init! fsm timeout db)
+        (start-impl! fsm timeout db)
         (->> (partial advance-fx fsm timeout)
              (advance-fx-interceptor)
              (i/reg-global-interceptor fsm-v))
+        ;; Must happen after interceptor.
         (fsm-dispatch! fsm)))))
 
 (defn- stop!
@@ -636,15 +648,15 @@
   [db fsm-v]
   (let [{:keys [ref attr return]
          :or   {return attr}
-         :as   fsm} (fsm-spec fsm-v)]
+         :as   fsm} (fsm-spec fsm-v)
+        fsm-v*      (i/new-cycle-id fsm-v)]
     ;; Get the value of the db for a one time init, but should not be
     ;; reactive to it.
-    (let [fsm-v* (i/new-cycle-id fsm-v)]
-      (start! (.-state db) fsm-v*)
-      (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
-                        #(vector return ref)
-                        fsm-v
-                        (db/query-ref)))))
+    (start! (.-state db) fsm-v*)
+    (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
+                      #(vector return ref)
+                      fsm-v
+                      (db/query-ref))))
 
 (defn reg-fsm
   [id fsm-fn]

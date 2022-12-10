@@ -84,7 +84,6 @@ $coll-brace-width:              0.5rem;
     box-shadow: 4px 4px $debug-panel-drop-shadow;
     font-size: $font-size-xs;
     font-family: $font-family-monospace;
-
 }
 
 .reflet-global-control {
@@ -190,7 +189,6 @@ $coll-brace-width:              0.5rem;
         opacity: 0;
         @include disable-safari-transitions;
 
-        
         > div > :nth-child(2n+1) {
             padding-left: 0.5rem;
         }
@@ -469,30 +467,49 @@ $coll-brace-width:              0.5rem;
 }
 
 .reflet-transition {
-    display: flex;
-    overflow: hidden;
-    justify-content: center;
-    font-style: italic;
-
     > :first-child {
-        flex: 1 1 0;
-    }
-
-    > :last-child {
-        flex: 1 1 0;
         display: flex;
-        justify-content: end;
-    }
+        overflow: hidden;
+        justify-content: center;
+        font-style: italic;
 
-    > :nth-child(2) {
-        margin: 0 0.75rem;
-    }
+        > :first-child {
+            flex: 1 1 0;
+        }
 
-    > .reflet-keyword {
-        > * {
-            color: $syntax-fsm-state;
+        > :nth-child(3) {
+            flex: 1 1 0;
+            display: flex;
+            justify-content: end;
+        }
+
+        > :nth-child(2) {
+            margin: 0 0.75rem;
+        }
+
+        > .reflet-keyword {
+            > * {
+                color: $syntax-fsm-state;
+            }
         }
     }
+
+    > :nth-child(n + 2) {
+        display: grid;
+        grid-template-columns: fit-content(3rem) auto;
+        grid-column-gap: 0.5rem;
+
+        > :nth-child(2n + 1) {
+            color: $syntax-string;
+        }
+    }
+}
+
+.reflet-fsm-init-state {
+    width: 100%;
+    font-family: $font-family-monospace;
+    text-transform: uppercase;
+    color: $syntax-string;
 }
 
 // Data formatting
@@ -677,6 +694,7 @@ $coll-brace-width:              0.5rem;
     display: flex;
     overflow: hidden;
     font-family: $font-family-monospace;
+    white-space: nowrap;
 
     > :last-child {
         @include truncate;
