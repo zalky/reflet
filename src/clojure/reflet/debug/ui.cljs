@@ -475,10 +475,17 @@
         (.appendChild (body-el) el)
         el)))
 
-(defn render-debug
+(defn render!
+  "Renders the debugger to the dom."
   []
   (when db/tap-fn
     (upsert-css!)
     (f/disp [::impl/config])
     (->> (upsert-overlay-el!)
          (dom/render [overlay]))))
+
+(defn activate!
+  "Configures the debugger. This needs to be called before any react
+  elements are renered to the dom, for example in a preload."
+  []
+  (set! db/tap-fn tap))

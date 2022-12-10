@@ -1,5 +1,4 @@
 (ns reflet.debug.preload
-  (:require [reflet.db :as db]
-            [reflet.debug.ui :as ui]))
+  (:require [reflet.debug.ui :as debug]))
 
-(set! db/tap-fn ui/tap)
+(debug/activate!)

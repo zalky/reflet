@@ -4,15 +4,13 @@
             [reflet.client.boot :as boot]
             [reflet.client.ui :as ui]
             [reflet.core :as f]
-            [reflet.debug.ui :as debug]
 
             ;; Require for use.
             [reflet.log]))
 
-(defn ^:dev/after-load render!
+(defn render!
   []
   (f/clear-subscription-cache!)
-  (debug/render-debug)
   (some->> "container"
            (.getElementById js/document)
            (dom/render [ui/app])))
