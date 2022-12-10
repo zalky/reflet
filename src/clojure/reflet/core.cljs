@@ -92,6 +92,11 @@
 
 ;;;; Reflet API
 
+(defn debug?
+  "Returns true if debugging is activated."
+  []
+  (boolean db/tap-fn))
+
 (def ^:dynamic *force-persistent-refs*
   "Only use during reflet.fixtures/run-test-async tests. All refs during
   async tests are made to be persistent so that when the async test

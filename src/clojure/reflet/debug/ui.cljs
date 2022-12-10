@@ -478,7 +478,7 @@
 (defn render!
   "Renders the debugger to the dom."
   []
-  (when db/tap-fn
+  (when (f/debug?)
     (upsert-css!)
     (f/disp [::impl/config])
     (->> (upsert-overlay-el!)
