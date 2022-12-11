@@ -121,7 +121,25 @@
     (is (= (f/with-ref {:system/uuid [self]
                         :in          props}
              [self props])
-           [[:system/uuid :self] {:self [:system/uuid :self]}]))))
+           [[:system/uuid :self] {:self [:system/uuid :self]}])))
+
+  (testing "map destructuring bindings"
+    (is (= (f/with-ref {:system/uuid {sym :binding}
+                        :in          props}
+             [sym props])
+           [[:system/uuid :binding] {:binding [:system/uuid :binding]}]))
+    (is (= (f/with-ref {:system/uuid {sym ::binding}
+                        :in          props}
+             [sym props])
+           [[:system/uuid ::binding] {::binding [:system/uuid ::binding]}]))
+    (is (= (f/with-ref {:system/uuid {sym1 :b1
+                                      sym2 :b2}
+                        :in          props}
+             [sym1 sym2 props])
+           [[:system/uuid :b1]
+            [:system/uuid :b2]
+            {:b1 [:system/uuid :b1]
+             :b2 [:system/uuid :b2]}]))))
 
 (deftest random-ref-cofx-test
   (let [f (reg/get-handler :cofx :random-ref)]

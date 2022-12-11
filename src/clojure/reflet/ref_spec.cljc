@@ -13,14 +13,27 @@
 (s/def ::binding-vector
   (s/coll-of ::binding :kind vector?))
 
+(s/def ::binding-map
+  (s*/conform-to
+    (s/map-of symbol? keyword?)
+    (fn [m]
+      (map (fn [[sym k]]
+             {:key k
+              :sym sym})
+           m))))
+
+(s/def ::binding-coll
+  (s/or :vector ::binding-vector
+        :map    ::binding-map))
+
 (s/def ::bindings
   (s*/conform-to
-    (s/nilable (s/map-of qualified-keyword? ::binding-vector))
-    (fn [binding-map]
+    (s/nilable (s/map-of qualified-keyword? ::binding-coll))
+    (fn [bindings]
       (mapcat
-       (fn [[k binding-vector]]
+       (fn [[k [_ binding-coll]]]
          (map
           (fn [parsed]
             (assoc parsed :id-attr k))
-          binding-vector))
-       binding-map))))
+          binding-coll))
+       bindings))))
