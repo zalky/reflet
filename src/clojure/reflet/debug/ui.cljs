@@ -160,8 +160,10 @@
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
      (when @lens
-       [g/menu {:class         "reflet-control"
-                :on-mouse-down (f/stop-prop on-back)}])
+       [:div
+        [g/menu {:class         "reflet-control"
+                 :on-mouse-down (f/stop-prop on-back)}]
+        [:span @lens]])
      [:div {:class "reflet-ref-title"}
       [data/value-ref ref]]
      [g/x {:class         "reflet-close"

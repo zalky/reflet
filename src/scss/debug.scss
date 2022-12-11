@@ -288,6 +288,18 @@ $coll-brace-width:              0.5rem;
     .reflet-move & {
         cursor: grabbing;
     }
+
+    > :first-child {
+        display: flex;
+
+        > :nth-child(2) {
+            text-transform: uppercase;
+        }
+
+        > :not(:last-child) {
+            margin-right: 0.25rem;
+        }
+    }
 }
 
 .reflet-props-title, .reflet-ref-title {
