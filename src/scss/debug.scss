@@ -289,7 +289,7 @@ $coll-brace-width:              0.5rem;
         cursor: grabbing;
     }
 
-    > :first-child {
+    > :first-child:not(.reflet-props-title) {
         display: flex;
 
         > :nth-child(2) {
@@ -297,7 +297,7 @@ $coll-brace-width:              0.5rem;
         }
 
         > :not(:last-child) {
-            margin-right: 0.25rem;
+            margin-right: 0.5rem;
         }
     }
 }
