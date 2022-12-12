@@ -27,7 +27,7 @@
 
   `:ref`
             A db reference to the FSM entity being advanced through
-            states
+            states.
 
   `:fsm`
             Defines the allowed states of the FSM, mapping each state
@@ -37,7 +37,7 @@
 
   `:attr`
             The entity attribute where the state is stored. If not
-            provided `::state` is used
+            provided `::state` is used.
 
   `:stop`
             One or more states which when reached will stop the fsm.
@@ -49,9 +49,12 @@
             attribute specified by `:attr`. The query is always run
             agains the FSM `:ref` as the root reference.
 
+  `:to`
+            Start the FSM in some initial state.
+
   `:dispatch`
             One or more events to dispatch immediately after starting
-            the FSM
+            the FSM.
 
   `:dispatch-later`
             Same, but conforms to the re-frame `:dispatch-later` fx
