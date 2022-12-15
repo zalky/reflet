@@ -49,46 +49,11 @@
      [reflet-interceptors interceptors]
      handler)))
 
-(def dispatch                   f/dispatch)
-(def dispatch-sync              f/dispatch-sync)
-(def subscribe                  f/subscribe)
-
-(def reg-sub                    f/reg-sub)
-(def reg-sub-raw                f/reg-sub-raw)
-(def clear-sub                  f/clear-sub)
-(def clear-subscription-cache!  f/clear-subscription-cache!)
-
-(def reg-fx                     f/reg-fx)
-(def clear-fx                   f/clear-fx)
-
-(def reg-cofx                   f/reg-cofx)
-(def inject-cofx                f/inject-cofx)
-(def clear-cofx                 f/clear-cofx)
-
-(def debug                      f/debug)
-(def path                       f/path)
-(def enrich                     f/enrich)
-(def trim-v                     f/trim-v)
-(def after                      f/after)
-(def on-changes                 f/on-changes)
-
-(def ->interceptor              f/->interceptor)
-(def get-coeffect               f/get-coeffect)
-(def assoc-coeffect             f/assoc-coeffect)
-(def get-effect                 f/get-effect)
-(def assoc-effect               f/assoc-effect)
-(def enqueue                    f/enqueue)
-
-(def set-loggers!               f/set-loggers!)
-(def console                    f/console)
-(def make-restore-fn            f/make-restore-fn)
-(def purge-event-queue          f/purge-event-queue)
-(def add-post-event-callback    f/add-post-event-callback)
-(def remove-post-event-callback f/remove-post-event-callback)
-
-(def sub                        subscribe)
-(def disp                       dispatch)
-(def disp-sync                  dispatch-sync)
+(def reg-sub     f/reg-sub)
+(def reg-sub-raw f/reg-sub-raw)
+(def sub         f/subscribe)
+(def disp        f/dispatch)
+(def disp-sync   f/dispatch-sync)
 
 ;;;; Reflet API
 
@@ -124,7 +89,7 @@
   [config]
   (reg/register-handler :reflet/config :reflet/config config))
 
-(reg-fx ::reg-config reg-config)
+(f/reg-fx ::reg-config reg-config)
 
 (reg-event-fx ::reg-config
   (fn [_ [_ config]]
@@ -204,7 +169,7 @@
                       (pull-reaction))]
           (reduce reg-comp-rf r1 ids))))))
 
-(reg-cofx :random-ref
+(f/reg-cofx :random-ref
   ;; This cofx has the same semantics as with-ref, with the exception
   ;; that refs cannot be transient, because there is no reactive
   ;; context in event handlers.
@@ -248,11 +213,11 @@
     (.preventDefault e)
     (f e)))
 
-(reg-fx ::stop-prop
+(f/reg-fx ::stop-prop
   (fn [e]
     (.stopPropagation e)))
 
-(reg-fx ::prevent-default
+(f/reg-fx ::prevent-default
   (fn [e]
     (.preventDefault e)))
 

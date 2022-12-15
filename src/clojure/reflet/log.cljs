@@ -1,11 +1,12 @@
 (ns reflet.log
   "Provides loggging functionality via timbre."
   (:require [clojure.string :as str]
+            [re-frame.core :as f*]
             [reflet.core :as f]
             [taoensso.timbre :as log]))
 
 ;; Prevent handler overwriting warnings during cljs reload.
-(f/set-loggers!
+(f*/set-loggers!
  {:warn (fn [& args]
           (when-not (re-find #"^re-frame: overwriting" (first args))
             (apply js/console.warn args)))})
@@ -25,7 +26,7 @@
        (when ?err
          (str "\n" (log/stacktrace ?err {})))))
 
-(f/reg-fx :log
+(f*/reg-fx :log
   (fn [[level & vargs :as arg]]
     (when arg
       (log/with-merged-config
