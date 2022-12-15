@@ -12,7 +12,7 @@
           el      (i/grab el-r)
           source  (.createMediaElementSource context el)]
       (.connect source (.-destination context))
-      (i/reg context-r context)
+      (i/reg context-r context {:destroy #(.close context)})
       (i/reg source-r source))))
 
 (defn running?
