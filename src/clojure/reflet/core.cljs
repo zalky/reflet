@@ -1,5 +1,5 @@
 (ns reflet.core
-  "Re-frame and reflet api, and convenience utilites."
+  "Reflet api and convenience utilites."
   (:refer-clojure :exclude [uuid])
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]
@@ -8,6 +8,7 @@
             [reagent.core :as r]
             [reagent.impl.component :as util]
             [reflet.db :as db]
+            [reflet.debug :as d]
             [reflet.fsm :as fsm]
             [reflet.interceptors :as itor]
             [reflet.interop :as i]
@@ -132,10 +133,10 @@
          (db/pull-reaction expr-fn query-v q-ref)
          (result-reaction query-v q-ref)))))
 
-(defn reg-pull*
-  "Prefer reg-pull macro."
+(defn reg-pull-impl
+  "Do not use, see reg-pull macro."
   ([id expr-fn]
-   (reg-pull* id expr-fn nil))
+   (reg-pull-impl id expr-fn nil))
   ([id expr-fn result-fn]
    (reg-expr-fn id expr-fn)
    (when result-fn (reg-result-fn id result-fn))
@@ -151,14 +152,14 @@
         (pull-reaction query-v))))
 
 (defn reg-comp
-  "Composes a series of named reactions, where the result of each
-  reaction in the sequence is provided as input to the next. Semantics
-  are similar to `clojure.core/comp`. Except for the first, every
-  other reaction in the pipeline should expect only a single argument.
-  As with comp, the order of operations is reversed from the order in
-  which they are declared. The resultant reaction returned by the
-  composition is cached according to the input arguments of the
-  pipeline. No intermediary reactions are cached."
+  "Composes a series of named, normalized reactions, where the result of
+  each reaction in the sequence is provided as input to the
+  next. Semantics are similar to `clojure.core/comp`. Except for the
+  first, every other reaction in the pipeline should expect only a
+  single argument.  As with comp, the order of operations is reversed
+  from the order in which they are declared. The resultant reaction
+  returned by the composition is cached according to the input
+  arguments of the pipeline. No intermediary reactions are cached."
   [id comp-ids]
   (let [[r1-id & ids] (reverse comp-ids)]
     (reg-sub-raw id
@@ -183,14 +184,39 @@
            (reduce rf {})
            (assoc cofx :random-ref)))))
 
+(defmulti ref-cleanup
+  "Dispatches on ref unique attribute."
+  (fn [cofx [_ ref]]
+    (first ref)))
+
+(defmethod ref-cleanup :debug/id
+  [cofx [_ ref :as event]]
+  (let [handler (get-method ref-cleanup :default)
+        fx      (handler cofx event)]
+    (merge fx {:log      [:debug "Debug cleanup" ref]
+               :dispatch [::d/untap ref]})))
+
+(defmethod ref-cleanup :el/uuid
+  [cofx [_ ref :as event]]
+  {:log        [:debug "DOM cleanup" ref]
+   ::i/cleanup ref})
+
+(defmethod ref-cleanup :js/uuid
+  [cofx [_ ref :as event]]
+  {:log        [:debug "JS cleanup" ref]
+   ::i/cleanup ref})
+
+(defmethod ref-cleanup :default
+  [{db :db} [_ ref]]
+  {:log             [:debug "Reactive state cleanup" ref]
+   :db              (db/dissocn db ref)
+   ::db/unmount-ref ref})
+
 (f/reg-event-fx ::ref-cleanup
   [db/inject-query-index
    fsm/advance
    itor/add-global-interceptors]
-  (fn [{db :db} [_ ref]]
-    {:log        [:debug "Ref cleanup" ref]
-     :db         (db/dissocn db ref)
-     ::i/cleanup [ref]}))
+  ref-cleanup)
 
 ;;;; Additional Utilities
 

@@ -391,30 +391,34 @@
   (fix/run-test-sync
 
    (f/reg-pull ::q1
+     ;; Query returns first reference in join.
      (fn [id]
        [[:system/uuid
          :kr/name
          :kr/join]
-        id]))
+        id])
+     (comp first :kr/join))
 
    (f/reg-pull ::q2
      (fn [q1-result]
        [[:system/uuid
          :kr/name]
-        (get q1-result :kr/join)]))
+        q1-result]))
 
    (f/reg-comp ::reg-comp [::q2 ::q1])
 
    (f/reg-event-db ::init
-     (fn [db [_ id join]]
-       (db/mergen db {:system/uuid (second id)
-                      :kr/name     "test"
-                      :kr/join     {:system/uuid (second join)
-                                    :kr/name     "join"}})))
+     (fn [db [_ id1 id2 id3]]
+       (db/mergen db {:system/uuid (second id1)
+                      :kr/name     "1"
+                      :kr/join     [{:system/uuid (second id2)
+                                     :kr/name     "2"}
+                                    {:system/uuid (second id3)
+                                     :kr/name     "3"}]})))
 
-   (f/with-ref {:system/uuid [id join]}
-     (f/disp [::init id join])
-     (let [r (f/sub [::reg-comp id])]
-       (is (= {:system/uuid (second join)
-               :kr/name     "join"}
+   (f/with-ref {:system/uuid [id1 id2 id3]}
+     (f/disp [::init id1 id2 id3])
+     (let [r (f/sub [::reg-comp id1])]
+       (is (= {:system/uuid (second id2)
+               :kr/name     "2"}
               @r))))))

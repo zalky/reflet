@@ -6,7 +6,6 @@
             [reagent.core :as r]
             [reagent.ratom :as r*]
             [reflet.db :as db]
-            [reflet.debug :as d]
             [reflet.ref-spec :as rs]))
 
 (defn- throw-parse-err!
@@ -92,16 +91,13 @@
   (list
    'finally
    `(when-let [ref# (:debug-id ~context)]
-      (db/unmount-ref! ref#)
-      (disp [::ref-cleanup ref#])
-      (disp [::d/untap ref#]))
+      (disp-sync [::ref-cleanup ref#]))
 
    `(doseq [[_# ref#] (deref ~refs)]
       (when (and ref# (db/transient? ref#))
-        (db/unmount-ref! ref#)
-        (disp [::ref-cleanup ref#]))
+        (disp-sync [::ref-cleanup ref#]))
       (when (:debug-id ~context)
-        (disp [::db/untrace-event ref#])))))
+        (disp-sync [::db/untrace-event ref#])))))
 
 (defn- env-namespace
   [env]
@@ -136,7 +132,8 @@
 
 (defn- debug-id
   "Produces a debug id that is unique within a dom tree, but not across
-  trees with the same topology."
+  trees with the same topology. This allows us to track props across
+  hot restarts."
   [env]
   `(let [^clj c# r*/*ratom-context*
          g#      (or (.-withRefGeneration c#) 0)
@@ -159,7 +156,7 @@
 (defmacro with-ref
   "Generates entity references. Optionally rebinds props attributes,
   and dispatches entity cleanup. See the Reflet wiki for motivation,
-  usage and other documentation."
+  usage and documentation of other options."
   [bindings & body]
   (let [[opts unparsed] (get-opts bindings)
         parsed          (s/conform ::rs/bindings unparsed)
@@ -205,7 +202,7 @@
   facilitate sync expressions."
   [& [id [_ bindings & spec] result-fn]]
   (concat
-   `(reg-pull* ~id
+   `(reg-pull-impl ~id
      (fn ~bindings ~@(no-eval-keywords spec)))
    (when result-fn [result-fn])))
 

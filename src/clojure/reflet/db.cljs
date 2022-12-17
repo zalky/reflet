@@ -218,6 +218,9 @@
   [ref]
   (swap! mounted-transient-refs disj ref))
 
+(f/reg-fx ::unmount-ref
+  unmount-ref!)
+
 (defn mounted?
   "Returns true if the given entity references is associated with a
   component that is currently mounted. This is useful for long running
