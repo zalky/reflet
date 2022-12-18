@@ -658,8 +658,7 @@
     (start! (.-state db) fsm-v*)
     (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
                       #(vector return ref)
-                      fsm-v
-                      (db/query-ref))))
+                      fsm-v)))
 
 (defn reg-fsm
   [id fsm-fn]

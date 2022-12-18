@@ -385,7 +385,7 @@
   result)
 
 (defn- untrace-query
-  [q-ref query-v result]
+  [q-ref query-v]
   (when (trace? query-v)
     (swap! query-index update ::q->trace dissoc q-ref)))
 
@@ -908,6 +908,10 @@
           @db-tick                      ; Next query tick = db tick
           query-tick)))))
 
+(defn query-ref
+  []
+  (random-ref :query/uuid))
+
 (defn reactive?
   [x]
   (satisfies? r/IReactiveAtom x))
@@ -925,23 +929,23 @@
         (cons args)
         (vec))))
 
+(defn reaction-ref
+  [^clj input-r]
+  (.-reflet-query-ref input-r))
+
 (defn result-reaction
-  [input-r result-fn query-v q-ref]
-  (let [result-v (get-result-v query-v)
-        q-tick   (query-tick q-ref)]
-    (traced-reaction nil result-v
+  [input-r result-fn query-v]
+  (let [result-v  (get-result-v query-v)
+        input-ref (reaction-ref input-r)]
+    (traced-reaction input-ref result-v
       (fn []
         (let [t (-> (.-state db/app-db) ::data ::tick)]
           (->> (rest result-v)
                (map maybe-deref)
                (apply result-fn @input-r)
-               (trace-query q-ref result-v t))))
+               (trace-query input-ref result-v t))))
       (fn []
-        (untrace-query q-ref result-v q-ref)))))
-
-(defn query-ref
-  []
-  (random-ref :query/uuid))
+        (untrace-query input-ref result-v)))))
 
 (defn pull-reaction
   "Returns a differential pull reaction. `expr-fn` is a function that
@@ -954,11 +958,11 @@
   the pull reaction is dependent on the db and query index values, it
   is not reactive to them. Instead, it is reactive to changes the
   query tick, which tracks the db-tick and synced."
-  [config expr-fn query-v q-ref]
-  (let [rx-id  (atom nil)
+  [config expr-fn query-v]
+  (let [q-ref  (query-ref)
         q-tick (query-tick q-ref)
         expr-r (apply expr-fn (rest query-v))]
-    (traced-reaction rx-id query-v
+    (traced-reaction q-ref query-v
       (fn []
         (let [in {:db         (.-state db/app-db)
                   :index      (.-state query-index)
@@ -973,7 +977,7 @@
           (trace-query q-ref query-v (.-state q-tick) r)))
       (fn []
         (swap! query-index dispose-query q-ref)
-        (untrace-query q-ref query-v q-ref)
+        (untrace-query q-ref query-v)
         (when-let [f (:on-dispose config)]
           (f))))))
 

@@ -4,8 +4,8 @@
             [reagent.ratom :as r]))
 
 (defmacro traced-reaction
-  [rx-id query-v reaction-fn & [dispose-fn]]
-  `(let [id# (or ~rx-id (atom nil))
+  [q-ref query-v reaction-fn & [dispose-fn]]
+  `(let [id# (atom nil)
          r#  (r/make-reaction
                (fn []
                  (trace/with-trace
@@ -17,6 +17,8 @@
                      (trace/merge-trace! {:tags {:value res#}})
                      res#)))
                :on-dispose ~dispose-fn)]
+     (when ~q-ref
+       (set! (.-reflet-query-ref r#) ~q-ref))
      (->> r#
           (interop/reagent-id)
           (reset! id#))

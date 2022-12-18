@@ -118,9 +118,9 @@
   (reg/get-handler ::result-fn id))
 
 (defn result-reaction
-  [input-r [id :as query-v] q-ref]
+  [input-r [id :as query-v]]
   (if-let [f (get-result-fn id)]
-    (db/result-reaction input-r f query-v q-ref)
+    (db/result-reaction input-r f query-v)
     input-r))
 
 (defn pull-reaction
@@ -128,10 +128,9 @@
    (-> (get-expr-fn id)
        (pull-reaction query-v)))
   ([expr-fn query-v]
-   (let [q-ref (db/query-ref)]
-     (-> (get-config)
-         (db/pull-reaction expr-fn query-v q-ref)
-         (result-reaction query-v q-ref)))))
+   (-> (get-config)
+       (db/pull-reaction expr-fn query-v)
+       (result-reaction query-v))))
 
 (defn reg-pull-impl
   "Do not use, see reg-pull macro."
@@ -185,7 +184,7 @@
            (assoc cofx :random-ref)))))
 
 (defmulti ref-cleanup
-  "Dispatches on ref unique attribute."
+  "Dispatches on the ref's unique attribute."
   (fn [cofx [_ ref]]
     (first ref)))
 
