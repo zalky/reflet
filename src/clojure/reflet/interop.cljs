@@ -8,7 +8,10 @@
   avoid leaks."
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]
-            [reagent.ratom :as r]))
+            [re-frame.db :as rdb]
+            [reagent.ratom :as r]
+            [reflet.db :as db]
+            [reflet.db.normalize :as norm]))
 
 (defonce db
   (r/atom {}))
@@ -58,10 +61,12 @@
   ;; Called from `with-ref` cleanup to remove references belonging to
   ;; an unmounted React comp
   (fn [refs]
-    (doseq [ref refs]
-      (when-let [{:keys [destroy obj]} (get @db ref)]
-        (when destroy
-          (destroy obj))
+    (doseq [ref (->> @rdb/app-db
+                     (::db/id-attrs)
+                     (norm/to-many refs))]
+      (when-let [{:keys [destroy unmount obj]} (get @db ref)]
+        (when destroy (destroy obj))
+        (when unmount (unmount))
         (swap! db dissoc ref)))))
 
 (defn el!
@@ -73,11 +78,11 @@
   component is mounted. This callback should only be used in the
   special case where you don't have access to the component's
   lifecycle."
-  [ref & {:keys [flush cb]}]
+  [ref & {:keys [flush cb unmount]}]
   (when-not (:obj (get (.-state db) ref))
     (fn [el]
       (when el
-        (reg ref el)
+        (reg ref el {:unmount unmount})
         (when cb (cb el))
         (when flush (r/flush!))))))
 

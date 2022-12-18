@@ -91,11 +91,11 @@
   (list
    'finally
    `(when-let [ref# (:debug-id ~context)]
-      (disp-sync [::ref-cleanup ref#]))
+      (disp-sync [::cleanup ref#]))
 
    `(doseq [[_# ref#] (deref ~refs)]
       (when (and ref# (db/transient? ref#))
-        (disp-sync [::ref-cleanup ref#]))
+        (disp-sync [::cleanup ref#]))
       (when (:debug-id ~context)
         (disp-sync [::db/untrace-event ref#])))))
 

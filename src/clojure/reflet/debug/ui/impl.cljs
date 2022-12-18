@@ -430,7 +430,7 @@
     {:db       (-> db
                    (update ::panels dissoc self)
                    (dissoc ::selected))
-     :dispatch [::f/ref-cleanup self]}))
+     :dispatch [::f/cleanup self]}))
 
 (defn- get-ref-panels
   [db]
@@ -442,7 +442,7 @@
   (fn [{db :db} _]
     (let [refs (get-ref-panels db)]
       {:db         (dissoc db ::panels ::selected)
-       :dispatch-n (for [r refs] [::f/ref-cleanup r])})))
+       :dispatch-n (for [r refs] [::f/cleanup r])})))
 
 (f/reg-pull ::tap
   (fn [tap]

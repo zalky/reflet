@@ -183,39 +183,40 @@
            (reduce rf {})
            (assoc cofx :random-ref)))))
 
-(defmulti ref-cleanup
+(defmulti cleanup
   "Dispatches on the ref's unique attribute."
   (fn [cofx [_ ref]]
     (first ref)))
 
-(defmethod ref-cleanup :debug/id
+(defmethod cleanup :debug/id
+  ;; Cleanup behaviour is specific to the debugger.
   [cofx [_ ref :as event]]
-  (let [handler (get-method ref-cleanup :default)
+  (let [handler (get-method cleanup :default)
         fx      (handler cofx event)]
     (merge fx {:log      [:debug "Debug cleanup" ref]
                :dispatch [::d/untap ref]})))
 
-(defmethod ref-cleanup :el/uuid
+(defmethod cleanup :el/uuid
   [cofx [_ ref :as event]]
   {:log        [:debug "DOM cleanup" ref]
    ::i/cleanup ref})
 
-(defmethod ref-cleanup :js/uuid
+(defmethod cleanup :js/uuid
   [cofx [_ ref :as event]]
   {:log        [:debug "JS cleanup" ref]
    ::i/cleanup ref})
 
-(defmethod ref-cleanup :default
+(defmethod cleanup :default
   [{db :db} [_ ref]]
   {:log             [:debug "Reactive state cleanup" ref]
    :db              (db/dissocn db ref)
    ::db/unmount-ref ref})
 
-(f/reg-event-fx ::ref-cleanup
+(f/reg-event-fx ::cleanup
   [db/inject-query-index
    fsm/advance
    itor/add-global-interceptors]
-  ref-cleanup)
+  cleanup)
 
 ;;;; Additional Utilities
 
