@@ -931,10 +931,11 @@
         q-tick   (query-tick q-ref)]
     (traced-reaction nil result-v
       (fn []
-        (->> (rest result-v)
-             (map maybe-deref)
-             (apply result-fn @input-r)
-             (trace-query q-ref result-v (.-state q-tick))))
+        (let [t (-> (.-state db/app-db) ::data ::tick)]
+          (->> (rest result-v)
+               (map maybe-deref)
+               (apply result-fn @input-r)
+               (trace-query q-ref result-v t))))
       (fn []
         (untrace-query q-ref result-v q-ref)))))
 
