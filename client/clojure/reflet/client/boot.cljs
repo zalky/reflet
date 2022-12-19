@@ -32,8 +32,8 @@
   [m]
   (assoc m :system/uuid (random-uuid)))
 
-(f/reg-event-fx ::boot
-  (fn [_ _]
-    {:db (->> track-list
-              (tx/walk-maps add-id)
-              (db/assocn (db/new-db) :user/track-list))}))
+(f/reg-event-db ::init-tracks
+  (fn [db _]
+    (->> track-list
+         (tx/walk-maps add-id)
+         (db/assocn db :user/track-list))))

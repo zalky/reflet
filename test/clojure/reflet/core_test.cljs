@@ -332,9 +332,10 @@
    ;; application.
 
    (let [db (atom [])]
-     (f/reg-config {:effects-fn
-                    (fn [params {ref :ref}]
-                      (swap! db conj [params ref]))})
+     (f/disp [::f/config
+              {:effects-fn
+               (fn [params {ref :ref}]
+                 (swap! db conj [params ref]))}])
 
      (f/reg-event-db ::init
        (fn [db [_ id join n1 n2 n3]]

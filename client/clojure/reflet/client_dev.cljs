@@ -11,5 +11,5 @@
 
 (defn init!
   []
-  (f/disp-sync [::boot/boot])
+  (client/config!)
   (render!))

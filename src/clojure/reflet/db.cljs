@@ -248,16 +248,23 @@
   (fn [db _]
     (get db ::id-attrs)))
 
+(defn- valid-db?
+  [data id-attrs]
+  (and (or (nil? id-attrs)
+           (set? id-attrs))
+       (map? data)))
+
 (defn new-db
   "Returns a new db, optionally with initial data and unique id
   attributes. Must have at least one unique id attribute."
   ([]
    (new-db {}))
   ([data]
-   (new-db data default-unique-attributes))
+   (new-db data nil))
   ([data id-attrs]
-   {:pre [(map? data) (seq id-attrs)]}
-   (assoc data ::id-attrs id-attrs)))
+   {:pre [(valid-db? data id-attrs)]}
+   (->> (or id-attrs default-unique-attributes)
+        (assoc data ::id-attrs))))
 
 ;;;; Query Tracking Index
 
@@ -693,8 +700,8 @@
     :else           nil))
 
 (defn- default-pull-impl
-  "Evaluates the pull expression specified by `expr` against a given
-  context. A context will contain at least:
+  "Evaluates the pull expression, `expr`, against the `:db` given in the
+  `context` map. `context` will contain at least:
 
   :db
             DB value against which the expression is evaluated
@@ -715,20 +722,24 @@
             effects. [Optional]
 
   :effects-fn
-            Fn that handles pull side effects. [Optional]
+            Fn that handles pull side effects, like triggering
+            data syncs. [Optional]
 
+  After evaluating the expression against the value of the db, this
+  function returns the result.
+  
   By default, this implementation is a pure function of the given
-  `:db` value. However, if `:acc-fn` and `:effects-fn` are
-  provided in the context map, this implementation runs them for
+  `:db` value. However, if `:acc-fn` and `:effects-fn` are provided in
+  the context map, this implementation runs them for
   side-effects. This means the entire impl must also be eager. This
-  function is not part of the api and not meant to be used directly."
+  function is not meant to be called directly."
   [{ref :ref :as context} expr]
   (if-let [attr (when ref (attr-expr expr))]
     (-> (pull* context [expr])
         (get attr))
     (pull* context expr)))
 
-(defn pull-fn
+(defn get-pull-fn
   "Retrieves configured pull fn, or default implementation."
   []
   (-> (get-config)
@@ -782,11 +793,11 @@
   ([db expr]
    (pull db expr nil))
   ([db expr e-ref]
-   (let [pull! (pull-fn)]
-     (pull! {:id-attrs (::id-attrs db)
-             :db       (::data db)
-             :ref      e-ref}
-            expr))))
+   (let [pfn (get-pull-fn)]
+     (pfn {:id-attrs (::id-attrs db)
+           :db       (::data db)
+           :ref      e-ref}
+          expr))))
 
 (defn- clear-stale-entities
   [index stale-entities q-ref]
@@ -835,13 +846,13 @@
   [{:keys [db index expr e-ref q-ref query-tick effects-fn]}]
   (let [fresh  (volatile! #{})
         stale  (volatile! (q->e index q-ref #{}))
-        pull!  (pull-fn)
-        result (pull! {:id-attrs   (::id-attrs db)
-                       :db         (::data db)
-                       :ref        e-ref
-                       :acc-fn     (acc-fn fresh stale)
-                       :effects-fn effects-fn}
-                      expr)]
+        pfn    (get-pull-fn)
+        result (pfn {:id-attrs   (::id-attrs db)
+                     :db         (::data db)
+                     :ref        e-ref
+                     :acc-fn     (acc-fn fresh stale)
+                     :effects-fn effects-fn}
+                    expr)]
     {:db     db
      :result result
      :index  (update-index index fresh stale query-tick q-ref)}))

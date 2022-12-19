@@ -70,10 +70,17 @@
   prematurely. You should not use this with a running application."
   false)
 
-(defn reg-config
+(defn- config
   "Registers reflet configuration map. The configuration should be
   registered before application boot. Currently supported
   configuration options:
+
+  :id-attrs
+            A set of unique id attributes that configure the db
+            normalized data model.
+
+  :dispatch
+            An initial dispatch immediately after configuration.
 
   :effects-fn
             Handles effects expressions within pull syntax, evaluating
@@ -81,8 +88,10 @@
             expressions are ignored.
 
   :pull-fn
-            Overrides the default pull implementation. This can be used
-            to swap in a fully conformed EQL query parser, for example.
+            Overrides the default pull implementation. This fn must
+            fullfill the input and ouput contract specified by
+            reflet.db/default-pull-impl. See the function's doc
+            string for more info.
 
   :trace-queue-size
             Sets the trace queue size for the debugger panels.
@@ -90,11 +99,15 @@
   [config]
   (reg/register-handler :reflet/config :reflet/config config))
 
-(f/reg-fx ::reg-config reg-config)
+(f/reg-fx ::config config)
 
-(reg-event-fx ::reg-config
-  (fn [_ [_ config]]
-    {::reg-config config}))
+(f/reg-event-fx ::config
+  (fn [{db :db} [_ {id-attrs :id-attrs
+                    dispatch :dispatch
+                    :as      config}]]
+    (cond-> {:db      (db/new-db db id-attrs)
+             ::config config}
+      dispatch (assoc :dispatch dispatch))))
 
 (defn reg-expr-fn
   [id expr-fn]

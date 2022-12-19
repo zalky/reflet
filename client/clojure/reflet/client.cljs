@@ -16,7 +16,12 @@
            (.getElementById js/document)
            (dom/render [ui/app])))
 
+(defn config!
+  []
+  (f/disp-sync [::f/config])
+  (f/disp-sync [::boot/init-tracks]))
+
 (defn init!
   []
-  (f/disp-sync [::boot/boot])
+  (config!)
   (render!))
