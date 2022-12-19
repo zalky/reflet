@@ -136,10 +136,10 @@
   hot restarts."
   [env]
   `(let [^clj c# r*/*ratom-context*
-         g#      (or (.-withRefGeneration c#) 0)
+         gen#    (or (.-withRefGeneration c#) 0)
          n#      ~(component-name)
-         r#      [:debug/id (keyword n# g#)]]
-     (set! (.-withRefGeneration c#) (inc g#))
+         r#      [:debug/id (keyword n# gen#)]]
+     (set! (.-withRefGeneration c#) (inc gen#))
      (db/mount-ref! r#)
      r#))
 

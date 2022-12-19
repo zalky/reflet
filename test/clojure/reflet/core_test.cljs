@@ -142,13 +142,13 @@
              :b2 [:system/uuid :b2]}]))))
 
 (deftest random-ref-cofx-test
-  (let [f (reg/get-handler :cofx :random-ref)]
+  (let [f (reg/get-handler :cofx ::f/with-ref)]
     (is (= (f {:db {}} {:system/uuid [:search/self :search/target]
                         :cmp/uuid    [:search/local]})
-           {:db         {}
-            :random-ref {:search/self   [:system/uuid :search/self]
-                         :search/target [:system/uuid :search/target]
-                         :search/local  [:cmp/uuid :search/local]}}))))
+           {:db          {}
+            ::f/with-ref {:search/self   [:system/uuid :search/self]
+                          :search/target [:system/uuid :search/target]
+                          :search/local  [:cmp/uuid :search/local]}}))))
 
 (deftest reg-pull-test
   (fix/run-test-sync

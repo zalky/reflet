@@ -182,9 +182,9 @@
                       (pull-reaction))]
           (reduce reg-comp-rf r1 ids))))))
 
-(f/reg-cofx :random-ref
-  ;; This cofx has the same semantics as with-ref, with the exception
-  ;; that refs cannot be transient, because there is no reactive
+(f/reg-cofx ::with-ref
+  ;; This cofx has the same semantics as with-ref, except that here
+  ;; refs cannot be transient, because there is no reactive
   ;; context in event handlers.
   (fn [cofx {:keys [meta]
              :as   bindings}]
@@ -194,7 +194,7 @@
       (->> bindings
            (s/conform ::rs/bindings)
            (reduce rf {})
-           (assoc cofx :random-ref)))))
+           (assoc cofx ::with-ref)))))
 
 (defmulti cleanup
   "Dispatches on the ref's unique attribute."
