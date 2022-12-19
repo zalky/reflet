@@ -91,13 +91,13 @@
   (list
    'finally
    `(when-let [ref# (:debug-id ~context)]
-      (disp-sync [::cleanup ref#]))
+      (disp [::cleanup ref#]))
 
    `(doseq [[_# ref#] (deref ~refs)]
       (when (and ref# (db/transient? ref#))
-        (disp-sync [::cleanup ref#]))
+        (disp [::cleanup ref#]))
       (when (:debug-id ~context)
-        (disp-sync [::db/untrace-event ref#])))))
+        (disp [::db/untrace-event ref#])))))
 
 (defn- env-namespace
   [env]

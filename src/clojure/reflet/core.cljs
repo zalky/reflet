@@ -201,13 +201,18 @@
   (fn [cofx [_ ref]]
     (first ref)))
 
+(defn- untap
+  [db ref]
+  (update db ::d/taps dissoc ref))
+
 (defmethod cleanup :debug/id
   ;; Cleanup behaviour is specific to the debugger.
-  [cofx [_ ref :as event]]
-  (let [handler (get-method cleanup :default)
-        fx      (handler cofx event)]
-    (merge fx {:log      [:debug "Debug cleanup" ref]
-               :dispatch [::d/untap ref]})))
+  [{db :db :as cofx} [_ ref :as event]]
+  (let [handler    (get-method cleanup :default)
+        default-fx (handler cofx event)]
+    (->> {:log [:debug "Debug cleanup" ref]
+          :db  (untap (:db default-fx db) ref)}
+         (merge default-fx))))
 
 (defmethod cleanup :el/uuid
   [cofx [_ ref :as event]]

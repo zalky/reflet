@@ -8,19 +8,13 @@
   ;; lifecycle. To guarantee this, ::d/tap must be invoked in either
   ;; the `:ref` callback, or the `:component-did-mount` phase of the
   ;; component lifecycle. Must not dispatch in a `with-let`, where it
-  ;; will happen during the first render.
+  ;; will happen during the first render. Untap is implemented via the
+  ;; reflet.core/cleanup :debug/id defmethod.
   [db/inject-query-index]
   (fn [db [_ ref tap]]
     (-> db
         (update-in [::taps ref] merge tap)
         (db/mergen tap))))
-
-(f/reg-event-db ::untap
-  [db/inject-query-index]
-  (fn [db [_ ref]]
-    (-> db
-        (update ::taps dissoc ref)
-        (db/dissocn ref))))
 
 (f/reg-sub ::taps
   (fn [db _]
