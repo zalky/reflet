@@ -11,10 +11,6 @@
 
 (log/set-level! :warn)
 
-(f/reg-event-fx ::internals
-  (fn [_ _]
-    {:db (db/new-db)}))
-
 (defn base-fixtures
   "These are included by default by the
   `reflet.fixtures/run-test-sync` macro."
@@ -24,5 +20,5 @@
                 i/db                      (r/atom {})
                 f/debounced-events        (r/atom {})]
     (binding [f/*force-persistent-refs* true]
-      (f/disp-sync [::internals])
+      (f/disp-sync [::f/config])
       (f))))

@@ -600,14 +600,14 @@
 
 (defn- pull-effects
   "Parses effect expression and runs effect-fn, if configured, for side
-  effects. The effects-fn has two args: a map of effect parameters,
+  effects. The pull-fx-fn has two args: a map of effect parameters,
   and a subset of the query context. The default pull implementation
   should have no effects configured, and is pure."
-  [{:keys [db ref effects-fn]
+  [{:keys [db ref pull-fx-fn]
     :as   context} effect result]
   (let [[expr params] (unquote-list effect)]
-    (when effects-fn
-      (effects-fn params {:db db :ref ref}))
+    (when pull-fx-fn
+      (pull-fx-fn params {:db db :ref ref}))
     (pull* context expr result)))
 
 (defn- pull-join
@@ -721,7 +721,7 @@
             Fn that accumulates entity references via side
             effects. [Optional]
 
-  :effects-fn
+  :pull-fx-fn
             Fn that handles pull side effects, like triggering
             data syncs. [Optional]
 
@@ -729,7 +729,7 @@
   function returns the result.
   
   By default, this implementation is a pure function of the given
-  `:db` value. However, if `:acc-fn` and `:effects-fn` are provided in
+  `:db` value. However, if `:acc-fn` and `:pull-fx-fn` are provided in
   the context map, this implementation runs them for
   side-effects. This means the entire impl must also be eager. This
   function is not meant to be called directly."
@@ -843,7 +843,7 @@
   tracked entities to the query index, updates the given query tick
   for the given query, clears stale entities from the previous pull,
   and clears touched queries."
-  [{:keys [db index expr e-ref q-ref query-tick effects-fn]}]
+  [{:keys [db index expr e-ref q-ref query-tick pull-fx-fn]}]
   (let [fresh  (volatile! #{})
         stale  (volatile! (q->e index q-ref #{}))
         pfn    (get-pull-fn)
@@ -851,7 +851,7 @@
                      :db         (::data db)
                      :ref        e-ref
                      :acc-fn     (acc-fn fresh stale)
-                     :effects-fn effects-fn}
+                     :pull-fx-fn pull-fx-fn}
                     expr)]
     {:db     db
      :result result
