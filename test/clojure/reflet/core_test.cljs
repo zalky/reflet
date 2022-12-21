@@ -322,9 +322,12 @@
        (let [r (f/sub [::result-fn join])]
          (is (= @r ":joinjoin updatedlabel")))))))
 
+(def pull-fx-db
+  (atom []))
+
 (defmethod f/pull-fx ::test
-  [{v :val} {:keys [db ref]}]
-  (swap! db conj [v ref]))
+  [{v :val} {:keys [ref]}]
+  (swap! pull-fx-db conj [v ref]))
 
 (deftest reg-pull-effects-test
   (fix/run-test-sync
@@ -333,104 +336,101 @@
    ;; properties of pull queries are only really testable in a mounted
    ;; application.
 
-   (let [db (atom [])]
-     (f/disp [::f/config
-              {:pull-fx-fn
-               (fn [params context]
-                 ;; Override context db with test reference
-                 (f/pull-fx params (assoc context :db db)))}])
+   (f/reg-event-db ::init
+     (fn [db [_ id join n1 n2 n3]]
+       (-> db
+           (db/mergen {:system/uuid    (second id)
+                       :kr/name        "name"
+                       :kr/description "description"
+                       :kr/join        {:system/uuid (second join)
+                                        :kr/name     "join"
+                                        :kr/label    "label"
+                                        :kr/join     [{:system/uuid (second n1)
+                                                       :kr/name     "nested 1"}
+                                                      {:system/uuid (second n2)
+                                                       :kr/name     "nested 2"
+                                                       :kr/join     {:system/uuid    (second n3)
+                                                                     :kr/name        "nested 3"
+                                                                     :kr/description "leaf"}}]}})
+           (db/assocn ::link id))))
 
-     (f/reg-event-db ::init
-       (fn [db [_ id join n1 n2 n3]]
-         (-> db
-             (db/mergen {:system/uuid    (second id)
-                         :kr/name        "name"
-                         :kr/description "description"
-                         :kr/join        {:system/uuid (second join)
-                                          :kr/name     "join"
-                                          :kr/label    "label"
-                                          :kr/join     [{:system/uuid (second n1)
-                                                         :kr/name     "nested 1"}
-                                                        {:system/uuid (second n2)
-                                                         :kr/name     "nested 2"
-                                                         :kr/join     {:system/uuid    (second n3)
-                                                                       :kr/name        "nested 3"
-                                                                       :kr/description "leaf"}}]}})
-             (db/assocn ::link id))))
+   (f/with-ref {:system/uuid [id join n1 n2 n3]}
+     (f/disp [::init id join n1 n2 n3])
 
-     (f/with-ref {:system/uuid [id join n1 n2 n3]}
-       (f/disp [::init id join n1 n2 n3])
-
-       (testing "Query effects"
-         (f/reg-pull ::join
-           (fn [id]
-             [([:system/uuid
-                :kr/name
-                (:kr/description {:id ::test :val ::e2})
-                ({:kr/join ([:system/uuid
-                             :kr/name
-                             :kr/label
-                             {:kr/join ([:kr/name] {:id ::test :val ::e5})}]
-                            {:id ::test :val ::e4})}
-                 {:id ::test :val ::e3})]
-               {:id ::test :val ::e1})
-              id]))
-
-         (let [r (f/sub [::join id])]
-           (is (= @r
-                  {:system/uuid    (second id)
-                   :kr/name        "name"
-                   :kr/description "description"
-                   :kr/join        {:system/uuid (second join)
-                                    :kr/name     "join"
-                                    :kr/label    "label"
-                                    :kr/join     [{:kr/name "nested 1"}
-                                                  {:kr/name "nested 2"}]}}))
-           (is (= @db [[::e1 [:system/uuid :id]]
-                       [::e2 [:system/uuid :id]]
-                       [::e3 [:system/uuid :id]]
-                       [::e4 [:system/uuid :join]]
-                       [::e5 [:system/uuid :n1]]
-                       [::e5 [:system/uuid :n2]]]))))
-
-       (reset! db [])
-       (testing "Single attribute pull effects"
-         (f/reg-pull ::attr
-           (fn [id]
-             [({:kr/join ([:system/uuid
+     (reset! pull-fx-db [])
+     (testing "Query effects"
+       (f/reg-pull ::join
+         (fn [id]
+           [([:system/uuid
+              :kr/name
+              (:kr/description {:id ::test :val ::e2})
+              ({:kr/join ([:system/uuid
                            :kr/name
-                           :kr/label]
-                          {:id ::test :val ::e2})}
-               {:id ::test :val ::e1})
-              id]))
+                           :kr/label
+                           {:kr/join ([:kr/name] {:id ::test :val ::e5})}]
+                          {:id ::test :val ::e4})}
+               {:id ::test :val ::e3})]
+             {:id ::test :val ::e1})
+            id]))
 
-         (let [r (f/sub [::attr id])]
-           (is (= @r
-                  {:system/uuid (second join)
-                   :kr/name     "join"
-                   :kr/label    "label"}))
-           (is (= @db [[::e1 [:system/uuid :id]]
-                       [::e2 [:system/uuid :join]]]))))
+       (let [r (f/sub [::join id])]
+         (is (= @r
+                {:system/uuid    (second id)
+                 :kr/name        "name"
+                 :kr/description "description"
+                 :kr/join        {:system/uuid (second join)
+                                  :kr/name     "join"
+                                  :kr/label    "label"
+                                  :kr/join     [{:kr/name "nested 1"}
+                                                {:kr/name "nested 2"}]}}))
+         (is (= @pull-fx-db
+                [[::e1 [:system/uuid :id]]
+                 [::e2 [:system/uuid :id]]
+                 [::e3 [:system/uuid :id]]
+                 [::e4 [:system/uuid :join]]
+                 [::e5 [:system/uuid :n1]]
+                 [::e5 [:system/uuid :n2]]]))))
 
-       (reset! db [])
-       (testing "link entry pull effects"
-         (f/reg-pull ::link
-           (fn [id]
-             [({::link ([:system/uuid
+     (reset! pull-fx-db [])
+     (testing "Single attribute pull effects"
+       (f/reg-pull ::attr
+         (fn [id]
+           [({:kr/join ([:system/uuid
                          :kr/name
-                         :kr/description]
+                         :kr/label]
                         {:id ::test :val ::e2})}
-               {:id ::test :val ::e1})]))
+             {:id ::test :val ::e1})
+            id]))
 
-         (let [r (f/sub [::link id])]
-           (is (= @r
-                  {:system/uuid    (second id)
-                   :kr/name        "name"
-                   :kr/description "description"}))
-           ;; Note: there is no entity reference at the top level link
-           ;; query context
-           (is (= @db [[::e1 nil]
-                       [::e2 [:system/uuid :id]]]))))))))
+       (let [r (f/sub [::attr id])]
+         (is (= @r
+                {:system/uuid (second join)
+                 :kr/name     "join"
+                 :kr/label    "label"}))
+         (is (= @pull-fx-db
+                [[::e1 [:system/uuid :id]]
+                 [::e2 [:system/uuid :join]]]))))
+
+     (reset! pull-fx-db [])
+     (testing "link entry pull effects"
+       (f/reg-pull ::link
+         (fn [id]
+           [({::link ([:system/uuid
+                       :kr/name
+                       :kr/description]
+                      {:id ::test :val ::e2})}
+             {:id ::test :val ::e1})]))
+
+       (let [r (f/sub [::link id])]
+         (is (= @r
+                {:system/uuid    (second id)
+                 :kr/name        "name"
+                 :kr/description "description"}))
+         ;; Note: there is no entity reference at the top level link
+         ;; query context
+         (is (= @pull-fx-db
+                [[::e1 nil]
+                 [::e2 [:system/uuid :id]]])))))))
 
 (deftest reg-comp-test
   (fix/run-test-sync

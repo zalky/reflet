@@ -71,9 +71,7 @@
   prematurely. You should not use this with a running application."
   false)
 
-(defmulti pull-fx
-  (fn [params context]
-    (:id params)))
+(def pull-fx db/pull-fx)
 
 (defmethod pull-fx :default
   [_ {ref :ref}]
@@ -90,11 +88,6 @@
 
   :dispatch
             An initial dispatch immediately after configuration.
-
-  :pull-fx-fn
-            Handles effects expressions within pull syntax, evaluating
-            for side-effects. Default is implementation is
-           `reflet.core/pull-fx`.
 
   :pull-fn
             Overrides the default pull implementation. This fn must
@@ -114,10 +107,9 @@
   (fn [{db :db} [_ {id-attrs :id-attrs
                     dispatch :dispatch
                     :as      config}]]
-    (let [defaults {:pull-fx-fn pull-fx}]
-      (cond-> {:db      (db/new-db db id-attrs)
-               ::config (merge defaults config)}
-        dispatch (assoc :dispatch dispatch)))))
+    (cond-> {:db      (db/new-db db id-attrs)
+             ::config config}
+      dispatch (assoc :dispatch dispatch))))
 
 (defn reg-expr-fn
   [id expr-fn]

@@ -837,13 +837,17 @@
     (vswap! fresh conj e-ref)
     (vswap! stale disj e-ref)))
 
+(defmulti pull-fx
+  (fn [params context]
+    (:id params)))
+
 (defn- pull-reactive
   "Given a pull expression and an entity reference, returns the
   de-normalized entity data from the database. Additionally adds newly
   tracked entities to the query index, updates the given query tick
   for the given query, clears stale entities from the previous pull,
   and clears touched queries."
-  [{:keys [db index expr e-ref q-ref query-tick pull-fx-fn]}]
+  [{:keys [db index expr e-ref q-ref query-tick]}]
   (let [fresh  (volatile! #{})
         stale  (volatile! (q->e index q-ref #{}))
         pfn    (get-pull-fn)
@@ -851,7 +855,7 @@
                      :db         (::data db)
                      :ref        e-ref
                      :acc-fn     (acc-fn fresh stale)
-                     :pull-fx-fn pull-fx-fn}
+                     :pull-fx-fn pull-fx}
                     expr)]
     {:db     db
      :result result
