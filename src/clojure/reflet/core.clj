@@ -186,11 +186,15 @@
     `(with-ref ~(assoc bindings :debug false)
        ~@body)))
 
+(defn- side-effect?
+  [x]
+  (and (list? x) (not (symbol? (first x)))))
+
 (defn- no-eval-keywords
   [expr]
   (w/postwalk
    (fn [x]
-     (if (and (list? x) (not (symbol? (first x))))
+     (if (side-effect? x)
        (cons 'list x)
        x))
    expr))

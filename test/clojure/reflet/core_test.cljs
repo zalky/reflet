@@ -213,8 +213,7 @@
      (testing "Wildcard query"
        (f/reg-pull ::wildcard
          (fn [id]
-           ['[*
-              {:kr/join [*]}]
+           ['[* {:kr/join [*]}]
             id]))
 
        (let [r (f/sub [::wildcard id join])]
@@ -275,8 +274,7 @@
      (testing "Infinitely recursive wildcard query (pull everything)"
        (f/reg-pull ::recursive-*
          (fn [id]
-           ['[*
-              {:kr/join ...}]
+           ['[* {:kr/join ...}]
             id]))
 
        (let [r (f/sub [::recursive-* id])]
@@ -364,10 +362,11 @@
              [([:system/uuid
                 :kr/name
                 (:kr/description {:id ::e2})
-                ({:kr/join [:system/uuid
-                            :kr/name
-                            :kr/label
-                            {:kr/join ([:kr/name] {:id ::e4})}]}
+                ({:kr/join ([:system/uuid
+                             :kr/name
+                             :kr/label
+                             {:kr/join ([:kr/name] {:id ::e5})}]
+                            {:id ::e4})}
                  {:id ::e3})]
                {:id ::e1})
               id]))
@@ -385,8 +384,9 @@
            (is (= @db [[{:id ::e1} [:system/uuid :id]]
                        [{:id ::e2} [:system/uuid :id]]
                        [{:id ::e3} [:system/uuid :id]]
-                       [{:id ::e4} [:system/uuid :n1]]
-                       [{:id ::e4} [:system/uuid :n2]]]))))))))
+                       [{:id ::e4} [:system/uuid :join]]
+                       [{:id ::e5} [:system/uuid :n1]]
+                       [{:id ::e5} [:system/uuid :n2]]]))))))))
 
 (deftest reg-comp-test
   (fix/run-test-sync

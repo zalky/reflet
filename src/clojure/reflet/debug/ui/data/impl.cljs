@@ -4,7 +4,7 @@
 
 (f/reg-pull ::entity
   (fn [ref]
-    ['[*] ref]))
+    [['*] ref]))
 
 (f/reg-pull ::expand?
   (fn [self]
