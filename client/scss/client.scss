@@ -110,6 +110,10 @@ body {
             }
         }
 
+        > div > :last-child {
+            text-align: right;
+        }
+
         > :nth-child(2n) > div {
             background: color.scale($card-bg, $lightness: 50%);
         }

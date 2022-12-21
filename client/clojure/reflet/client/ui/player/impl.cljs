@@ -57,11 +57,18 @@
      self]))
 
 (f/reg-pull ::track-duration
-  (fn [id]
-    [:kr.track/duration id])
+  (fn [ref]
+    [:kr.track/duration ref])
   (fn [secs]
+    ;; Convert numeric seconds to a HH:mm:ss string representation
     (when (number? secs)
-      (str (quot secs 60) ":" (mod secs 60)))))
+      (->> (-> secs
+               (* 1000)
+               ( js/Date.)
+               (.toISOString)
+               (.slice 11 19))
+           (drop-while #{\0 \:})
+           (apply str)))))
 
 (f/reg-sub ::selecting?
   (fn [[_ self]]
