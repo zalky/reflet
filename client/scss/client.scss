@@ -50,6 +50,11 @@ body {
 
     .menu {
         justify-content: center;
+
+        > .nav-item {
+            user-select: none;
+            cursor: pointer;
+        }
     }
 }
 
@@ -58,13 +63,15 @@ body {
     flex: 1;
 }
 
-.player {
+.player, .form {
     width: 30rem;
     position: absolute;
     top: 30%;
     left: 50%;
     transform: translate(-50%, 0);
+}
 
+.player {
     .btn-toolbar .btn {
         width: 5rem;
     }
