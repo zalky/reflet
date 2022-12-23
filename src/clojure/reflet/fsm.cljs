@@ -40,7 +40,9 @@
             provided `::state` is used.
 
   `:stop`
-            One or more states which when reached will stop the fsm.
+            One or more states which when reached will stop the
+            fsm. The FSM interceptor will be removed, but the FSM state
+            will also be set to the relevant state.
 
   `:return`
             A pull spec run as the return value of the resultant FSM
@@ -50,7 +52,7 @@
             agains the FSM `:ref` as the root reference.
 
   `:to`
-            Start the FSM in some initial state.
+            Advance the FSM to some starting state.
 
   `:dispatch`
             One or more events to dispatch immediately after starting
@@ -192,8 +194,9 @@
 
   When an FSM is started, its initial state will be whatever is
   referenced by its FSM `:ref` in the db. If no state exists, then it
-  will be `nil`. It is usually a good idea to always define a `nil`
-  transition, or the FSM will stop progressing.
+  will be `nil`. You should always define a `nil` transition, or set
+  the `:to` option to advance the FSM on startup. Otherwise, the FSM
+  will never get out of the `nil` state.
 
   Because the FSM implementation is based on global interceptors that
   run every time, all the matching and lookup algorithms are written
@@ -223,15 +226,15 @@
 
 (s/def ::event
   (s*/non-conformer
-   (s/cat :event-id   ::event-id
-          :more       (s/* any?))))
+   (s/cat :event-id ::event-id
+          :more     (s/* any?))))
 
 (s/def ::timeout
   (s*/non-conformer
-   (s/cat :id     #{::timeout}
-          :ref    ::s*/ref
-          :ms     ::ms
-          :more   (s/* any?))))
+   (s/cat :id   #{::timeout}
+          :ref  ::s*/ref
+          :ms   ::ms
+          :more (s/* any?))))
 
 (s/def ::pull
   (s/coll-of ::s*/ref :kind vector?))
@@ -341,8 +344,7 @@
     (reduce-kv r1 {} fsm)))
 
 (s/def :parse-recursive/fsm
-  (s/and (s/map-of (s/or :state ::state
-                         :fsm   :parse-recursive/fsm)
+  (s/and (s/map-of (s/or :state ::state :fsm :parse-recursive/fsm)
                    (s/nilable map?)
                    :conform-keys true)
          (s/conformer distribute-transitions)))
@@ -351,9 +353,25 @@
   (s/and :parse-recursive/fsm
          (s/map-of ::state (s/nilable ::transitions))))
 
+(s/def ::nil-state-default
+  ;; A `nil` state is a real state for an FSM, just like any
+  ;; other. However, it is also the default initial state for most
+  ;; FSMs. Every allowable state for an FSM must be fully enumerated
+  ;; in the :fsm spec, even if that state's transition map is nil. It
+  ;; is an error for the FSM to reach a state that is not enumerated
+  ;; in the transition map. Because the nil state is so common, it is
+  ;; always implicitly enumerated with a transition map of
+  ;; `nil`. However, this means an FSM can never get out of the nil
+  ;; state without an explicit {nil transition}, or the `:to` state
+  ;; being set.
+  (s/conformer #(update % :fsm (partial merge {nil nil}))))
+
 (s/def ::fsm
-  (s/keys :req-un [::ref :state-map/fsm]
-          :opt-un [::stop ::to ::dispatch ::dispatch-later]))
+  (s/and ::nil-state-default
+         (s/keys :req-un [::ref]
+                 :opt-un [:state-map/fsm
+                          ::to ::stop
+                          ::dispatch ::dispatch-later])))
 
 (defn- parse
   [fsm]

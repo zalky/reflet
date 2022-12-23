@@ -19,8 +19,7 @@
 
      (fsm/reg-fsm ::no-op
        (fn [self]
-         {:ref self
-          :fsm {nil nil}}))
+         {:ref self}))
 
      (f/reg-no-op ::advance)
 
@@ -74,8 +73,7 @@
     (fix/run-test-sync
      (fsm/reg-fsm ::idempotent
        (fn [self]
-         {:ref self
-          :fsm {nil nil}}))
+         {:ref self}))
 
      (f/with-ref {:cmp/uuid [fsm/self]}
        (letfn [(get-handler []
@@ -135,8 +133,7 @@
        (fn [self]
          {:ref self
           :to  ::starting
-          :fsm {nil        nil
-                ::starting {[::advance self] ::started}}}))
+          :fsm {::starting {[::advance self] ::started}}}))
 
      (f/reg-no-op ::advance)
 
