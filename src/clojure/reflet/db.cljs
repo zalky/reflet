@@ -762,9 +762,9 @@
 
 (defn pull
   "Pulls normalized data from the given db. This is a non-reactive,
-  functionally pure version of pull! for use in event handlers. The
-  data is pulled from the entity according to a pull pattern that
-  conforms to:
+  functionally pure version of pull-reactive for use in event
+  handlers. The data is pulled from the entity according to a pull
+  pattern that conforms to:
 
   { :attr sub-pattern }
             If the entity contains :attr, it is treated as an

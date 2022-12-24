@@ -36,7 +36,7 @@
   The following optional attributes are also supported:
 
   `:attr`
-            The entity attribute where the state is stored. If not
+            The entity attribute where the FSM state is stored. If not
             provided `::state` is used.
 
   `:stop`
@@ -45,11 +45,11 @@
             will also be set to the relevant state.
 
   `:return`
-            A pull spec run as the return value of the resultant FSM
-            subscription. By default, the fsm subscription returns a
-            simple attribute something more query on the state
-            attribute specified by `:attr`. The query is always run
-            agains the FSM `:ref` as the root reference.
+            The result returned by the FSM subscription. This is
+            expressed as a pull spec that is run against the db with
+            the FSM `:ref` as the root entity. The default pull spec
+            returns a single attribute, which is the FSM state
+            attribute (see the `:attr` option above).
 
   `:to`
             Advance the FSM to some starting state.
@@ -347,7 +347,8 @@
     (reduce-kv r1 {} fsm)))
 
 (s/def :parse-recursive/fsm
-  (s/and (s/map-of (s/or :state ::state :fsm :parse-recursive/fsm)
+  (s/and (s/map-of (s/or :state ::state
+                         :fsm :parse-recursive/fsm)
                    (s/nilable map?)
                    :conform-keys true)
          (s/conformer distribute-transitions)))
@@ -356,25 +357,27 @@
   (s/and :parse-recursive/fsm
          (s/map-of ::state (s/nilable ::transitions))))
 
-(s/def ::nil-state-default
-  ;; A `nil` state is a real state for an FSM, just like any
-  ;; other. However, it is also the default initial state for most
-  ;; FSMs. Every allowable state for an FSM must be fully enumerated
-  ;; in the :fsm spec, even if that state's transition map is nil. It
-  ;; is an error for the FSM to reach a state that is not enumerated
-  ;; in the transition map. Because the nil state is so common, it is
-  ;; always implicitly enumerated with a transition map of
-  ;; `nil`. However, this means an FSM can never get out of the nil
-  ;; state without an explicit {nil transition}, or the `:to` state
-  ;; being set.
-  (s/conformer #(update % :fsm (partial merge {nil nil}))))
+(s/def ::fsm-map
+  (s/keys :req-un [::ref]
+          :opt-un [:state-map/fsm
+                   ::to ::stop
+                   ::dispatch ::dispatch-later]))
+
+(defn nil-state-default
+  "A `nil` state is a real state for an FSM, just like any
+  other. However, it is also the default initial state for most
+  FSMs. Every allowable state for an FSM must be fully enumerated in
+  the :fsm spec, even if that state's transition map is nil. It is an
+  error for the FSM to reach a state that is not enumerated in the
+  transition map. Because the nil state is so common, it is always
+  implicitly enumerated with a transition map of `nil`. However, this
+  means an FSM can never get out of the nil state without an explicit
+  {nil transition}, or the `:to` state being set."
+  [expr]
+  (update expr :fsm (partial merge {nil nil})))
 
 (s/def ::fsm
-  (s/and ::nil-state-default
-         (s/keys :req-un [::ref]
-                 :opt-un [:state-map/fsm
-                          ::to ::stop
-                          ::dispatch ::dispatch-later])))
+  (s/and (s/conformer nil-state-default) ::fsm-map))
 
 (defn- parse
   [fsm]
