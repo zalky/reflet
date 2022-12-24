@@ -565,6 +565,10 @@
 
 (declare pull*)
 
+(defn prop?
+  [expr]
+  (or (keyword? expr) (string? expr)))
+
 (defn- link?
   [ref expr]
   (and (map? expr) (not ref)))
@@ -685,7 +689,7 @@
      (link? ref expr) (pull-link context expr result)
      (list? expr)     (pull-effects context expr result)
      (vector? expr)   (pull-props context expr result)
-     (keyword? expr)  (pull-prop context expr result)
+     (prop? expr)     (pull-prop context expr result)
      (wildcard? expr) (pull-wildcard context expr result)
      (map? expr)      (pull-join context expr result)
      :else            (throw (ex-info "Invalid pull expression"

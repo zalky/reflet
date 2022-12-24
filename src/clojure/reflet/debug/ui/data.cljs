@@ -69,13 +69,19 @@
          :on-context-menu (on-context-click s)}
    [:span (str \" s \")]])
 
+(defn- attr->ns
+  [attr]
+  (if (keyword? attr)
+    (namespace attr)
+    attr))
+
 (defn value-ref
   [ref & {:keys [on-click]}]
   (let [[attr value] ref]
     [:div {:class           "reflet-ref"
            :on-click        on-click
            :on-context-menu (on-context-click ref)}
-     (namespace attr) "@"
+     (attr->ns attr) "@"
      (if (uuid? value)
        (subs (str value) 0 8)
        (str value))]))
