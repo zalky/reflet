@@ -217,9 +217,12 @@
 
 (s/def ::ref ::s*/ref)
 (s/def ::state (s/nilable qualified-keyword?))
-(s/def ::when qualified-keyword?)
 (s/def ::to ::state)
 (s/def ::ms number?)
+
+(s/def ::when
+  (s/or :spec qualified-keyword?
+        :fn   fn?))
 
 (s/def ::event-id
   (s/and keyword? (complement #{::timeout})))
@@ -379,12 +382,15 @@
       (assoc :fsm-unparsed fsm)))
 
 (defn- eval-clause
-  [db input {p :pull
-             c :when}]
-  (or (not c)
-      (if p
-        (s/valid? c (map #(db/getn db %) p))
-        (s/valid? c input))))
+  [db input {pull     :pull
+             [t pred] :when}]
+  (or (not pred)
+      (let [f (case t
+                :spec (partial s/valid? pred)
+                :fn   pred)]
+        (f (if pull
+             (map #(db/getn db %) pull)
+             input)))))
 
 (defn- cond-clause
   [db [input clauses]]

@@ -420,13 +420,13 @@
                               :when ::four?}
                              {:to   ::even
                               :pull [self]
-                              :when ::even}]}
+                              :when (comp even? ::n first)}]}
                  ::even {:* [{:to   ::done
                               :pull [self]
                               :when ::four?}
                              {:to   ::odd
                               :pull [self]
-                              :when ::odd}]}
+                              :when (comp odd? ::n first)}]}
                  ::done {:* [{:to ::odd}]}}}))
 
      (f/reg-event-db ::set
@@ -442,15 +442,19 @@
              n     (f/sub [::n self])]
          (is (nil? @n))
          (is (nil? @state))
+         ;; This transition is spec conditional clause
          (f/disp [::set self 1])
          (is (= @n 1))         
          (is (= ::odd @state))
+         ;; This transition is function conditional clause
          (f/disp [::set self 2])
          (is (= @n 2))
          (is (= ::even @state))
+         ;; This transition is spec conditional clause
          (f/disp [::set self 3])
          (is (= @n 3))
          (is (= ::odd @state))
+         ;; This transition is fuction conditional clause
          (f/disp [::set self 4])
          (is (= @n 4))
          (is (= ::done @state))
