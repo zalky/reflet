@@ -19,23 +19,23 @@
            ::done   nil}}))
 
 (fsm/reg-fsm ::workflow-b
-  (fn [self w1 w2 w3 w4]
+  (fn [self f1 f2 f3 f4]
     {:ref self
      :to  ::step-1
-     :fsm {::step-1 {[::done w1] ::step-2}
-           ::step-2 {[::done w2] ::step-3}
-           ::step-3 {[::done w3] ::step-4}
-           ::step-4 {[::done w4] {:to       ::done
+     :fsm {::step-1 {[::done f1] ::step-2}
+           ::step-2 {[::done f2] ::step-3}
+           ::step-3 {[::done f3] ::step-4}
+           ::step-4 {[::done f4] {:to       ::done
                                   :dispatch [::done self]}}
            ::done   nil}}))
 
 (fsm/reg-fsm ::workflow-c
-  (fn [self w1 w2 w3]
+  (fn [self f1 f2 f3]
     {:ref self
      :to  ::step-1
-     :fsm {::step-1 {[::done w1] ::step-2}
-           ::step-2 {[::done w2] ::step-3}
-           ::step-3 {[::done w3] {:to       ::done
+     :fsm {::step-1 {[::done f1] ::step-2}
+           ::step-2 {[::done f2] ::step-3}
+           ::step-3 {[::done f3] {:to       ::done
                                   :dispatch [::done self]}}
            ::done   nil}}))
 
@@ -63,4 +63,3 @@
     [::fsm/state self])
   (fn [state]
     (= state ::done)))
-

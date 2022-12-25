@@ -170,14 +170,15 @@
             A list of entity references. These entities are then
             passed as inputs to the :when conditional, in place of
             the trigger event. This allows you to build FSMs that use
-            the state of other FSMs as inputs to their transitions.  
+            the state of other FSMs as inputs to their transitions.
+            [optional]
 
   `:dispatch`
             An event vector to dispatch on a succesful transition
             [optional]
 
   `:dispatch-later`
-            Same semantics as
+            Same semantics as `:dispatch-later` Re-frame fx.
 
   Once an FSM has been declared using `reg-fsm`, instances can be
   created via subscriptions. When created this way, an FSM's lifecycle
@@ -410,12 +411,23 @@
 
 (defn- get-transition
   [{state-map :fsm
-    {m :fsm}  :fsm-unparsed} state]
+    unparsed  :fsm-unparsed} state]
   (if (contains? state-map state)
     (get state-map state)
-    (-> "FSM state not in state map"
-        (ex-info {:state state :state-map m})
+    (-> "Not a valid FROM state"
+        (ex-info {:state state :fsm unparsed})
         (throw))))
+
+(defn- validate-to
+  [{stop      :stop
+    state-map :fsm
+    unparsed  :fsm-unparsed} {to :to :as clause}]
+  (when-not (or (contains? state-map to)
+                (contains? stop to))
+    (-> "Not a valid TO state"
+        (ex-info {:state to :fsm unparsed})
+        (throw)))
+  clause)
 
 (defn- match-clause
   "Given the current state of the fsm in the db, returns a matching
@@ -423,7 +435,8 @@
   [fsm current-state db event]
   (some->> (get-transition fsm current-state)
            (match-transition db event)
-           (cond-clause db)))
+           (cond-clause db)
+           (validate-to fsm)))
 
 (defn- advance-fx
   "Given a parsed fsm, a timeout reference, a db, and an event, computes
@@ -483,13 +496,6 @@
 
 (declare stop!)
 
-(defn- cleanup!
-  [{:keys [stop fsm-v]
-    :as   fsm} timeout state]
-  (if (contains? stop state)
-    (stop! fsm-v)
-    (set-timeout! timeout fsm state)))
-
 (defn- fsm-dispatch!
   "Must happen after interceptor has been registered."
   [{:keys [dispatch dispatch-later]}]
@@ -498,6 +504,14 @@
   (doseq [event dispatch-later]
     (fx/dispatch-later event)))
 
+(defn- do-advance-fx!
+  [{:keys [stop fsm-v]
+    :as   fsm} clause timeout state]
+  (fsm-dispatch! clause)
+  (if (contains? stop state)
+    (stop! fsm-v)
+    (set-timeout! timeout fsm state)))
+
 (defn- advance-rf
   [event]
   (fn [db {{:keys [ref attr]
@@ -505,8 +519,7 @@
            {:keys [to]
             :as   clause} :clause
            timeout        :timeout}]
-    (fsm-dispatch! clause)
-    (cleanup! fsm timeout to)
+    (do-advance-fx! fsm clause timeout to)
     (db/assoc-inn db [ref attr] to)))
 
 (defn- after-fx
@@ -660,28 +673,29 @@
 
  (f/reg-event-fx ::start
    ;; Stopping and starting FSMs during the event phase is only safe
-   ;; is that is the only thing that is happening.
+   ;; if that is the only thing that is happening.
    fsm-safe-usage-interceptor
    (fn [_ [_ fsm-v]]
      {::start-not-safe fsm-v}))
 
 (f/reg-event-fx ::stop
    ;; Stopping and starting FSMs during the event phase is only safe
-   ;; is that is the only thing that is happening.
+   ;; if that is the only thing that is happening.
   fsm-safe-usage-interceptor
   (fn [_ [_ fsm-v]]
     {::stop-not-safe fsm-v}))
 
 ;;;; Subs
 
-(defn- fsm-reaction-handler
+(defn- fsm-reaction
+  "Instantiates the FSM, and returns a reaction to the FSM state. The
+  FSM `start!` depends on the value of the db, but careful not to
+  dereference it: reactivity must be via the pull-reaction."
   [db fsm-v]
   (let [{:keys [ref attr return]
          :or   {return attr}
          :as   fsm} (fsm-spec fsm-v)
         fsm-v*      (i/new-cycle-id fsm-v)]
-    ;; Get the value of the db for a one time init, but should not be
-    ;; reactive to it.
     (start! (.-state db) fsm-v*)
     (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
                       #(vector return ref)
@@ -690,4 +704,4 @@
 (defn reg-fsm
   [id fsm-fn]
   (reg/register-handler ::fsm-fn id fsm-fn)
-  (f/reg-sub-raw id fsm-reaction-handler))
+  (f/reg-sub-raw id fsm-reaction))
