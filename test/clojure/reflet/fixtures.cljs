@@ -2,7 +2,7 @@
   (:require [reagent.core :as r]
             [reflet.core :as f]
             [reflet.db :as db]
-            [reflet.interop :as i]            
+            [reflet.interop :as i]
             [taoensso.timbre :as log]
 
             ;; Required for use.

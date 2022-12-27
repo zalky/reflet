@@ -578,7 +578,7 @@
   [db/inject-query-index
    db/trace-event
    advance
-   i/add-global-interceptors])
+   (i/add-global-interceptors ::fsm)])
 
 (f/reg-event-fx ::timeout
   fsm-interceptors
@@ -621,9 +621,9 @@
     (when (contains? fsm :to)
       (f/dispatch [::advance fsm-v to]))))
 
-(defn started?
+(defn running?
   [fsm-v]
-  (i/global-interceptor-registered? fsm-v))
+  (i/global-interceptor-registered? ::fsm fsm-v))
 
 (defn- advance-fx-interceptor*
   [f]
@@ -646,12 +646,12 @@
   "Do not use directly. Prefer ::start event or subscription."
   [db fsm-v]
   (let [fsm (parse (fsm-spec fsm-v))]
-    (when-not (started? fsm-v)
+    (when-not (running? fsm-v)
       (let [timeout (atom nil)]
         (start-impl! fsm timeout db)
         (->> (partial advance-fx fsm timeout)
              (advance-fx-interceptor)
-             (i/reg-global-interceptor fsm-v))
+             (i/reg-global-interceptor ::fsm fsm-v))
         ;; Must happen after interceptor.
         (fsm-dispatch! fsm)))))
 
@@ -659,7 +659,21 @@
   "Do not use directly. Prefer ::stop event or subscription."
   [fsm-v]
   (when (i/same-cycle? fsm-v)
-    (i/clear-global-interceptor fsm-v)))
+    (i/clear-global-interceptor ::fsm fsm-v)))
+
+;; In general, an FSM cannot be reliably started or stopped via FX if
+;; there is the possibility that a db mutation might occur at the same
+;; time. This is due to the concurrency considerations of setting
+;; timeouts. Whether or not there is an initial timeout depends on the
+;; state of the FSM at the time the FSM is started. However, because
+;; any interceptor can change the value of the db, and the inteceptor
+;; chain is dynamic, there is no reliable point in the interceptor
+;; chain where we can take the value of the db to get teh state of the
+;; FSM. And because the order of FX is indeterminate, there is no way
+;; to resolve the concurrency problem of when to measure the db value
+;; in the FX itself. The only robust solution is to use
+;; dedicated ::start and ::stop events where we can guarantee that
+;; there is no db mutation happening.
 
 (f/reg-fx ::start-not-safe
   ;; Do not use these directly, prefer events

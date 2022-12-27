@@ -2,10 +2,14 @@
   "Reflet api and convenience utilites."
   (:refer-clojure :exclude [uuid])
   (:require [cljs.spec.alpha :as s]
+            [re-frame.cofx :as cofx]
             [re-frame.core :as f]
+            [re-frame.events :as events]
+            [re-frame.fx :as fx]
             [re-frame.interop :as interop]
             [re-frame.loggers :as log]
             [re-frame.registrar :as reg]
+            [re-frame.std-interceptors :as fitor]
             [reagent.core :as r]
             [reagent.impl.component :as util]
             [reflet.db :as db]
@@ -25,31 +29,43 @@
   [db/inject-query-index
    db/trace-event
    fsm/advance
-   itor/add-global-interceptors])
+   (itor/add-global-interceptors ::fsm/fsm)
+   (itor/add-global-interceptors)])
+
+(defn- register
+  "Reflet interceptors must happen before Re-frame global ones."
+  [id interceptors handler]
+  (->> [cofx/inject-db
+        fx/do-fx
+        reflet-interceptors
+        fitor/inject-global-interceptors
+        interceptors
+        handler]
+       (events/register id)))
 
 (defn reg-event-db
   ([id handler]
    (reg-event-db id nil handler))
   ([id interceptors handler]
-   (f/reg-event-db id
-     [reflet-interceptors interceptors]
-     handler)))
+   (->> handler
+        (fitor/db-handler->interceptor)
+        (register id interceptors))))
 
 (defn reg-event-fx
   ([id handler]
    (reg-event-fx id nil handler))
   ([id interceptors handler]
-   (f/reg-event-fx id
-     [reflet-interceptors interceptors]
-     handler)))
+   (->> handler
+        (fitor/fx-handler->interceptor)
+        (register id interceptors))))
 
 (defn reg-event-ctx
   ([id handler]
    (reg-event-ctx id nil handler))
   ([id interceptors handler]
-   (f/reg-event-ctx id
-     [reflet-interceptors interceptors]
-     handler)))
+   (->> handler
+        (fitor/ctx-handler->interceptor)
+        (register id interceptors))))
 
 (def reg-sub     f/reg-sub)
 (def reg-sub-raw f/reg-sub-raw)
@@ -235,7 +251,8 @@
 (f/reg-event-fx ::cleanup
   [db/inject-query-index
    fsm/advance
-   itor/add-global-interceptors]
+   (itor/add-global-interceptors ::fsm/fsm)
+   (itor/add-global-interceptors)]
   cleanup)
 
 ;;;; Additional Utilities

@@ -8,7 +8,8 @@
             [reflet.core :as f]
             [reflet.db :as db]
             [reflet.fixtures :as fix]
-            [reflet.fsm :as fsm]))
+            [reflet.fsm :as fsm]
+            [reflet.interceptors :as itor]))
 
 (f/reg-event-fx ::next-state
   (constantly nil))
@@ -77,13 +78,13 @@
 
      (f/with-ref {:cmp/uuid [fsm/self]}
        (letfn [(get-handler []
-                 (reg/get-handler :global-interceptor [::idempotent self]))]
+                 (itor/get-global-interceptor ::fsm/fsm [::idempotent self]))]
 
          (t/testing "start"
-           (is (not (fsm/started? [::idempotent self])))
+           (is (not (fsm/running? [::idempotent self])))
            (is (nil? (get-handler)))
            (let [state (f/sub [::idempotent self])]
-             (is (fsm/started? [::idempotent self]))
+             (is (fsm/running? [::idempotent self]))
              (is (get-handler))
              (is (nil? @state))
 
@@ -92,12 +93,12 @@
                ;; animation frame, but these tests are synchronous so
                ;; we are ok.
                (fsm/start! @dbr/app-db [::idempotent self])
-               (is (fsm/started? [::idempotent self]))
-               (is (= handler (get-handler))))
+               (is (fsm/running? [::idempotent self]))
+               (is (identical? handler (get-handler))))
 
              (t/testing "stop"
                (r/dispose! state)
-               (is (not (fsm/started? [::idempotent self])))
+               (is (not (fsm/running? [::idempotent self])))
                (is (nil? (get-handler)))))))))))
 
 (t/deftest fsm-lifecycle-test
@@ -115,12 +116,12 @@
 
      (f/with-ref {:cmp/uuid [fsm/self]}
        (f/disp [::fsm/start [::lifecycle self]])
-       (is (fsm/started? [::lifecycle self]))
+       (is (fsm/running? [::lifecycle self]))
        (f/disp [::advance self])
        (let [state (f/sub [::lifecycle self])]
          (is (= ::started @state))
          (f/disp [::fsm/stop [::lifecycle self]])
-         (is (not (fsm/started? [::lifecycle self])))
+         (is (not (fsm/running? [::lifecycle self])))
          (f/disp [::advance self])
          (is (= ::started @state))
          (is (not= ::failed-to-stop @state)))))))
@@ -320,10 +321,10 @@
                        [::error self]   ::error}}}))
 
      (f/reg-no-op ::advance ::stop ::error ::reset)
-
+     
      (f/with-ref {:cmp/uuid [fsm/self]}
        (let [state (f/sub [::stop-fsm self])]
-         (is (reg/get-handler :global-interceptor [::stop-fsm self]))
+         (is (fsm/running? [::stop-fsm self]))
          (is (nil? @state))
          (f/disp [::advance self])
          (is (= ::s1 @state))
@@ -341,7 +342,7 @@
          (is (= ::stop @state))
          (f/disp [::advance self])
          (is (= ::stop @state))
-         (is (not (reg/get-handler :global-interceptor [::stop-fsm self]))))))))
+         (is (not (fsm/running? [::stop-fsm self]))))))))
 
 (s/def ::threshold
   (fn [entities]
@@ -559,4 +560,4 @@
          (is (= ::s3 @state))
          (f/disp [::advance self])
          (is (= ::stop @state))
-         (is (not (fsm/started? [::recursive self]))))))))
+         (is (not (fsm/running? [::recursive self]))))))))
