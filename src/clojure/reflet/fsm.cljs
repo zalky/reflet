@@ -11,7 +11,6 @@
   (f/reg-fsm ::review
     (fn [self]
       {:ref  self
-       :attr :kr/votes
        :stop #{::accepted ::cancelled}
        :fsm  {nil        {[:voted self] ::review}
               ::review   {:* {:to       ::review
@@ -20,8 +19,7 @@
                               :dispatch [:notify self]}}
               ::decision {[::fsm/timeout self 1000] ::cancelled
                           [:accepted self]          ::accepted
-                          [:revisit self]           {:to      ::review
-                                                     :dipatch [:reset self]}}}}))
+                          [:revisit self]           ::review}}}))
 
   This spec requires the following attributes:
 
@@ -333,29 +331,28 @@
 
 (defn distribute-transitions
   [fsm]
-  (letfn [(r2 [transitions]
+  (letfn [(r2 [xtions]
             (fn [acc k m]
-              (->> transitions
+              (->> xtions
                    (merge m)
                    (assoc acc k))))
 
-          (r1 [acc [t form] transitions]
+          (r1 [acc [t form] xtions]
             (case t
-              :state (assoc acc form transitions)
+              :state (assoc acc form xtions)
               :fsm   (->> form
-                          (reduce-kv (r2 transitions) {})
+                          (reduce-kv (r2 xtions) {})
                           (merge acc))))]
     (reduce-kv r1 {} fsm)))
 
-(s/def :parse-recursive/fsm
-  (s/and (s/map-of (s/or :state ::state
-                         :fsm :parse-recursive/fsm)
+(s/def :parse-recur/fsm
+  (s/and (s/map-of (s/or :state ::state :fsm :parse-recur/fsm)
                    (s/nilable map?)
                    :conform-keys true)
          (s/conformer distribute-transitions)))
 
 (s/def :state-map/fsm
-  (s/and :parse-recursive/fsm
+  (s/and :parse-recur/fsm
          (s/map-of ::state (s/nilable ::transitions))))
 
 (s/def ::fsm-map
@@ -364,7 +361,7 @@
                    ::to ::stop
                    ::dispatch ::dispatch-later]))
 
-(defn nil-state-default
+(defn- default-nil-state
   "A `nil` state is a real state for an FSM, just like any
   other. However, it is also the default initial state for most
   FSMs. Every allowable state for an FSM must be fully enumerated in
@@ -375,10 +372,10 @@
   means an FSM can never get out of the nil state without an explicit
   {nil transition}, or the `:to` state being set."
   [expr]
-  (update expr :fsm (partial merge {nil nil})))
+  (update expr :fsm #(merge {nil nil} %)))
 
 (s/def ::fsm
-  (s/and (s/conformer nil-state-default) ::fsm-map))
+  (s/and (s/conformer default-nil-state) ::fsm-map))
 
 (defn- parse
   [fsm]
@@ -386,10 +383,10 @@
       (assoc :fsm-unparsed fsm)))
 
 (defn- eval-clause
-  [db input {pull     :pull
-             [t pred] :when}]
+  [db input {pull        :pull
+             [type pred] :when}]
   (or (not pred)
-      (let [f (case t
+      (let [f (case type
                 :spec (partial s/valid? pred)
                 :fn   pred)]
         (f (if pull
@@ -601,7 +598,7 @@
     (let [{:keys [ref attr]} (fsm-spec fsm-v)]
       (db/assoc-inn db [ref attr] to))))
 
-(defn- init-trace!
+(defn- first-trace!
   [{:keys [ref fsm-v]} state t]
   (->> #queue [{:t          t
                 :fsm-v      fsm-v
@@ -617,7 +614,7 @@
     (set-timeout! timeout fsm state)
     (when db/tap-fn
       (->> (get-in db [::db/data ::db/tick])
-           (init-trace! fsm state)))
+           (first-trace! fsm state)))
     (when (contains? fsm :to)
       (f/dispatch [::advance fsm-v to]))))
 
@@ -712,7 +709,7 @@
         fsm-v*      (i/new-cycle-id fsm-v)]
     (start! (.-state db) fsm-v*)
     (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
-                      #(vector return ref)
+                      #(do [return ref])
                       fsm-v)))
 
 (defn reg-fsm
