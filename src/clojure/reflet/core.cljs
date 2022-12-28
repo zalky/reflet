@@ -287,20 +287,21 @@
 (defonce debounced-events
   (atom {}))
 
-(defn dispatch-debounced
+(defn disp-debounced
+  "Debounces dispatched events by id."
   [{[id :as event] :dispatch
     ms             :ms}]
   {:pre [event ms]}
   (let [debounce-id (random-uuid)]
-    (letfn [(dispatch-debounced []
+    (letfn [(disp-fn []
               (when (= debounce-id (get @debounced-events id))
                 (swap! debounced-events dissoc id)
                 (disp event)))]
       (swap! debounced-events assoc id debounce-id)
-      (interop/set-timeout! dispatch-debounced ms))))
+      (interop/set-timeout! disp-fn ms))))
 
-(f/reg-fx ::dispatch-debounced
-  dispatch-debounced)
+(f/reg-fx ::disp-debounced
+  disp-debounced)
 
 (defn props-did-update-handler
   "Returns a componentDidUpdate lifecycle handler function that will
