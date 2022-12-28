@@ -206,8 +206,10 @@
             [clojure.spec.alpha :as s]
             [re-frame.core :as f]
             [re-frame.db :as dbr]
+            [re-frame.events :as events]
             [re-frame.fx :as fx]
             [re-frame.registrar :as reg]
+            [re-frame.std-interceptors :as fitor]
             [reagent.ratom :as r]
             [reflet.db :as db]
             [reflet.debug :as d]
@@ -454,23 +456,6 @@
          :timeout    timeout
          :prev-state state}))))
 
-(defn- fsm-safe-usage
-  [{{start ::start-not-safe
-     stop  ::stop-not-safe
-     db    :db}    :effects
-    {event :event} :coeffects
-    :as            context}]
-  (when (and db (or start stop))
-    (-> "Cannot modify db when starting or stopping an FSM"
-        (ex-info {:event event})
-        (throw)))
-  context)
-
-(def fsm-safe-usage-interceptor
-  (f/->interceptor
-   :id ::fsm-safe-usage-interceptor
-   :after fsm-safe-usage))
-
 (defn- get-timeout
   [fsm state]
   (some-> fsm
@@ -558,7 +543,6 @@
      event   :event} :coeffects
     advance-fx       ::advance-fx
     :as              context}]
-  (fsm-safe-usage context)
   (if (not-empty advance-fx)
     (->> (or db-fx db-cofx)
          (after-fx event advance-fx)
@@ -672,29 +656,38 @@
 ;; dedicated ::start and ::stop events where we can guarantee that
 ;; there is no db mutation happening.
 
-(f/reg-fx ::start-not-safe
-  ;; Do not use these directly, prefer events
-  (fn [fsm-v]
-    (start! (.-state dbr/app-db) fsm-v)))
+(defn- lifecycle-fx
+  [{{start-v ::start
+     stop-v  ::stop} :effects
+    :as              context}]
+  (cond
+    start-v (start! (.-state dbr/app-db) start-v)
+    stop-v  (stop! stop-v))
+  context)
 
-(f/reg-fx ::stop-not-safe
-  ;; Do not use these directly, prefer events
-  (fn [fsm-v]
-    (stop! fsm-v)))
+(def lifecycle-interceptor
+  (f/->interceptor
+   :id ::lifecycle-interceptor
+   :after lifecycle-fx))
 
- (f/reg-event-fx ::start
-   ;; Stopping and starting FSMs during the event phase is only safe
-   ;; if that is the only thing that is happening.
-   fsm-safe-usage-interceptor
-   (fn [_ [_ fsm-v]]
-     {::start-not-safe fsm-v}))
+(defn- register
+  "Stopping and starting FSMs during the event phase is only safe if
+  there are no mutations at the same time. Therefore we roll custom
+  event handlers that process a single ::start or ::stop fx, without
+  exposing those fx as part of the Reflet API."
+  [id handler]
+  (->> handler
+       (fitor/fx-handler->interceptor)
+       (vector lifecycle-interceptor)
+       (events/register id)))
 
-(f/reg-event-fx ::stop
-   ;; Stopping and starting FSMs during the event phase is only safe
-   ;; if that is the only thing that is happening.
-  fsm-safe-usage-interceptor
+(register ::start
   (fn [_ [_ fsm-v]]
-    {::stop-not-safe fsm-v}))
+    {::start fsm-v}))
+
+(register ::stop
+  (fn [_ [_ fsm-v]]
+    {::stop fsm-v}))
 
 ;;;; Subs
 
