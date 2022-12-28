@@ -71,19 +71,27 @@
 
 (defn el!
   "Returns a react callback for initializing a dom element ref and
-  putting it into the interop db.
+  putting it into the interop db. Signal is only initialized once.
 
-  Signal is only initialized once. Can optionally flush reagent ratom
-  queue for immediate computation, or provide a callback for when the
-  component is mounted. This callback should only be used in the
-  special case where you don't have access to the component's
-  lifecycle."
-  [ref & {:keys [flush cb unmount]}]
+  Options include:
+
+  :mount
+            Callback function is called after DOM element is
+            mounted. Accepts the DOM element as it's only argument.
+
+  :unmount
+            Callback function is called before the DOM elment is
+            unmounted. Called with no arguments.
+
+  :flush
+            Flushes the reagent ratom queue for immediate
+            computation"
+  [ref & {:keys [flush mount unmount]}]
   (when-not (:obj (get (.-state db) ref))
     (fn [el]
       (when el
         (reg ref el {:unmount unmount})
-        (when cb (cb el))
+        (when mount (mount el))
         (when flush (r/flush!))))))
 
 (defn id

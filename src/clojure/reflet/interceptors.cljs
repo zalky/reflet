@@ -92,8 +92,9 @@
 (defn same-cycle?
   "Cycle ids can be used to ensure that interceptor operations from
   different runtime lifecycles do not clobber each other. For example,
-  if the lifecycle handler from before a hot reload tries to clear an
-  interceptor that was registered after the hot reload."
+  you can use this function to check if the lifecycle handler from
+  BEFORE a hot reload is attempting to clear an interceptor that was
+  registered AFTER the hot reload."
   [id]
   (->> (vals @db)
        (some #(find % id))

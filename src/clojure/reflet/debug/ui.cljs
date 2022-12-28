@@ -57,7 +57,7 @@
           cb    #(f/disp [::impl/set-rect self el tap])]
       (f/once (f/disp [::impl/set-props self props]))
       (when @state
-        [:div {:ref   (i/el! el :cb cb)
+        [:div {:ref   (i/el! el :mount cb)
                :class "reflet-node"
                :style @rect}
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
@@ -86,7 +86,7 @@
           cb    #(f/disp [::impl/set-rect self el centroid])]
       (f/once (f/disp [::impl/set-props self props]))
       (when @state
-        [:div {:ref   (i/el! el :cb cb)
+        [:div {:ref   (i/el! el :mount cb)
                :class "reflet-node"
                :style @rect}
          [:div {:on-mouse-enter #(f/disp [::impl/open self])
@@ -186,7 +186,7 @@
   [{:debug/keys [ref] :as props}]
   (f/with-ref* {:el/uuid [el]}
     (if-let [e @(f/sub [::data-impl/entity ref])]
-      [:div {:ref (i/el! el :cb (set-height props))}
+      [:div {:ref (i/el! el :mount (set-height props))}
        [data/value e]]
       [:div {:ref   (set-height props)
              :class "reflet-no-data"}
@@ -204,7 +204,7 @@
   [{:debug/keys [ref] :as props}]
   (f/with-ref* {:el/uuid [el]}
     (if-let [events @(f/sub [::d/e->events ref])]
-      [:div {:ref   (i/el! el :cb (set-height props))
+      [:div {:ref   (i/el! el :mount (set-height props))
              :class "reflet-event-lens"}
        (doall
         (map-indexed
@@ -250,7 +250,7 @@
   [{:debug/keys [ref] :as props}]
   (f/with-ref* {:el/uuid [el]}
     (if-let [traces @(f/sub [::d/e->queries ref])]
-      [:div {:ref   (i/el! el :cb (set-height props))
+      [:div {:ref   (i/el! el :mount (set-height props))
              :class "reflet-query-lens"}
        (doall
         (map-indexed
@@ -303,7 +303,7 @@
   [{:debug/keys [ref] :as props}]
   (f/with-ref* {:el/uuid [el]}
     (if-let [traces @(f/sub [::d/fsm->transitions ref])]
-      [:div {:ref   (i/el! el :cb (set-height props))
+      [:div {:ref   (i/el! el :mount (set-height props))
              :class "reflet-fsm-lens"}
        (doall
         (map-indexed
