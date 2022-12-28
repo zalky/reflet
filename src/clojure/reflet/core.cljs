@@ -123,8 +123,8 @@
   (fn [{db :db} [_ {id-attrs :id-attrs
                     dispatch :dispatch
                     :as      config}]]
-    (cond-> {:db      (db/new-db db id-attrs)
-             ::config config}
+    (cond-> {::config config
+             :db      (db/new-db db id-attrs)}
       dispatch (assoc :dispatch dispatch))))
 
 (defn reg-expr-fn
@@ -304,9 +304,11 @@
   disp-debounced)
 
 (defn props-did-update-handler
-  "Returns a componentDidUpdate lifecycle handler function that will
-  invoke the provided fn with old and new component props when they
-  change. Careful, different lifecycles have different signatures with
+  "Given an update handler, f, returns a componentDidUpdate lifecycle
+  handler function that will invoke the provided fn with old and new
+  component props when they change. The given handler, f ,must be a
+  function of two arguments, the old props value, and the new props
+  value. Careful, other lifecycles have different signatures with
   respect to new and old values during an update, and are not
   interchangeable."
   [f]
