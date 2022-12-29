@@ -114,16 +114,15 @@
 
 (defn- wrap-debug
   [props-sym context env body opts]
-  `(if ~(debug? opts)
-     (let [p# {:debug/type  :debut.type/tap
-               :debug/id    (second (:debug-id ~context))
-               :debug/ns    ~(env-namespace env)
-               :debug/line  ~(env-line env)
-               :debug/props ~props-sym}]
-       [:<>
-        (db/tap-fn p# (:target ~context))
-        (do ~@body)])
-     (do ~@body)))
+  `(let [r# (do ~@body)]
+     (if ~(debug? opts)
+       (let [p# {:debug/type  :debut.type/tap
+                 :debug/id    (second (:debug-id ~context))
+                 :debug/ns    ~(env-namespace env)
+                 :debug/line  ~(env-line env)
+                 :debug/props ~props-sym}]
+         [:<> (db/tap-fn p# (:target ~context)) r#])
+       r#)))
 
 (defn- component-name
   []
