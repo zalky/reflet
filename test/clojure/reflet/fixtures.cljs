@@ -2,14 +2,8 @@
   (:require [reagent.core :as r]
             [reflet.core :as f]
             [reflet.db :as db]
-            [reflet.interop :as i]
-            [taoensso.timbre :as log]
-
-            ;; Required for use.
-            [reflet.log])
+            [reflet.interop :as i])
   (:require-macros reflet.fixtures))
-
-(log/set-level! :warn)
 
 (defn base-fixtures
   "These are included by default by the

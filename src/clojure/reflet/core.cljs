@@ -4,9 +4,8 @@
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]
             [re-frame.interop :as interop]
-            [re-frame.loggers :as log]
+            [re-frame.loggers :as logf]
             [re-frame.registrar :as reg]
-            [re-frame.std-interceptors :as fitor]
             [reagent.core :as r]
             [reagent.impl.component :as util]
             [reflet.config :as config]
@@ -15,6 +14,7 @@
             [reflet.fsm :as fsm]
             [reflet.interceptors :as itor]
             [reflet.interop :as i]
+            [reflet.log :as log]
             [reflet.ref-spec :as rs]
 
             ;; Required for macro use.
@@ -78,7 +78,7 @@
 
 (defmethod pull-fx :default
   [_ {ref :ref}]
-  (log/console :debug "pull effect:" ref))
+  (logf/console :debug "pull effect:" ref))
 
 (f/reg-event-fx ::config
   (fn [{db :db} [_ {id-attrs :id-attrs
@@ -185,23 +185,23 @@
   [{db :db :as cofx} [_ ref :as event]]
   (let [handler    (get-method cleanup :default)
         default-fx (handler cofx event)]
-    (->> {:log [:debug "Debug cleanup" ref]
-          :db  (untap (:db default-fx db) ref)}
+    (->> {::log/log [:debug "Debug cleanup" ref]
+          :db       (untap (:db default-fx db) ref)}
          (merge default-fx))))
 
 (defmethod cleanup :el/uuid
   [cofx [_ ref :as event]]
-  {:log        [:debug "DOM cleanup" ref]
+  {::log/log   [:debug "DOM cleanup" ref]
    ::i/cleanup ref})
 
 (defmethod cleanup :js/uuid
   [cofx [_ ref :as event]]
-  {:log        [:debug "JS cleanup" ref]
+  {::log/log   [:debug "JS cleanup" ref]
    ::i/cleanup ref})
 
 (defmethod cleanup :default
   [{db :db} [_ ref]]
-  {:log             [:debug "Reactive state cleanup" ref]
+  {::log/log        [:debug "Reactive state cleanup" ref]
    :db              (db/dissocn db ref)
    ::db/unmount-ref ref})
 

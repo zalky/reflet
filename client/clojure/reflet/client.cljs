@@ -4,10 +4,7 @@
             [reagent.dom :as dom]
             [reflet.client.boot :as boot]
             [reflet.client.ui :as ui]
-            [reflet.core :as f]
-
-            ;; Require for use.
-            [reflet.log]))
+            [reflet.core :as f]))
 
 (defn render!
   []

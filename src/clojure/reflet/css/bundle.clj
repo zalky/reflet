@@ -1,6 +1,5 @@
 (ns reflet.css.bundle
-  (:require [axle.core :as watch]
-            [taoensso.timbre :as log]))
+  (:require [axle.core :as watch]))
 
 (def css-path
   "resources/debug.css")
@@ -18,11 +17,11 @@
        (prn-str)
        (format bundled-css-string)
        (spit bundle-path))
-  (log/info "Bundled reflet.css.bundled/css"))
+  (println "reflet - Bundled reflet.css.bundled/css"))
 
 (defn bundle
   [_]
-  (log/info "Bundling css...")
+  (println "reflet - Bundling css...")
   (watch/watch!
    {:paths   [css-path]
     :handler bundle-css})

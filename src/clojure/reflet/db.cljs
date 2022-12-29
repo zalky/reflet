@@ -137,13 +137,13 @@
             [clojure.walk :as walk]
             [re-frame.core :as f]
             [re-frame.db :as db]
+            [re-frame.loggers :as log]
             [re-frame.registrar :as reg]
             [reagent.core :as r*]
             [reagent.ratom :as r]
             [reflet.config :as config]
             [reflet.db.normalize :as norm]
-            [reflet.util.transients :as t]
-            [taoensso.timbre :as log])
+            [reflet.util.transients :as t])
   (:require-macros [reflet.db :refer [traced-reaction]]))
 
 (defmulti random-ref*
@@ -435,7 +435,7 @@
 (defn- warn-on-transient-write
   [ref]
   (when (transient-unmounted? ref)
-    (log/warn "Writing to unmounted transient state" ref)))
+    (log/console :warn "Writing to unmounted transient state" ref)))
 
 (defn- mergen-normalize
   [tx {:keys [id-attrs] :as opts}]

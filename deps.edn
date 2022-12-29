@@ -1,9 +1,7 @@
-{:deps    {com.fzakaria/slf4j-timbre {:mvn/version "0.3.21"}
-           com.taoensso/timbre       {:mvn/version "5.2.1"}
-           io.zalky/cinch            {:mvn/version "0.1.0"}
-           org.clojure/clojure       {:mvn/version "1.11.1"}
-           re-frame/re-frame         {:mvn/version "1.1.2"}
-           reagent/reagent           {:mvn/version "1.0.0"}}
+{:deps    {io.zalky/cinch      {:mvn/version "0.1.0"}
+           org.clojure/clojure {:mvn/version "1.11.1"}
+           re-frame/re-frame   {:mvn/version "1.1.2"}
+           reagent/reagent     {:mvn/version "1.0.0"}}
  :paths   ["src/clojure"]
  :aliases {:cljs/dev    {:extra-paths ["test/clojure"]
                          :extra-deps  {binaryage/devtools            {:mvn/version "1.0.6"}
