@@ -126,9 +126,23 @@
                user-itors))
         (events/register id))))
 
-(defn reg-event-fx
+(defn reg-event-db-impl
   ([id impl-itors handler]
-   (reg-event-fx id impl-itors nil handler))
+   (reg-event-db-impl id impl-itors nil handler))
+  ([id impl-itors user-itors handler]
+   (reg-event id impl-itors user-itors
+     (itor/db-handler->interceptor handler))))
+
+(defn reg-event-fx-impl
+  ([id impl-itors handler]
+   (reg-event-fx-impl id impl-itors nil handler))
   ([id impl-itors user-itors handler]
    (reg-event id impl-itors user-itors
      (itor/fx-handler->interceptor handler))))
+
+(defn reg-event-ctx-impl
+  ([id impl-itors handler]
+   (reg-event-ctx-impl id impl-itors nil handler))
+  ([id impl-itors user-itors handler]
+   (reg-event id impl-itors user-itors
+     (itor/ctx-handler->interceptor handler))))

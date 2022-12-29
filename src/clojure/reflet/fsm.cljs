@@ -559,7 +559,7 @@
    advance
    (i/add-global-interceptors ::fsm)])
 
-(i/reg-event-fx ::timeout
+(i/reg-event-fx-impl ::timeout
   fsm-interceptors
   (constantly nil))
 
@@ -574,11 +574,11 @@
                 (util/assoc-nil :attr ::state))
         (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
-(i/reg-event-fx ::advance
+(i/reg-event-db-impl ::advance
   fsm-interceptors
-  (fn [{db :db} [_ fsm-v to]]
+  (fn [db [_ fsm-v to]]
     (let [{:keys [ref attr]} (fsm-spec fsm-v)]
-      {:db (db/assoc-inn db [ref attr] to)})))
+      (db/assoc-inn db [ref attr] to))))
 
 (defn- first-trace!
   [{:keys [ref fsm-v]} state t]

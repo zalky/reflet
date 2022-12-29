@@ -34,25 +34,25 @@
   ([id handler]
    (reg-event-db id nil handler))
   ([id interceptors handler]
-   (itor/reg-event id
+   (itor/reg-event-db-impl id
      reflet-interceptors interceptors
-     (fitor/db-handler->interceptor handler))))
+     handler)))
 
 (defn reg-event-fx
   ([id handler]
    (reg-event-fx id nil handler))
   ([id interceptors handler]
-   (itor/reg-event id
+   (itor/reg-event-fx-impl id
      reflet-interceptors interceptors
-     (fitor/fx-handler->interceptor handler))))
+     handler)))
 
 (defn reg-event-ctx
   ([id handler]
    (reg-event-ctx id nil handler))
   ([id interceptors handler]
-   (itor/reg-event id
+   (itor/reg-event-ctx-impl id
      reflet-interceptors interceptors
-     (fitor/ctx-handler->interceptor handler))))
+     handler)))
 
 (def reg-sub     f/reg-sub)
 (def reg-sub-raw f/reg-sub-raw)
@@ -211,7 +211,7 @@
    (itor/add-global-interceptors ::fsm/fsm)
    (itor/add-global-interceptors)])
 
-(itor/reg-event-fx ::cleanup
+(itor/reg-event-fx-impl ::cleanup
   cleanup-interceptors
   cleanup)
 
