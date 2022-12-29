@@ -1,32 +1,35 @@
 (ns reflet.interceptors
   (:require [cinch.core :as util]
+            [re-frame.cofx :as cofx]
             [re-frame.core :as f]
-            [re-frame.registrar :as reg]))
+            [re-frame.events :as events]
+            [re-frame.fx :as fx]
+            [re-frame.std-interceptors :as itor]))
 
 (defonce db
   (atom {}))
 
 (defn reg-global-interceptor
   ([id interceptor]
-   (reg-global-interceptor ::global-interceptor id interceptor))
+   (reg-global-interceptor ::default-group id interceptor))
   ([group id interceptor]
    (swap! db assoc-in [group id] interceptor)))
 
 (defn clear-global-interceptor
   ([id]
-   (clear-global-interceptor ::global-interceptor id))
+   (clear-global-interceptor ::default-group id))
   ([group id]
    (swap! db update group dissoc id)))
 
 (defn get-global-interceptor
   ([id]
-   (get-global-interceptor ::global-interceptor id))
+   (get-global-interceptor ::default-group id))
   ([group id]
    (get-in @db [group id])))
 
 (defn global-interceptor-registered?
   ([id]
-   (global-interceptor-registered? ::global-interceptor id))
+   (global-interceptor-registered? ::default-group id))
   ([group id]
    (boolean (get-global-interceptor group id))))
 
@@ -50,9 +53,9 @@
   could statically declare ALL FSM interceptors should happen before
   ALL input validation interceptors, but have no defined order within
   either group. This results in a more robust architecture, while
-  retaining some imperative control as well."
+  retaining some imperative control."
   ([]
-   (add-global-interceptors ::global-interceptor))
+   (add-global-interceptors ::default-group))
   ([group]
    (letfn [(cut-in-queue [queue xs]
              (into #queue [] (concat xs queue)))
@@ -101,3 +104,31 @@
        (first)
        (cycle-id)
        (= (cycle-id id))))
+
+(defn- all-interceptors
+  "Reflet implementation interceptors must happen before Re-frame
+  globals. User interceptors happen after everything else."
+  [impl-itors user-itors]
+  [cofx/inject-db
+   fx/do-fx
+   impl-itors
+   itor/inject-global-interceptors
+   user-itors])
+
+(defn reg-event
+  "Registers a pre-wrapped interceptor handler."
+  ([id impl-itors handler]
+   (reg-event id impl-itors nil handler))
+  ([id impl-itors user-itors handler]
+   (->> handler
+        (conj (all-interceptors
+               impl-itors
+               user-itors))
+        (events/register id))))
+
+(defn reg-event-fx
+  ([id impl-itors handler]
+   (reg-event-fx id impl-itors nil handler))
+  ([id impl-itors user-itors handler]
+   (reg-event id impl-itors user-itors
+     (itor/fx-handler->interceptor handler))))

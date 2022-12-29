@@ -2,10 +2,7 @@
   "Reflet api and convenience utilites."
   (:refer-clojure :exclude [uuid])
   (:require [cljs.spec.alpha :as s]
-            [re-frame.cofx :as cofx]
             [re-frame.core :as f]
-            [re-frame.events :as events]
-            [re-frame.fx :as fx]
             [re-frame.interop :as interop]
             [re-frame.loggers :as log]
             [re-frame.registrar :as reg]
@@ -32,40 +29,29 @@
    (itor/add-global-interceptors ::fsm/fsm)
    (itor/add-global-interceptors)])
 
-(defn- register
-  "Reflet interceptors must happen before Re-frame global ones."
-  [id interceptors handler]
-  (->> [cofx/inject-db
-        fx/do-fx
-        reflet-interceptors
-        fitor/inject-global-interceptors
-        interceptors
-        handler]
-       (events/register id)))
-
 (defn reg-event-db
   ([id handler]
    (reg-event-db id nil handler))
   ([id interceptors handler]
-   (->> handler
-        (fitor/db-handler->interceptor)
-        (register id interceptors))))
+   (itor/reg-event id
+     reflet-interceptors interceptors
+     (fitor/db-handler->interceptor handler))))
 
 (defn reg-event-fx
   ([id handler]
    (reg-event-fx id nil handler))
   ([id interceptors handler]
-   (->> handler
-        (fitor/fx-handler->interceptor)
-        (register id interceptors))))
+   (itor/reg-event id
+     reflet-interceptors interceptors
+     (fitor/fx-handler->interceptor handler))))
 
 (defn reg-event-ctx
   ([id handler]
    (reg-event-ctx id nil handler))
   ([id interceptors handler]
-   (->> handler
-        (fitor/ctx-handler->interceptor)
-        (register id interceptors))))
+   (itor/reg-event id
+     reflet-interceptors interceptors
+     (fitor/ctx-handler->interceptor handler))))
 
 (def reg-sub     f/reg-sub)
 (def reg-sub-raw f/reg-sub-raw)
@@ -248,11 +234,14 @@
    :db              (db/dissocn db ref)
    ::db/unmount-ref ref})
 
-(f/reg-event-fx ::cleanup
+(def cleanup-interceptors
   [db/inject-query-index
    fsm/advance
    (itor/add-global-interceptors ::fsm/fsm)
-   (itor/add-global-interceptors)]
+   (itor/add-global-interceptors)])
+
+(itor/reg-event-fx ::cleanup
+  cleanup-interceptors
   cleanup)
 
 ;;;; Additional Utilities

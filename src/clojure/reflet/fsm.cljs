@@ -210,9 +210,7 @@
             [re-frame.fx :as fx]
             [re-frame.registrar :as reg]
             [re-frame.std-interceptors :as fitor]
-            [reagent.ratom :as r]
             [reflet.db :as db]
-            [reflet.debug :as d]
             [reflet.interceptors :as i]
             [reflet.trie :as t]))
 
@@ -561,7 +559,7 @@
    advance
    (i/add-global-interceptors ::fsm)])
 
-(f/reg-event-fx ::timeout
+(i/reg-event-fx ::timeout
   fsm-interceptors
   (constantly nil))
 
@@ -576,11 +574,11 @@
                 (util/assoc-nil :attr ::state))
         (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
-(f/reg-event-db ::advance
+(i/reg-event-fx ::advance
   fsm-interceptors
-  (fn [db [_ fsm-v to]]
+  (fn [{db :db} [_ fsm-v to]]
     (let [{:keys [ref attr]} (fsm-spec fsm-v)]
-      (db/assoc-inn db [ref attr] to))))
+      {:db (db/assoc-inn db [ref attr] to)})))
 
 (defn- first-trace!
   [{:keys [ref fsm-v]} state t]
@@ -670,22 +668,22 @@
    :id ::lifecycle-interceptor
    :after lifecycle-fx))
 
-(defn- register
+(defn- register-lifecycle
   "Stopping and starting FSMs during the event phase is only safe if
-  there are no mutations at the same time. Therefore we roll custom
-  event handlers that process a single ::start or ::stop fx, without
-  exposing those fx as part of the Reflet API."
+  there are no concurrent mutations. Therefore we roll custom event
+  handlers that process a single ::start or ::stop fx. We want to
+  avoid exposing those fx via reg-fx as part of the user API."
   [id handler]
   (->> handler
        (fitor/fx-handler->interceptor)
        (vector lifecycle-interceptor)
        (events/register id)))
 
-(register ::start
+(register-lifecycle ::start
   (fn [_ [_ fsm-v]]
     {::start fsm-v}))
 
-(register ::stop
+(register-lifecycle ::stop
   (fn [_ [_ fsm-v]]
     {::stop fsm-v}))
 
