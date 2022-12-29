@@ -1,6 +1,7 @@
 (ns reflet.debug.ui.impl
   (:require [cinch.core :as util]
             [reagent.ratom :as r]
+            [reflet.config :as config]
             [reflet.core :as f]
             [reflet.db :as db]
             [reflet.debug :as d]
@@ -504,11 +505,17 @@
        (.-ctrlKey e)
        (not (.-repeat e))))
 
+(defn- get-hotkey
+  []
+  (-> (config/get-config)
+      (get :debug-hotkey \j)))
+
 (defn- overlay-toggle
   [^js e]
-  (when (hotkey? e \j)
-    (.preventDefault e)
-    (f/disp [::toggle-marks])))
+  (let [c (get-hotkey)]
+    (when (hotkey? e c)
+      (.preventDefault e)
+      (f/disp [::toggle-marks]))))
 
 (f/reg-event-db ::config
   (fn [db _]

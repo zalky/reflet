@@ -16,8 +16,13 @@
             reflet.db/default-pull-impl. See the function's doc
             string for more info.
 
-  :trace-queue-size Sets the trace queue size for the debugger panels.
-  Default is 50."
+  :debug-hotkey
+            A character literal for the key that when pressed toggles
+            the debugger overlay. Default is \\j.
+
+  :trace-queue-size
+            Sets the trace queue size for the debugger panels.
+            Default is 50."
   (:require [re-frame.core :as f]))
 
 (def ^:private config
