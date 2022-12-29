@@ -9,6 +9,7 @@
             [re-frame.std-interceptors :as fitor]
             [reagent.core :as r]
             [reagent.impl.component :as util]
+            [reflet.config :as config]
             [reflet.db :as db]
             [reflet.debug :as d]
             [reflet.fsm :as fsm]
@@ -79,38 +80,12 @@
   [_ {ref :ref}]
   (log/console :debug "pull effect:" ref))
 
-(defn- config
-  "Registers reflet configuration map. The configuration should be
-  registered before application boot. Currently supported
-  configuration options:
-
-  :id-attrs
-            A set of unique id attributes that configure the db
-            normalized data model.
-
-  :dispatch
-            An initial dispatch immediately after configuration.
-
-  :pull-fn
-            Overrides the default pull implementation. This fn must
-            fullfill the input and ouput contract specified by
-            reflet.db/default-pull-impl. See the function's doc
-            string for more info.
-
-  :trace-queue-size
-            Sets the trace queue size for the debugger panels.
-            Default is 50."
-  [config]
-  (reg/register-handler :reflet/config :reflet/config config))
-
-(f/reg-fx ::config config)
-
 (f/reg-event-fx ::config
   (fn [{db :db} [_ {id-attrs :id-attrs
                     dispatch :dispatch
                     :as      config}]]
-    (cond-> {::config config
-             :db      (db/new-db db id-attrs)}
+    (cond-> {:db             (db/new-db db id-attrs)
+             ::config/config config}
       dispatch (assoc :dispatch dispatch))))
 
 (defn reg-expr-fn
@@ -120,10 +95,6 @@
 (defn reg-result-fn
   [id result-fn]
   (reg/register-handler ::result-fn id result-fn))
-
-(defn get-config
-  []
-  (reg/get-handler :reflet/config :reflet/config))
 
 (defn get-expr-fn
   [id]
@@ -145,7 +116,7 @@
    (-> (get-expr-fn id)
        (pull-reaction query-v)))
   ([expr-fn query-v]
-   (-> (get-config)
+   (-> (config/get-config)
        (db/pull-reaction expr-fn query-v)
        (result-reaction query-v))))
 

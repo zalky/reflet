@@ -140,6 +140,7 @@
             [re-frame.registrar :as reg]
             [reagent.core :as r*]
             [reagent.ratom :as r]
+            [reflet.config :as config]
             [reflet.db.normalize :as norm]
             [reflet.util.transients :as t]
             [taoensso.timbre :as log])
@@ -295,15 +296,11 @@
 (defonce trace-index
   (r/atom {}))
 
-(defn get-config
-  []
-  (reg/get-handler :reflet/config :reflet/config))
-
 (defn queue-size
   "Number of events to tap per query. This should eventually be
   dynamic."
   []
-  (-> (get-config)
+  (-> (config/get-config)
       (get :trace-queue-size 50)))
 
 (defn- trace-v?
@@ -746,7 +743,7 @@
 (defn get-pull-fn
   "Retrieves configured pull fn, or default implementation."
   []
-  (-> (get-config)
+  (-> (config/get-config)
       (get :pull-fn default-pull-impl)))
 
 (defn getn
