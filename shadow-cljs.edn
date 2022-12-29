@@ -5,6 +5,11 @@
                                     :external-config {:devtools/config {:dont-detect-custom-formatters true}}}
                  :devtools         {:http-port 8021
                                     :http-root "resources/test"}}
+          :app  {:target           :browser
+                 :output-dir       "resources/js"
+                 :asset-path       "/js"
+                 :compiler-options {:infer-externs :auto}
+                 :modules          {:main {:init-fn reflet.client/init!}}}
           :dev  {:target           :browser
                  :output-dir       "resources/js"
                  :asset-path       "/js"

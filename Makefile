@@ -17,6 +17,9 @@ include make-clj/Makefile
 npm: .makecache/npm-install
 	@:
 
+cljs: npm
+	clojure -M:cljs/client release app
+
 nuke:
 	@make nuke-super
 	@rm -rf .makecache
