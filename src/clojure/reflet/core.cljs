@@ -88,20 +88,20 @@
              ::config/config config}
       dispatch (assoc :dispatch dispatch))))
 
-(defn reg-expr-fn
+(defn- reg-expr-fn
   [id expr-fn]
   (reg/register-handler ::expr-fn id expr-fn))
 
-(defn reg-result-fn
+(defn- reg-result-fn
   [id result-fn]
   (reg/register-handler ::result-fn id result-fn))
 
-(defn get-expr-fn
+(defn- get-expr-fn
   [id]
   (or (reg/get-handler ::expr-fn id)
       (throw (ex-info "expr-fn not defined" {:id id}))))
 
-(defn get-result-fn
+(defn- get-result-fn
   [id]
   (reg/get-handler ::result-fn id))
 
