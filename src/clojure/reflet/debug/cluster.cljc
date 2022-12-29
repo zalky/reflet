@@ -91,7 +91,7 @@
 
   One potential drawback of this algorithm for this application is
   that it can produce clusters that are arbitrarily large as long as
-  they are densly connected. However, UI elements possess a high
+  they are densely connected. However, UI elements possess a high
   degree of geometric regularity, and so with a correctly tuned
   `:epsilon` parameter it should be able to produce good results. The
   naive grid clustering approach below, while guaranteeing bounded

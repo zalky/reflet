@@ -4,9 +4,9 @@
   This fsm implementation is based on an entity model, where any
   entity in the db can be transitioned through allowed states given
   defined inputs. This means both domain entities as well as component
-  entities can be used as fsms.
+  entities can be used as FSMs.
 
-  Each fsm is defined declaratively. For example:
+  Each FSM is defined declaratively. For example:
 
   (f/reg-fsm ::review
     (fn [self]
@@ -57,15 +57,15 @@
             the FSM.
 
   `:dispatch-later`
-            Same, but conforms to the re-frame `:dispatch-later` fx
+            Same, but conforms to the Re-frame `:dispatch-later` fx
             syntax.
 
-  Like re-frame events and subscriptions, FSMs are uniquely identified
+  Like Re-frame events and subscriptions, FSMs are uniquely identified
   by a vector that starts with their `reg-fsm` id, followed by their
   arguments: `[::review self]`.
 
   FSMs are implemented via interceptors that will advance the FSM on
-  any recieved re-frame event.
+  any received Re-frame event.
 
   A running FSM will throw an error if it ever reaches a state that is
   not defined in either the `:fsm` state map, or the set of `:stop`
@@ -103,10 +103,10 @@
   1. Event transitions
   2. Timeout transitions
 
-  Event transitions match a recieved event against a set of event
+  Event transitions match a received event against a set of event
   stems. Each stem either matches the event exactly, or an event with
   additional args. If more than one input stem would match, then the
-  longest stem is chosen. For example, given the recieved event:
+  longest stem is chosen. For example, given the received event:
 
   [:voted self first-pref second-pref]
 
@@ -149,7 +149,7 @@
   most specific match will win.
 
   All transitions define one or more output clauses. Each output
-  clause be expresed in either simple or expanded form.
+  clause be expressed in either simple or expanded form.
 
   1. Simple: Just a state keyword
   2. Complex: A map containing the following attributes:
@@ -172,7 +172,7 @@
             [optional]
 
   `:dispatch`
-            An event vector to dispatch on a succesful transition
+            An event vector to dispatch on a successful transition
             [optional]
 
   `:dispatch-later`
@@ -427,7 +427,7 @@
   clause)
 
 (defn- match-clause
-  "Given the current state of the fsm in the db, returns a matching
+  "Given the current state of the FSM in the db, returns a matching
   clause. Care must be taken to handle the `nil` state."
   [fsm current-state db event]
   (some->> (get-transition fsm current-state)
@@ -436,13 +436,13 @@
            (validate-to fsm)))
 
 (defn- advance-fx
-  "Given a parsed fsm, a timeout reference, a db, and an event, computes
+  "Given a parsed FSM, a timeout reference, a db, and an event, computes
   that FSM's advance fx, if any. After advance fx have been collected
   for all FSMs, they are all realized at the same time by
   `reflet.fsm/advance`, and their results merged. This effectively
   advances all FSMs at the same time, based on the same db value. Or,
   framed another way, makes FSM advance computations commutative. If
-  we advance the FSM direclty here, FSM logic is imperative, and not
+  we advance the FSM directly here, FSM logic is imperative, and not
   commutative. Do not write to unmounted transient entities."
   [{:keys [ref attr]
     :as   fsm} timeout db event]
@@ -522,7 +522,7 @@
                     (db/queue-size)))))
 
 (defn- after-trace
-  "Each FSM advance fx will incrememt the ::db/tick. But for debugging
+  "Each FSM advance fx will increment the ::db/tick. But for debugging
   purposes, what we really want is the resultant ::db/tick after all
   the FSMs have been advanced. This unfortunately requires us to
   iterate twice through the fx set, though this is still fairly
@@ -645,9 +645,9 @@
 ;; time. This is due to the concurrency considerations of setting
 ;; timeouts. Whether or not there is an initial timeout depends on the
 ;; state of the FSM at the time the FSM is started. However, because
-;; any interceptor can change the value of the db, and the inteceptor
+;; any interceptor can change the value of the db, and the interceptor
 ;; chain is dynamic, there is no reliable point in the interceptor
-;; chain where we can take the value of the db to get teh state of the
+;; chain where we can take the value of the db to get the state of the
 ;; FSM. And because the order of FX is indeterminate, there is no way
 ;; to resolve the concurrency problem of when to measure the db value
 ;; in the FX itself. The only robust solution is to use

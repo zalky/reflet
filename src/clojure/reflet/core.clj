@@ -130,7 +130,7 @@
     (r/current-component)))
 
 (defn- debug-id
-  "Produces a debug id that is unique within a dom tree, but not across
+  "Produces a debug id that is unique within a DOM tree, but not across
   trees with the same topology. This allows us to track props across
   hot restarts."
   [env]
@@ -199,7 +199,7 @@
    expr))
 
 (defmacro reg-pull
-  "Registers a named pull query. Semantics are similar to datomic pull,
+  "Registers a named pull query. Semantics are similar to Datomic pull,
   but with link and attribute queries. See wiki for full
   details. Macro prevents keyword evaluation. This is a convenience to
   facilitate sync expressions."

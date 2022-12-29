@@ -78,7 +78,7 @@
                     [:system/uuid 3] {:system/uuid 3},
                     [:system/uuid 2] {:system/uuid 2}})))))
     
-    (testing "with mutal joins"
+    (testing "with mutual joins"
       (is (= (db/mergen (db) [{:system/uuid 1
                                :a {:system/uuid 2
                                    :a "a"}}

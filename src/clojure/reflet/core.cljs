@@ -1,5 +1,5 @@
 (ns reflet.core
-  "Reflet api and convenience utilites."
+  "Reflet API and convenience utilities."
   (:refer-clojure :exclude [uuid])
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]

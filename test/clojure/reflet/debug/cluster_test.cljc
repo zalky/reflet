@@ -118,7 +118,7 @@
 
 
 (deftest cluster-test
-  (testing "clustering api"
+  (testing "clustering API"
     (testing "dbscan"
       (is (= (c/cluster test-points {:min-points 2 :epsilon 2})
              {1      [{:id 1 :x 1 :y 0}
@@ -163,7 +163,7 @@
 
 (defspec dense-or-densly-reachable-test #?(:clj 1000 :cljs 100)
   ;; Every point in every cluster (not including :noise points) should
-  ;; be either dense or densly reachable. See the description of the
+  ;; be either dense or densely reachable. See the description of the
   ;; DBSCAN algorithm for what this means:
   ;; https://en.wikipedia.org/wiki/DBSCAN
   (prop/for-all [xs (points-gen)]

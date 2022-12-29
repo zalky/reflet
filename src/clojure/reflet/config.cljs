@@ -1,5 +1,5 @@
 (ns reflet.config
-  "Registers reflet configuration map. The configuration should be
+  "Registers Reflet configuration map. The configuration should be
   registered before application boot. Currently supported
   configuration options:
 
@@ -12,7 +12,7 @@
 
   :pull-fn
             Overrides the default pull implementation. This fn must
-            fullfill the input and ouput contract specified by
+            fulfill the input and output contract specified by
             reflet.db/default-pull-impl. See the function's doc
             string for more info.
 

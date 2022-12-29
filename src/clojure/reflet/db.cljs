@@ -46,7 +46,7 @@
   Importantly, while queries react to mutation events, they will also
   always return the correct value if for whatever reason the db is
   reset outside the mutation functions, for example, if the db value
-  is set by re-frame-undo or debug tooling like re-frame-10x. The
+  is set by Re-frame-undo or debug tooling like Re-frame-10x. The
   reactive queries respect time-travel.
 
   Another key design point is that query operations must be
@@ -58,7 +58,7 @@
   value provided to event handlers. They can be arbitrarily composed
   in event handler code, similar to associative methods like
   `clojure.core/assoc`. They can also be freely interleaved with
-  non-normalzied db operations. At the end of the day the re-frame db
+  non-normalzied db operations. At the end of the day the Re-frame db
   is still just a big map.
 
   It is important to note that the query index is not actually stored
@@ -113,7 +113,7 @@
 
   The above algorithm will only react to db changes via the db
   mutation functions. Specifically, the normalized data stored at
-  the ::data key of the re-frame db should never be directly
+  the ::data key of the Re-frame db should never be directly
   manipulated, except via the mutation functions.
 
   However, aside from this one constraint, all regular db operation on
@@ -130,7 +130,7 @@
   db index.
 
   Finally, this algorithm is implemented entirely via existing reagent
-  and re-frame machinery."
+  and Re-frame machinery."
   (:require [cinch.core :as util]
             [clojure.set :as set]
             [clojure.string :as str]
@@ -773,7 +773,7 @@
             the sub-pattern from the resolved entity.
 
   [ sub-pattern-1 sub-pattern-2 sub-pattern-3 ]
-            The algorithm attempts to pull each subpattern from the
+            The algorithm attempts to pull each sub-pattern from the
             given entity, and merging all the results together.
 
   keyword
@@ -1006,7 +1006,7 @@
   (some-> ref ref-meta :label))
 
 (defn db-label-filter
-  "Returns a version of the re-frame db filtered by label."
+  "Returns a version of the Re-frame db filtered by label."
   [& [label]]
   (letfn [(f [[ref _]]
             (when (vector? ref)

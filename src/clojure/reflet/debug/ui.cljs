@@ -449,17 +449,17 @@
       [:div {:class "reflet-reactive-tap"}])}))
 
 (defn tap
-  "On mount, the tap must be situated in the target dom to access dom
+  "On mount, the tap must be situated in the target DOM to access DOM
   relationships like parent, siblings, and position. After that
-  initial tap, the tap element becomes transparent as far as the dom
+  initial tap, the tap element becomes transparent as far as the DOM
   structure is concerned, situated elsewhere using a portal. The
   reactive tap then updates the debugger with changes in with-ref
-  props. ::d/tap must happen after the ::d/untap of the previous
-  react lifecycle. To guarantee this, ::d/tap must not be dispatched
-  in the render phase, for example in the bindings of a `with-let`,
-  where the ::d/tap handler will run immediately after the first
-  render, but before the previous lifecycle's cleanup. It is safe to
-  use in either the `:ref` callback, the `:component-did-mount`, or
+  props. ::d/tap must happen after the ::d/untap of the previous react
+  lifecycle. To guarantee this, ::d/tap must not be dispatched in the
+  render phase, for example in the bindings of a `with-let`, where
+  the ::d/tap handler will run immediately after the first render, but
+  before the previous lifecycle's cleanup. It is safe to use in either
+  the `:ref` callback, the `:component-did-mount`, or
   `:component-did-update` phase of the component lifecycle."
   [props target]
   (if-not @target
@@ -491,7 +491,7 @@
         el)))
 
 (defn render!
-  "Renders the debugger to the dom."
+  "Renders the debugger to the DOM."
   []
   (when (f/debug?)
     (upsert-css!)
@@ -501,6 +501,6 @@
 
 (defn activate!
   "Configures the debugger. This needs to be called before any react
-  elements are rendered to the dom, for example in a preload."
+  elements are rendered to the DOM, for example in a preload."
   []
   (set! db/tap-fn tap))

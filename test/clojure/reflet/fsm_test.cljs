@@ -91,7 +91,7 @@
              (let [handler (get-handler)]
                ;; We would normally not call fsm/start! outside an
                ;; animation frame, but these tests are synchronous so
-               ;; we are ok.
+               ;; we are OK.
                (fsm/start! @dbr/app-db [::idempotent self])
                (is (fsm/running? [::idempotent self]))
                (is (identical? handler (get-handler))))
@@ -455,7 +455,7 @@
          (f/disp [::set self 3])
          (is (= @n 3))
          (is (= ::odd @state))
-         ;; This transition is fuction conditional clause
+         ;; This transition is function conditional clause
          (f/disp [::set self 4])
          (is (= @n 4))
          (is (= ::done @state))

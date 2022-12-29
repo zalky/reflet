@@ -112,7 +112,7 @@
   (get db ::z-index 1000000000))
 
 (defn update-z-index
-  "Attempt to start panels ontop all host UI elements. This still
+  "Attempt to start panels on top all host UI elements. This still
   leaves over a billion panel interactions. Worst case the panels stop
   layering properly."
   [db ref]
@@ -260,7 +260,7 @@
 
 (f/reg-sub ::rect-quantized
   ;; Quantize size and position with respect to line-height. For nicer
-  ;; visual results when quantizing element height, use a qunatization
+  ;; visual results when quantizing element height, use a quantization
   ;; algorithm that dynamically accounts for content borders and
   ;; padding.
   (fn [[_ self el]]

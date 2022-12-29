@@ -21,7 +21,7 @@
 
 (defn update-context
   "Syncs the mutable state of the audio element given immutable app
-  state. Checks that we have recieved user input, via
+  state. Checks that we have received user input, via
   the :player/state. The browser will complain if we start an audio
   context without first having had user input."
   [_ {state :player/state
