@@ -503,7 +503,7 @@ $coll-brace-width:              0.5rem;
     display: inline;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-width: 1rem;
+    min-width: 0.25rem;
 }
 
 @mixin brace {

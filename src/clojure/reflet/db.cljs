@@ -719,8 +719,8 @@
             to be a link query. [Optional]
 
   :acc-fn
-            Fn that accumulates entity references via side
-            effects. [Optional]
+            Fn that accumulates touched entity references via side
+            effects. Required for reactivity. [Optional]
 
   :pull-fx-fn
             Fn that handles pull side effects, like triggering
