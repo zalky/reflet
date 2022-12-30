@@ -103,23 +103,19 @@
   [env]
   (-> env :ns :name str not-empty))
 
-(defn- env-line
-  [env]
-  (-> env :line))
-
 (defn- debug?
   [{:keys [debug]
     :or   {debug true}}]
   `(and (r*/reactive?) ~debug db/tap-fn))
 
 (defn- wrap-debug
-  [props-sym context env body opts]
+  [props-sym context env opts body]
   `(let [r# (do ~@body)]
      (if ~(debug? opts)
        (let [p# {:debug/type  :debut.type/tap
                  :debug/id    (second (:debug-id ~context))
                  :debug/ns    ~(env-namespace env)
-                 :debug/line  ~(env-line env)
+                 :debug/line  ~(:line env)
                  :debug/props ~props-sym}]
          [:<> (db/tap-fn p# (:target ~context)) r#])
        r#)))
@@ -168,7 +164,7 @@
        (let ~(if (= parsed ::s/invalid)
                (throw-parse-err! unparsed)
                (bind-refs props refs parsed env opts))
-         ~(wrap-debug props context env body opts))
+         ~(wrap-debug props context env opts body))
        ~(with-ref-cleanup refs context))))
 
 (defmacro with-ref*
@@ -176,11 +172,11 @@
   the debug UI. Not for public use: throws an error if used outside of
   a reflet.debug.* namespace."
   [bindings & body]
-  (let [ns (env-namespace &env)
-        l  (env-line &env)]
+  (let [ns   (env-namespace &env)
+        line (:line &env)]
     (when-not (re-find #"^reflet.debug" ns)
       (-> "with-ref* used outside reflet debug namespace"
-          (ex-info {:ns ns :line l})
+          (ex-info {:ns ns :line line})
           (throw)))
     `(with-ref ~(assoc bindings :debug false)
        ~@body)))

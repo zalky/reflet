@@ -1,7 +1,5 @@
 (ns reflet.log
-  "Provides logging functionality via timbre."
-  (:require [clojure.string :as str]
-            [re-frame.core :as f]
+  (:require [re-frame.core :as f]
             [re-frame.loggers :as log]))
 
 (f/reg-fx ::log

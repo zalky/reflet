@@ -1,4 +1,4 @@
-.PHONY: npm nuke clean
+.PHONY: npm cljs nuke clean
 
 version-number  = 0.2.0
 group-id        = io.zalky

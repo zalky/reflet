@@ -1,7 +1,7 @@
 (ns reflet.fsm
   "Provides finite state machine DSL and implementation.
 
-  This fsm implementation is based on an entity model, where any
+  This FSM implementation is based on an entity model, where any
   entity in the db can be transitioned through allowed states given
   defined inputs. This means both domain entities as well as component
   entities can be used as FSMs.
@@ -39,8 +39,8 @@
 
   `:stop`
             One or more states which when reached will stop the
-            fsm. The FSM interceptor will be removed, but the FSM state
-            will also be set to the relevant state.
+            FSM. The FSM interceptor will be removed, but the FSM
+            state will also be set to the relevant state.
 
   `:return`
             The result returned by the FSM subscription. This is
@@ -158,17 +158,21 @@
             The next state to transition to [required]
 
   `:when`
-            The id of a Clojure spec that must return s/valid? true
-            for the transition input in order for the transition to
-            fire. By default, the input will be the event vector that
-            triggered the transition. See :pull for alternative.
-            [optional]
+            A conditional clause that must return true for the
+            transition to match. This can be either, a) the id of a
+            Clojure spec that must return s/valid? `true`, or b) a
+            Clojure function that returns a truthy value. By default,
+            the input to either the spec or the function will be the
+            received event that triggered the transition. If `:pull`
+            is specified, a list of entities will be provided as input
+            instead of the event. See the `:pull` option for more
+            details. [optional]
 
   `:pull`
             A list of entity references. These entities are then
-            passed as inputs to the :when conditional, in place of
-            the trigger event. This allows you to build FSMs that use
-            the state of other FSMs as inputs to their transitions.
+            passed as inputs to the :when conditional, in place of the
+            trigger event. This allows you to build FSMs that use the
+            state of other FSMs as inputs to their transitions.
             [optional]
 
   `:dispatch`

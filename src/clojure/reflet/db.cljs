@@ -1,5 +1,5 @@
 (ns reflet.db
-  "Provides a differential, reactive db, with mutation and query
+  "Provides an event sourced, reactive db, with mutation and query
   methods.
 
   Storing data in normalized form has many benefits for application
