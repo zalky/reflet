@@ -1,6 +1,7 @@
 (ns reflet.core-test
   (:require [cljs.test :refer [deftest testing is are use-fixtures]]
             [re-frame.registrar :as reg]
+            [reagent.ratom :as r]
             [reflet.core :as f]
             [reflet.db :as db]
             [reflet.db.normalize :as norm]
@@ -19,20 +20,23 @@
       (tests))))
 
 (deftest with-ref-meta-test
-  (testing "transient is default true on fresh refs"
-    (is (= (f/with-ref {:system/uuid [p]}
-             (db/ref-meta p))
-           {:transient true}))
-    (let [props {:p [:system/uuid "a"]}]
-      (is (nil? (f/with-ref {:system/uuid [p] :in props}
-                  (db/ref-meta p))))))
+  ;; Fake a reactive context to simulate what the metadata should look
+  ;; like in situ with transient refs.
+  (fix/fake-reactive-context
+   (testing "transient is default true on fresh refs"
+     (is (= (f/with-ref {:system/uuid [p]}
+              (db/ref-meta p))
+            {:transient true}))
+     (let [props {:p [:system/uuid "a"]}]
+       (is (nil? (f/with-ref {:system/uuid [p] :in props}
+                   (db/ref-meta p))))))
 
-  (testing "Arbitrary meta data"
-    (is (= (f/with-ref {:system/uuid [p]
-                        :meta        {:provisional true}}
-             (db/ref-meta p))
-           {:provisional true
-            :transient   true}))))
+   (testing "Arbitrary meta data"
+     (is (= (f/with-ref {:system/uuid [p]
+                         :meta        {:provisional true}}
+              (db/ref-meta p))
+            {:provisional true
+             :transient   true})))))
 
 (deftest with-ref-test
   (testing "nil"

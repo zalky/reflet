@@ -28,7 +28,7 @@
   [meta]
   `(not-empty
     (if (or (false? (:transient ~meta))
-            *force-persistent-refs*)
+            (not (r*/reactive?)))
       (dissoc ~meta :transient)
       (assoc ~meta :transient true))))
 

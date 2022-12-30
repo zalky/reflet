@@ -13,6 +13,5 @@
                 db/mounted-transient-refs (r/atom #{})
                 i/db                      (r/atom {})
                 f/debounced-events        (r/atom {})]
-    (binding [f/*force-persistent-refs* true]
-      (f/disp-sync [::f/config])
-      (f))))
+    (f/disp-sync [::f/config])
+    (f)))
