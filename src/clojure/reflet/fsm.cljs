@@ -701,10 +701,13 @@
   (let [{:keys [ref attr return]
          :or   {return attr}
          :as   fsm} (fsm-spec fsm-v)
-        fsm-v*      (i/new-cycle-id fsm-v)]
-    (start! (.-state db) fsm-v*)
-    (db/pull-reaction {:on-dispose #(stop! fsm-v*)}
-                      #(do [return ref])
+        fsm-v*      (i/with-cycle-id fsm-v)
+        start-fn    #(start! (.-state db) fsm-v*)
+        stop-fn     #(stop! fsm-v*)
+        return-fn   #(do [return ref])]
+    (start-fn)
+    (db/pull-reaction {:on-dispose stop-fn}
+                      return-fn
                       fsm-v)))
 
 (defn reg-fsm

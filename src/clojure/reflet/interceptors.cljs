@@ -88,7 +88,7 @@
       (meta)
       (::cycle-id)))
 
-(defn new-cycle-id
+(defn with-cycle-id
   [id]
   (vary-meta id assoc ::cycle-id (random-uuid)))
 

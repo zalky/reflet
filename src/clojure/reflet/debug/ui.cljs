@@ -312,7 +312,7 @@
          traces))]
       [:div {:ref   (set-height props)
              :class "reflet-no-data"}
-       [:span "No Transitions"]])))
+       [:span "No FSMs"]])))
 
 (defmethod ref-lens :default
   [{:debug/keys [self el]}]
