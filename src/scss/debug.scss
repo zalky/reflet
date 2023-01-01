@@ -273,6 +273,7 @@ $coll-brace-width:              0.5rem;
 .reflet-header {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
+    grid-column-gap: 0.5rem;
     position: sticky;
     top: 0;
     left: 0;
@@ -296,13 +297,14 @@ $coll-brace-width:              0.5rem;
             text-transform: uppercase;
         }
 
-        > :not(:last-child) {
-            margin-right: 0.5rem;
+        > * {
+            white-space: nowrap;
         }
     }
 }
 
 .reflet-props-title, .reflet-ref-title {
+    display: flex;
     overflow: hidden;
     white-space: nowrap;
     font-weight: $font-weight-bold;
@@ -312,6 +314,14 @@ $coll-brace-width:              0.5rem;
         margin-left: 0.25rem;
         font-weight: $font-weight-normal;
         font-style: italic;
+    }
+}
+
+.reflet-props-title {
+    > :last-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        direction: rtl;
     }
 }
 

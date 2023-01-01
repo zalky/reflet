@@ -107,6 +107,7 @@
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
     [:div {:class         "reflet-header"
            :on-mouse-down on-drag}
+     [:div [:span "with-ref"]]
      (props-name @props)
      [g/x {:class         ["reflet-close"]
            :on-mouse-down (f/stop-prop on-close)}]]))
