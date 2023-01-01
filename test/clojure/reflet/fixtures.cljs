@@ -5,6 +5,10 @@
             [reflet.interop :as i])
   (:require-macros reflet.fixtures))
 
+(def fake-ratom-generation
+  "Used by fake-reactive-context, only during testing."
+  (atom 0))
+
 (defn base-fixtures
   "These are included by default by the
   `reflet.fixtures/run-test-sync` macro."

@@ -15,11 +15,12 @@
      (fn [] ~@body))))
 
 (defmacro fake-reactive-context
-  "Simulates a fake reactive context. Should only be used when you
-  want to test things like cleanup and other properties of transient
-  refs."
+  "Simulates a fake reactive context for testing with-ref in specific
+  scenarios, like cleanup and other properties of transient refs. Has
+  not been designed to work in any other context."
   [& body]
-  `(let [r# {}]
-     (set! (.-ratomGeneration r#) 0)
+  `(let [r# #js {}
+         g# (swap! fake-ratom-generation inc)]
+     (set! (.-ratomGeneration r#) g#)
      (binding [r/*ratom-context* r#]
        ~@body)))
