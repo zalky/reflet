@@ -15,9 +15,9 @@
   run-time calculation that depends on the data.
 
   A key insight that can help optimize query denormalization is that
-  for the set of queries that conform to a Datomic pull, a result
-  cannot change if the entities that were traversed while walking the
-  joins have not changed.
+  g  for the set of queries that conform to EQL, a result cannot change
+  if the entities that were traversed while walking the joins have not
+  changed.
 
   An approach used elsewhere that leverages this guarantee is to use
   reagent reactions to cache entity joins in the computed result. This

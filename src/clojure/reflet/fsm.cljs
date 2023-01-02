@@ -9,16 +9,16 @@
   Each FSM is defined declaratively. For example:
 
   (f/reg-fsm ::review
-    (fn [self]
+    (fn [self user]
       {:ref  self
        :stop #{::accepted ::cancelled}
        :fsm  {nil        {[:voted self] ::review}
-              ::review   {:* {:to       ::review
+              ::review   {:* {:to       ::decision
                               :pull     [self]
                               :when     ::review-threshold
-                              :dispatch [:notify self]}}
+                              :dispatch [:notify user]}}
               ::decision {[::fsm/timeout self 1000] ::cancelled
-                          [:accepted self]          ::accepted
+                          [:accepted self]          {:to ::accepted}
                           [:revisit self]           ::review}}}))
 
   This spec requires the following attributes:
