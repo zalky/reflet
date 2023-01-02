@@ -19,7 +19,7 @@
   scenarios, like cleanup and other properties of transient refs. Has
   not been designed to work in any other context."
   [& body]
-  `(let [r# #js {}
+  `(let [r# {}
          g# (swap! fake-ratom-generation inc)]
      (set! (.-ratomGeneration r#) g#)
      (binding [r/*ratom-context* r#]
