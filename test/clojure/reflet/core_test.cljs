@@ -19,22 +19,25 @@
     (binding [db/random-ref random-ref-test]
       (tests))))
 
-(deftest with-ref-meta-test
+(deftest with-ref-transient-test
   ;; Fake a reactive context to simulate what the metadata should look
   ;; like in situ with transient refs.
   (fix/fake-reactive-context
    (testing "transient is default true on fresh refs"
-     (is (= (f/with-ref {:system/uuid [p]}
-              (db/ref-meta p))
-            {:transient true}))
+     (is (f/with-ref {:system/uuid [t]}
+           (db/transient? t)))
+
+     (is (f/with-ref {:system/uuid [p]
+                      :meta        {:transient false}}
+           (false? (db/transient? p))))
      (let [props {:p [:system/uuid "a"]}]
-       (is (nil? (f/with-ref {:system/uuid [p] :in props}
-                   (db/ref-meta p))))))
+       (is (f/with-ref {:system/uuid [p] :in props}
+             (false? (db/transient? (:p props)))))))
 
    (testing "Arbitrary meta data"
-     (is (= (f/with-ref {:system/uuid [p]
+     (is (= (f/with-ref {:system/uuid [m]
                          :meta        {:provisional true}}
-              (db/ref-meta p))
+              (db/ref-meta m))
             {:provisional true
              :transient   true})))))
 

@@ -395,13 +395,14 @@
 
 (defn- overlay
   []
-  (let [marks-on? (f/sub [::impl/toggle-marks-fsm])
-        xs        (f/sub [::impl/overlay])]
+  (let [nodes     (f/sub [::impl/overlay])
+        marks-on? (f/sub [::impl/toggle-marks-fsm])]
     [:div {:class ["reflet-overlay"
-                   (when @marks-on? "reflet-marks-on")]}
+                   (when @marks-on?
+                     "reflet-marks-on")]}
      (doall
       (for [{id  :debug/self
-             :as node} @xs]
+             :as node} @nodes]
         ^{:key id} [render node]))]))
 
 (defn- body-el

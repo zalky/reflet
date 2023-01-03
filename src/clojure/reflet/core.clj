@@ -36,8 +36,9 @@
   [refs k id-attr {:keys [meta]}]
   `(let [m#   ~(parse-meta meta)
          ref# (db/random-ref ~id-attr m# ~k)]
+     (when (:transient m#)
+       (db/mount-ref! ref#))
      (vswap! ~refs assoc ~k ref#)
-     (db/mount-ref! ref#)
      ref#))
 
 (defn- get-refs
@@ -80,14 +81,14 @@
   [refs context]
   (list
    'finally
-   `(when-let [ref# (:debug-id ~context)]
-      (disp [::cleanup ref#]))
-
-   `(doseq [[_# ref#] (deref ~refs)]
-      (when (and ref# (db/transient? ref#))
+   `(do
+      (when-let [ref# (:debug-id ~context)]
         (disp [::cleanup ref#]))
-      (when (:debug-id ~context)
-        (disp [::db/untrace-event ref#])))))
+      (doseq [[_# ref#] (deref ~refs)]
+        (when (and ref# (db/transient? ref#))
+          (disp [::cleanup ref#]))
+        (when (:debug-id ~context)
+          (disp [::db/untrace-event ref#]))))))
 
 (defn- env-namespace
   [env]

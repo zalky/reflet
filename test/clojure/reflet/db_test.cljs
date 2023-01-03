@@ -1,6 +1,9 @@
 (ns reflet.db-test
-  (:require [reflet.db :as db]
-            [cljs.test :refer [deftest testing is]]))
+  (:require [cljs.test :as t :refer [deftest testing is]]
+            [reflet.fixtures :as fix]
+            [reflet.db :as db]))
+
+(t/use-fixtures :each fix/base-fixtures)
 
 (defn db
   ([]

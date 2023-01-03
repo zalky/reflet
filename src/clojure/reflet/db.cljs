@@ -194,33 +194,32 @@
     (.-metadata o)))
 
 (defn ref-meta
-  "Returns metadata for entity reference"
+  "Returns the metadata on an entity reference"
   [ref]
   (when (sequential? ref)
     (meta (second ref))))
 
-(defn transient?
-  "Returns true if the given entity references is transient."
-  [ref]
-  (boolean
-   (some-> ref ref-meta :transient)))
-
-(defonce mounted-transient-refs
+(defonce ^:private mounted-refs
   ;; The set of transient entity references that are associated with
   ;; mounted components. These are not stored in app state since this
   ;; is implementation state to do with the lifecycle of components.
-  (r/atom #{}))
+  (atom #{}))
 
 (defn mount-ref!
   [ref]
-  (swap! mounted-transient-refs conj ref))
+  (swap! mounted-refs conj ref))
 
 (defn unmount-ref!
   [ref]
-  (swap! mounted-transient-refs disj ref))
+  (swap! mounted-refs disj ref))
 
 (f/reg-fx ::unmount-ref
   unmount-ref!)
+
+(defn transient?
+  "Returns true if the given entity references is transient."
+  [ref]
+  (boolean (some-> ref ref-meta :transient)))
 
 (defn mounted?
   "Returns true if the given entity references is associated with a
@@ -228,7 +227,7 @@
   tasks that should short circuit if the associated component has been
   unmounted."
   [ref]
-  (contains? @mounted-transient-refs ref))
+  (contains? @mounted-refs ref))
 
 (defn transient-unmounted?
   "Returns true if the given reference is unmounted and transient."
@@ -728,7 +727,7 @@
 
   After evaluating the expression against the value of the db, this
   function returns the result.
-  
+
   By default, this implementation is a pure function of the given
   `:db` value. However, if `:acc-fn` and `:pull-fx-fn` are provided in
   the context map, this implementation runs them for
@@ -779,7 +778,7 @@
   keyword
             If the entity contains the keyword, includes it in the
             entity result.
-  
+
   '*
             (literal symbol asterisk) Includes all attributes from
             the entity in the result.

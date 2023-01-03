@@ -1,6 +1,7 @@
 (ns reflet.fixtures
   (:require [day8.re-frame.test :as t]
-            [reagent.ratom :as r]))
+            [reagent.ratom :as r]
+            [reflet.db :as db]))
 
 (defmacro run-test-sync
   [& body]
@@ -23,4 +24,7 @@
          g# (swap! fake-ratom-generation inc)]
      (set! (.-ratomGeneration r#) g#)
      (binding [r/*ratom-context* r#]
-       ~@body)))
+       (let [result# (do ~@body)]
+         (doseq [[_# r#] ^clj (.-reagReactionCache r/*ratom-context*)]
+           (r/dispose! r#))
+         result#))))
