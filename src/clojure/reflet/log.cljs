@@ -5,5 +5,5 @@
 (f/reg-fx ::log
   (fn [[level & vargs :as arg]]
     (when arg
-      (log/console level vargs))))
+      (apply log/console level vargs))))
 
