@@ -995,32 +995,3 @@
         (untrace-query q-ref query-v)
         (when-let [f (:on-dispose config)]
           (f))))))
-
-;;;; Utils
-
-(defn get-label
-  "Returns any metadata label associated with the given entity
-  reference."
-  [ref]
-  (some-> ref ref-meta :label))
-
-(defn db-label-filter
-  "Returns a version of the Re-frame db filtered by label."
-  [& [label]]
-  (letfn [(f [[ref _]]
-            (when (vector? ref)
-              (cond-> (get-label ref)
-                label (= label))))]
-    (->> @db/app-db
-         (::data)
-         (filter f)
-         (into {}))))
-
-(defn add-label
-  [tx label]
-  (walk/postwalk
-   (fn [x]
-     (if (uuid? x)
-       (vary-meta x assoc :label label)
-       x))
-   tx))
