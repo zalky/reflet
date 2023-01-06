@@ -16,6 +16,7 @@
   (with-redefs [db/query-index     (r/atom {})
                 db/mounted-refs    (r/atom #{})
                 i/db               (r/atom {})
-                f/debounced-events (r/atom {})]
+                f/debounced-events (r/atom {})
+                db/tap-fn          false]
     (f/disp-sync [::f/config])
     (f)))

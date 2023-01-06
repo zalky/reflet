@@ -24,7 +24,8 @@
          g# (swap! fake-ratom-generation inc)]
      (set! (.-ratomGeneration r#) g#)
      (binding [r/*ratom-context* r#]
-       (let [result# (do ~@body)]
-         (doseq [[_# r#] ^clj (.-reagReactionCache r/*ratom-context*)]
-           (r/dispose! r#))
-         result#))))
+       (with-redefs [db/tap-fn false]
+         (let [result# (do ~@body)]
+           (doseq [[_# r#] ^clj (.-reagReactionCache r/*ratom-context*)]
+             (r/dispose! r#))
+           result#)))))
