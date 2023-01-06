@@ -146,16 +146,16 @@
             [reflet.util.transients :as t])
   (:require-macros [reflet.db :refer [traced-reaction]]))
 
-(defmulti random-ref*
+(defmulti random-ref-impl
   "Extend this to produce different kinds of random entity references
   for new id attributes."
   identity)
 
-(defmethod random-ref* nil
+(defmethod random-ref-impl nil
   [_]
   (throw (js/Error "Ref must have unique id attribute")))
 
-(defmethod random-ref* :default
+(defmethod random-ref-impl :default
   [id-attr]
   [id-attr (random-uuid)])
 
@@ -163,7 +163,7 @@
   "Given a unique id attribute, and optionally metadata, returns a
   random entity reference. Only rebound for testing."
   [id-attr & [meta]]
-  (cond-> (random-ref* id-attr)
+  (cond-> (random-ref-impl id-attr)
     meta (update 1 with-meta meta)))
 
 ;;;; Transient Entity Reference Tracking
@@ -219,7 +219,10 @@
 (defn transient?
   "Returns true if the given entity references is transient."
   [ref]
-  (boolean (some-> ref ref-meta :transient)))
+  (-> ref
+      (ref-meta)
+      (:transient)
+      (boolean)))
 
 (defn mounted?
   "Returns true if the given entity references is associated with a
