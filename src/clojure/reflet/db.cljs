@@ -580,17 +580,16 @@
                  :pattern pattern)]
     (when (and acc-fn ref)
       (acc-fn ref))
-    (reduce (fn [result expr]
-              (pull* c expr result))
+    (reduce #(pull* c %2 %1)
             result
             (distinct pattern))))
 
 (defn- pull-prop
   [{:keys [entity]} attr result]
-  (let [v (get entity attr)]
-    (if (some? v)
-      (assoc result attr v)
-      result)))
+  (if (contains? entity attr)
+    (let [v (get entity attr)]
+      (assoc result attr v))
+    result))
 
 (defn- unquote-list
   [effect]

@@ -188,6 +188,7 @@
   (let [dbv (db {[:system/uuid "name"]     {:system/uuid    "name"
                                             :kr/name        "name"
                                             :kr/description "description"
+                                            :kr/null        nil
                                             :kr/join        [:system/uuid "join"]}
                  [:system/uuid "join"]     {:system/uuid "join"
                                             :kr/name     "join"
@@ -225,11 +226,13 @@
         (is (= (db/pull dbv
                         [:system/uuid
                          :kr/name
-                         :kr/description]
+                         :kr/description
+                         :kr/null]
                         [:system/uuid "name"])
                {:system/uuid    "name"
                 :kr/name        "name"
-                :kr/description "description"})))
+                :kr/description "description"
+                :kr/null        nil})))
 
       (testing "join one"
         (is (= (db/pull dbv
@@ -262,7 +265,14 @@
                 :kr/join     [{:system/uuid "nested 1"
                                :kr/name     "nested 1"}
                               {:system/uuid "nested 2"
-                               :kr/name     "nested 2"}]}))))
+                               :kr/name     "nested 2"}]}))
+
+        (is (= (db/pull dbv
+                        [:system/uuid
+                         {:kr/name ['*]}]
+                        [:system/uuid "name"])
+               {:system/uuid "name"
+                :kr/name     "name"}))))
 
     (testing "Wildcard query"
       (is (= (db/pull dbv
@@ -272,6 +282,7 @@
              {:system/uuid    "name"
               :kr/name        "name"
               :kr/description "description"
+              :kr/null        nil
               :kr/join
               {:system/uuid "join"
                :kr/name     "join"
@@ -321,6 +332,7 @@
              {:system/uuid    "name"
               :kr/name        "name"
               :kr/description "description"
+              :kr/null        nil
               :kr/join        {:system/uuid "join"
                                :kr/name     "join"
                                :kr/label    "label"
@@ -331,3 +343,42 @@
                                               :kr/join     {:system/uuid    "nested 3"
                                                             :kr/name        "nested 3"
                                                             :kr/description "leaf"}}]}})))))
+
+(defn- provisional?
+  [ref]
+  (boolean (some-> ref db/ref-meta :provisional)))
+
+(defn- pull-provisional
+  [db e-ref]
+  (let [pfn (db/get-pull-fn)]
+    (pfn {:id-attrs (::db/id-attrs db)
+          :db       (::db/data db)
+          :ref      e-ref
+          :join?    provisional?}
+         '[{* ...}])))
+
+(deftest pull-predicate-test
+  (let [r1 (db/random-ref :system/uuid {:provisional true})
+        r2 (db/random-ref :system/uuid {:provisional true})
+        r3 (db/random-ref :system/uuid {:provisional true})
+        r4 (db/random-ref :system/uuid)
+        r5 (db/random-ref :system/uuid)]
+    (let [dbv (db {r1 {:system/uuid (second r1)
+                       :kr/join     r2
+                       :kr/join2    r4}
+                   r2 {:system/uuid (second r2)
+                       :kr/join     [r3 r4]}
+                   r3 {:system/uuid (second r3)
+                       :kr/join     r5}
+                   r4 {:system/uuid (second r4)}
+                   r5 {:system/uuid    (second r5)
+                       :kr/name        "r5"
+                       :kr/description "leaf"}})]
+
+      (is (= (pull-provisional dbv r1)
+             {:system/uuid (second r1)
+              :kr/join     {:system/uuid (second r2)
+                            :kr/join     [{:system/uuid (second r3)
+                                           :kr/join     r5}
+                                          r4]}
+              :kr/join2    r4})))))
