@@ -8,8 +8,8 @@
 **Reflet** is a collection of tools for building Re-frame + React based
 web apps. This includes:
 
-1. Entity references and their lifecycle management
-2. Efficient, normalized state management
+1. Entity references with lifecycle management
+2. Efficient, normalized state model
 3. Simple but powerful hierarchical FSMs
 4. JS and DOM interop utilities
 5. Novel API-driven visual debugging of complex apps (don't sleep on
@@ -22,13 +22,13 @@ design goals are:
 
 1. A la carte feature set: it is not a "framework", so use as much or
    as little of it as you want
-2. Bring sanity to an existing Re-frame applications: Reflet
-   integrates easily into vanilla Re-frame apps, so a complete
-   re-write can be avoided
-3. Normalized data model, where entity references connect things
-   together: this encourages excellent, pluggable APIs
-4. Makes very few assumptions about your application boundaries
-5. Performance and stability: Reflet has already been deployed in
+2. Bring sanity to existing Re-frame applications: iterative, minimal
+   approach to integration, so big re-writes can be avoided
+3. Normalized and un-normalized data models can be mixed freely
+4. Entity references connect things together: this encourages
+   excellent, pluggable APIs
+5. Makes very few assumptions about your application boundaries
+6. Performance and stability: Reflet has already been deployed in
    complex, data driven production applications for years
    (e.g. in Bioinformatics, Business analytics... )
 
@@ -61,17 +61,19 @@ documentation](https://day8.github.io/re-frame/re-frame/) first, it is
 very good. Otherwise:
 
 1. [Overview](#overview)
-2. [Configuration](Configuration.md)
-3. Feature Documentation
-   - [Basics](Basics.md)
+2. [Quick Start](Quick-Start.md)
+3. [Configuration](Configuration.md)
+4. Feature Documentation
+   - [References and Application Design](References-and-Application-Design.md)
    - [Normalized DB](Normalized-DB.md)
    - [Normalized Queries](Normalized-Queries.md)
    - [Finite State Machines](Finite-State-Machines.md)
    - [Mutable State](Mutable-State.md)
    - [Debugging](Debugging.md)
    - [Testing](Testing.md)
-6. [Example Client](Example-Client.md)
-7. [General Development Tips](General-Development-Tips.md)
+   - [Advanced Usage](Advanced-Usage.md)
+5. [Example Client](Example-Client.md)
+6. [General Development Tips](General-Development-Tips.md)
 
 ## Getting Help
 
