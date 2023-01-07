@@ -28,7 +28,7 @@
            (db/transient? t)))
 
      (is (f/with-ref {:system/uuid [p]
-                      :meta        {:transient false}}
+                      :persist     true}
            (false? (db/transient? p))))
      (let [props {:p [:system/uuid "a"]}]
        (is (f/with-ref {:system/uuid [p] :in props}
@@ -39,7 +39,15 @@
                          :meta        {:provisional true}}
               (db/ref-meta m))
             {:provisional true
-             :transient   true})))))
+             :transient   true}))
+
+     ;; :persist options overrides :transient metadata
+     (is (= (f/with-ref {:system/uuid [m]
+                         :persist     true
+                         :meta        {:transient   true
+                                       :provisional true}}
+              (db/ref-meta m))
+            {:provisional true})))))
 
 (deftest with-ref-test
   (testing "nil"

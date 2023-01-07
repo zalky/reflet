@@ -25,16 +25,15 @@
 
 (defn- parse-meta
   "All newly created refs are transient by default."
-  [meta]
+  [{:keys [meta persist]}]
   `(not-empty
-    (if (or (false? (:transient ~meta))
-            (not (r*/reactive?)))
+    (if (or ~persist (not (r*/reactive?)))
       (dissoc ~meta :transient)
       (assoc ~meta :transient true))))
 
 (defn- mounted-random-ref
-  [refs k id-attr {:keys [meta]}]
-  `(let [m#   ~(parse-meta meta)
+  [refs k id-attr opts]
+  `(let [m#   ~(parse-meta opts)
          ref# (db/random-ref ~id-attr m# ~k)]
      (when (:transient m#)
        (db/mount-ref! ref#))
@@ -137,7 +136,7 @@
 
 (defn- get-opts
   [bindings]
-  (util/split-keys bindings [:in :meta :debug]))
+  (util/split-keys bindings [:in :meta :persist :debug]))
 
 (defmacro with-ref
   "Generates entity references. Optionally rebinds props attributes,
