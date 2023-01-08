@@ -95,7 +95,7 @@
   [:div {:class           "reflet-keyword"
          :on-context-menu (on-context-click k)}
    [:span ":"]
-   [:span (apply str (rest (str k)))]])
+   [:span (apply str (rest (str k \u200E)))]])
 
 (defmethod value ::map
   [m]
