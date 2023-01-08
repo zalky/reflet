@@ -1,7 +1,7 @@
 (ns reflet.db.tx
   (:require [clojure.zip :as z]))
 
-(defn into-seq
+(defn- into-seq
   [coll]
   (cond
     (seq? coll) coll

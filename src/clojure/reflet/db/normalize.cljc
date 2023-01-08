@@ -11,11 +11,6 @@
        (= (count x) 2)
        (contains? id-attrs (first x))))
 
-(defn uuid-str
-  [ref]
-  (when (sequential? ref)
-    (str (second ref))))
-
 (defn many?
   "Returns true if x is a cardinality many value."
   [x id-attrs]

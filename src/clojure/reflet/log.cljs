@@ -6,4 +6,3 @@
   (fn [[level & vargs :as arg]]
     (when arg
       (apply log/console level vargs))))
-

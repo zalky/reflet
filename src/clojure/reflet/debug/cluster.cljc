@@ -4,39 +4,39 @@
   See https://en.wikipedia.org/wiki/DBSCAN"
   (:require [clojure.set :as set]))
 
-(defn points
+(defn- points
   [db]
   (keys (:points db)))
 
-(defn get-group
+(defn- get-group
   [db p]
   (get-in db [:group p]))
 
-(defn set-group
+(defn- set-group
   [db p group]
   (assoc-in db [:group p] group))
 
-(defn pow
+(defn- pow
   [x y]
   #?(:cljs (js/Math.pow x y)
      :clj  (Math/pow x y)))
 
-(defn sqrt
+(defn- sqrt
   [x]
   #?(:cljs (js/Math.sqrt x)
      :clj  (Math/sqrt x)))
 
-(defn euclidean-distance
+(defn- euclidean-distance
   [{x1 :x y1 :y}
    {x2 :x y2 :y}]
   (sqrt (+ (pow (- x2 x1) 2)
            (pow (- y2 y1) 2))))
 
-(defn get-neigh
+(defn- get-neigh
   [db id]
   (get-in db [:neighbours id]))
 
-(defn index-neigh
+(defn- index-neigh
   [{points      :points
     n           :neighbours
     {eps  :epsilon
@@ -57,14 +57,14 @@
            (assoc db :neighbours))
       db)))
 
-(defn grow
+(defn- grow
   [more grow-n done]
   (->> done
        (set/difference grow-n)
        (concat more)
        (distinct)))
 
-(defn grow-neigh
+(defn- grow-neigh
   [{{:keys [min-points]} :opts
     :as                  db} seed group]
   (loop [db         db

@@ -437,7 +437,7 @@
              (vector ::d/tap ref)
              (f/disp))))
 
-(defn reactive-tap
+(defn- reactive-tap
   [_]
   (r/create-class
    {:component-did-update

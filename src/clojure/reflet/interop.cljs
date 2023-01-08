@@ -4,8 +4,7 @@
   Items are indexed by entity references obtained through the
   `reflet.core/with-ref` macro, and cleaned up when their React
   component unmounts. Do not use refs that were not created by
-  `with-ref` unless you are prepared to clean them up yourself to
-  avoid leaks."
+  `with-ref` unless you are prepared to clean them up yourself."
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]
             [re-frame.db :as rdb]

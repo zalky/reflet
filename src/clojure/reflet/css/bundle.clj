@@ -10,7 +10,7 @@
 (def bundled-css-string
   "(ns reflet.css.bundled) (def css %s)")
 
-(defn bundle-css
+(defn- bundle-css
   [_ e]
   (->> css-path
        (slurp)

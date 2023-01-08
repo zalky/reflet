@@ -521,7 +521,7 @@
           (assocn* (norm/like tx refs))
           db)))))
 
-(defn valid-updaten?
+(defn- valid-updaten?
   [{::keys [id-attrs]} ref tx]
   (or (norm/ref? ref id-attrs)
       (and (keyword? ref)
@@ -564,7 +564,7 @@
 
 (declare pull*)
 
-(defn prop?
+(defn- prop?
   [expr]
   (or (keyword? expr) (string? expr)))
 
@@ -701,7 +701,7 @@
     (list? expr)    (attr-expr (first expr))
     :else           nil))
 
-(defn- default-pull-impl
+(defn default-pull-impl
   "Evaluates the pull expression, `expr`, against the `:db` given in the
   `context` map. `context` will contain at least:
 
@@ -905,7 +905,7 @@
        (swap! query-index assoc ::tick db-tick)))
     db-tick))
 
-(defn query-tick
+(defn- query-tick
   "Returns the given query's tick, syncing to the db tick when the query
   must re-run. The query must re-run whenever it has been touched, it
   is uninitialized, or the db tick and index ticks are out of sync,
@@ -925,20 +925,20 @@
           @db-tick                      ; Next query tick = db tick
           query-tick)))))
 
-(defn query-ref
+(defn- query-ref
   []
   (random-ref :query/uuid))
 
-(defn reactive?
+(defn- reactive?
   [x]
   (satisfies? r/IReactiveAtom x))
 
-(defn maybe-deref
+(defn- maybe-deref
   [^js x]
   (cond-> x
     (reactive? x) deref))
 
-(defn get-result-v
+(defn- get-result-v
   [[id & args]]
   (let [ns (namespace id)
         n  (str (name id) "[result-fn]")]
@@ -946,7 +946,7 @@
         (cons args)
         (vec))))
 
-(defn reaction-ref
+(defn- reaction-ref
   [^clj input-r]
   (.-reflet-query-ref input-r))
 

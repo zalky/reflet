@@ -31,12 +31,12 @@
   {:x (.-clientX e)
    :y (.-clientY e)})
 
-(defn on-click
+(defn- on-click
   [ref]
   (fn [e]
     (f/disp [::ui/open-ref-panel ref])))
 
-(defn on-context-click
+(defn- on-context-click
   [value]
   (fn [e]
     (.preventDefault e)
