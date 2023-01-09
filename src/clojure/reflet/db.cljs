@@ -482,12 +482,13 @@
   touches any queries that are tracking the entity and increments the
   db and index ticks. Does not resolve entity references, so it cannot
   do deep updates in normalized data."
-  [db [ref :as path] value]
+  [db [[a v :as ref] :as path] value]
   {:pre [(valid-path? db path)]}
   (warn-on-transient-write ref)
   (let [p (cons ::data path)]
     (-> db
         (assoc-in p value)
+        (assoc-in [::data ref a] v)
         (update ::index touch-queries ref)
         (inc-tick))))
 
@@ -497,11 +498,12 @@
   first part of path. The updated value is either an entity, a link
   attribute value, or an attribute of an entity. Does not resolve
   entity references, so it cannot do deep updates in normalized data."
-  [db [ref :as path] f & args]
+  [db [[a v :as ref] :as path] f & args]
   {:pre [(valid-path? db path)]}
   (warn-on-transient-write ref)
   (let [p (cons ::data path)]
     (-> (apply update-in db p f args)
+        (assoc-in [::data ref a] v)
         (update ::index touch-queries ref)
         (inc-tick))))
 
