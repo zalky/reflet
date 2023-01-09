@@ -497,7 +497,7 @@
   []
   (when (f/debug?)
     (upsert-css!)
-    (f/disp [::impl/config])
+    (f/disp-sync [::impl/config])
     (->> (upsert-overlay-el!)
          (dom/render [overlay]))))
 

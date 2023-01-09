@@ -1,5 +1,6 @@
 (ns reflet.debug.ui.impl
   (:require [cinch.core :as util]
+            [clojure.set :as set]
             [reagent.ratom :as r]
             [reflet.config :as config]
             [reflet.core :as f]
@@ -519,6 +520,9 @@
 
 (f/reg-event-db ::config
   (fn [db _]
-    (when-not (::configured db)
-      (.addEventListener js/window "keydown" overlay-toggle)
-      (assoc db ::configured true))))
+    (if-not (::configured db)
+      (do (.addEventListener js/window "keydown" overlay-toggle)
+          (-> db
+              (assoc ::configured true)
+              (update ::db/id-attrs set/union db/default-unique-attributes)))
+      db)))
