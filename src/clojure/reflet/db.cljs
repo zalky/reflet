@@ -305,12 +305,18 @@
   (-> (config/get-config)
       (get :trace-queue-size 50)))
 
+(defn- maybe-ns
+  [id]
+  (when (keyword? id)
+    (namespace id)))
+
 (defn- trace-v?
   [v]
   (let [id (first v)]
     (or (= id ::untrace-event)
-        (let [ns (namespace id)]
-          (not (str/starts-with? ns "reflet.debug"))))))
+        (let [ns (maybe-ns id)]
+          (or (not ns)
+              (not (str/starts-with? ns "reflet.debug")))))))
 
 (defn trace?
   [v]

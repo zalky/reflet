@@ -74,13 +74,13 @@
 
 (f/reg-fx ::reg-global-interceptor
   (fn [xs]
-    (doseq [[id interceptor] (to-many xs)]
-      (reg-global-interceptor id interceptor))))
+    (doseq [args (to-many xs)]
+      (apply reg-global-interceptor args))))
 
 (f/reg-fx ::clear-global-interceptor
   (fn [xs]
-    (doseq [id (util/seqify xs)]
-      (clear-global-interceptor id))))
+    (doseq [args (to-many xs)]
+      (apply clear-global-interceptor args))))
 
 (defn cycle-id
   [id]
