@@ -1,5 +1,6 @@
 (ns reflet.css.bundle
-  (:require [axle.core :as watch]))
+  (:require [axle.core :as watch]
+            [clojure.string :as str]))
 
 (def css-path
   "resources/debug.css")
@@ -10,11 +11,16 @@
 (def bundled-css-string
   "(ns reflet.css.bundled) (def css %s)")
 
+(defn strip-source-map
+  [s]
+  (str/replace s #"/\*# sourceMappingURL=debug\.css\.map \*/" ""))
+
 (defn- bundle-css
   [_ e]
   (->> css-path
        (slurp)
        (prn-str)
+       (strip-source-map)
        (format bundled-css-string)
        (spit bundle-path))
   (println "reflet - Bundled reflet.css.bundled/css"))
