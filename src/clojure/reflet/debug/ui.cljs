@@ -16,16 +16,16 @@
   #"(.*\.)*([^.]+)")
 
 (defn- component-name
-  [id]
-  (let [[_ ns n] (re-find component-name-re (namespace id))]
+  [name]
+  (let [[_ ns n] (re-find component-name-re name)]
     n))
 
 (defn- props-name
-  [{:debug/keys [id ns line]}]
+  [{:debug/keys [id name ns line]}]
   [:div {:class "reflet-props-title"}
    (if (and id ns line)
      [:<>
-      [:span (component-name id)]
+      [:span (component-name name)]
       [:span "in"]
       [:span ns " : L" line]]
      [:span "with-ref removed"])])
@@ -413,7 +413,7 @@
   []
   (.querySelector js/document "#reflet-overlay"))
 
-(defn- find-tap-point
+(defn- get-tap-point
   "Search siblings for first element that is not a debug tap. If no
   siblings, choose parent. An example of where there could be no
   sibling is if a component returns an empty fragment."
@@ -426,16 +426,68 @@
           el))
       (.-parentElement tap-el))))
 
-(defn- init-tap
-  [props target tap-el]
+(defn- set-tap-point!
+  [{:keys [target]} tap-el]
+  (->> tap-el
+       (get-tap-point)
+       (reset! target)))
+
+(defn- child-n
+  [p c]
+  (->> p
+       (.-children)
+       (remove #(= (.-className %) "reflet-tap"))
+       (map-indexed vector)
+       (some (fn [[n sib]]
+               (when (= sib c) n)))))
+
+(defn- el-path
+  [gen el]
+  (loop [child el
+         path  (list (.-nodeName el) gen)]
+    (if-let [p (.-parentNode child)]
+      (recur p (conj path
+                     (child-n p child)
+                     (.-nodeName p)))
+      path)))
+
+(defn- path->debug-id
+  [path]
+  (->> path
+       (interpose ":")
+       (apply str)
+       (keyword)
+       (vector :debug/id)))
+
+(defn- set-debug-id!
+  [{:keys [debug-id gen]} tap-el]
+  (->> (el-path gen tap-el)
+       (path->debug-id)
+       (reset! debug-id)
+       (db/mount-ref!))
+  tap-el)
+
+(defn- wrap-props
+  ([props context]
+   (wrap-props props context nil))
+  ([props {:keys [debug-id]} tap-el]
+   (cond-> (assoc props :debug/id (second @debug-id))
+     tap-el (assoc :debug/rect (impl/rect tap-el)))))
+
+(defn- dispatch-tap
+  [props]
   (let [ref (find props :debug/id)]
+    (f/disp [::d/tap ref props])))
+
+(defn- init-tap
+  [props {:keys [debug-id]
+          :as   context}]
+  (fn [tap-el]
     (some->> tap-el
-             (find-tap-point)
-             (reset! target)
-             (impl/rect)
-             (assoc props :debug/rect)
-             (vector ::d/tap ref)
-             (f/disp))))
+             (set-tap-point! context)
+             (set-debug-id! context)
+             (wrap-props props context)
+             (dispatch-tap))))
 
 (defn- reactive-tap
   [_]
@@ -443,8 +495,7 @@
    {:component-did-update
     (f/props-did-update-handler
      (fn [_ props]
-       (let [ref (find props :debug/id)]
-         (f/disp [::d/tap ref props]))))
+       (dispatch-tap props)))
 
     :reagent-render
     (fn [_]
@@ -463,11 +514,11 @@
   before the previous lifecycle's cleanup. It is safe to use in either
   the `:ref` callback, the `:component-did-mount`, or
   `:component-did-update` phase of the component lifecycle."
-  [props target]
-  (if-not @target
+  [props context]
+  (if-not @(:target context)
     [:div {:class "reflet-tap"
-           :ref   (partial init-tap props target)}]
-    (-> [reactive-tap props]
+           :ref   (init-tap props context)}]
+    (-> [reactive-tap (wrap-props props context)]
         (r/as-element)
         (react-dom/createPortal (body-el)))))
 

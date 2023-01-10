@@ -81,12 +81,12 @@
   (list
    'finally
    `(do
-      (when-let [ref# (:debug-id ~context)]
+      (when-let [ref# (some-> ~context :debug-id deref)]
         (disp [::cleanup ref#]))
       (doseq [[_# ref#] (deref ~refs)]
         (when (and ref# (db/transient? ref#))
           (disp [::cleanup ref#]))
-        (when (:debug-id ~context)
+        (when (some-> ~context :debug-id deref)
           (disp [::db/untrace-event ref#]))))))
 
 (defn- env-namespace
@@ -98,41 +98,39 @@
     :or   {debug true}}]
   `(and (r*/reactive?) ~debug db/tap-fn))
 
-(defn- wrap-debug
-  [props-sym context env opts body]
-  `(let [r# (do ~@body)]
-     (if ~(debug? opts)
-       (let [p# {:debug/type  :debut.type/tap
-                 :debug/id    (second (:debug-id ~context))
-                 :debug/ns    ~(env-namespace env)
-                 :debug/line  ~(:line env)
-                 :debug/props ~props-sym}]
-         [:<> (db/tap-fn p# (:target ~context)) r#])
-       r#)))
-
 (defn- component-name
   []
   `(reagent.impl.component/component-name
     (r/current-component)))
 
-(defn- debug-id
+(defn- wrap-debug
+  [props-sym context env opts body]
+  `(let [r# (do ~@body)]
+     (if ~(debug? opts)
+       (let [p# {:debug/type  :debut.type/tap
+                 :debug/name  ~(component-name)
+                 :debug/ns    ~(env-namespace env)
+                 :debug/line  ~(:line env)
+                 :debug/props ~props-sym}]
+         [:<> (db/tap-fn p# ~context) r#])
+       r#)))
+
+(defn- with-ref-gen
   "Produces a debug id that is unique within a DOM tree, but not across
   trees with the same topology. This allows us to track props across
   hot restarts."
   [env]
   `(let [^clj c# r*/*ratom-context*
-         gen#    (or (.-withRefGeneration c#) 0)
-         n#      ~(component-name)
-         r#      [:debug/id (keyword n# gen#)]]
+         gen#    (or (.-withRefGeneration c#) 0)]
      (set! (.-withRefGeneration c#) (inc gen#))
-     (db/mount-ref! r#)
-     r#))
+     gen#))
 
 (defn debug-context
   [env opts]
   `(when ~(debug? opts)
      {:target   (r/atom nil)
-      :debug-id ~(debug-id env)}))
+      :debug-id (atom nil)
+      :gen      ~(with-ref-gen env)}))
 
 (defn- get-opts
   [bindings]

@@ -349,7 +349,7 @@
                 :x  #(get-in % [:debug/rect :left])
                 :y  #(get-in % [:debug/rect :top])}
    :min-points 2
-   :epsilon    50})
+   :epsilon    30})
 
 (defn create-mark
   [m]
@@ -449,6 +449,7 @@
 (f/reg-pull ::tap
   (fn [tap]
     [[:debug/id
+      :debug/name
       :debug/ns
       :debug/line]
      tap]))
@@ -457,6 +458,7 @@
   (fn [self]
     [{:debug/tap
       [:debug/id
+       :debug/name
        :debug/ns
        :debug/line
        :debug/props]}
