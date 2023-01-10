@@ -460,6 +460,8 @@
        (vector :debug/id)))
 
 (defn- set-debug-id!
+  "Sets a debug id that corresponds to a topological branch within the
+  DOM tree. This allows us to track props across hot restarts."
   [{:keys [debug-id gen]} tap-el]
   (->> (el-path gen tap-el)
        (path->debug-id)

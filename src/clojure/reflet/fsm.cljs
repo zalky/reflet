@@ -104,18 +104,19 @@
   2. Timeout transitions
 
   Event transitions match a received event against a set of event
-  stems. Each stem either matches the event exactly, or an event with
-  additional args. If more than one input stem would match, then the
-  longest stem is chosen. For example, given the received event:
+  prefixes. Each prefix either matches the event exactly, or an event
+  with additional args. If more than one event prefix would match,
+  then the longest matching prefix is chosen. For example, given the
+  received event:
 
   [:voted self first-pref second-pref]
 
-  and the set of input stems:
+  and the set of input prefixes:
 
   [:voted self]
   [:voted self first-pref]
 
-  Then matching stem would be:
+  Then matching prefix would be:
 
   [:voted self first-pref]
 
@@ -439,7 +440,7 @@
            (cond-clause db)
            (validate-to fsm)))
 
-(defn- advance-fx
+(defn- get-fsm-fx
   "Given a parsed FSM, a timeout reference, a db, and an event, computes
   that FSM's advance fx, if any. After advance fx have been collected
   for all FSMs, they are all realized at the same time by
@@ -488,7 +489,7 @@
   (doseq [event dispatch-later]
     (fx/dispatch-later event)))
 
-(defn- do-advance-fx!
+(defn- do-fx!
   [{:keys [stop fsm-v]
     :as   fsm} clause timeout state]
   (fsm-dispatch! clause)
@@ -496,19 +497,17 @@
     (stop! fsm-v)
     (set-timeout! timeout fsm state)))
 
-(defn- advance-rf
-  [event]
-  (fn [db {{:keys [ref attr]
-            :as   fsm}    :fsm
-           {:keys [to]
-            :as   clause} :clause
-           timeout        :timeout}]
-    (do-advance-fx! fsm clause timeout to)
-    (db/assoc-inn db [ref attr] to)))
-
-(defn- after-fx
-  [event advance-fx db]
-  (reduce (advance-rf event) db advance-fx))
+(defn- do-fx-after
+  [event fsm-fx db]
+  (reduce (fn [db {{:keys [ref attr]
+                    :as   fsm}    :fsm
+                   {:keys [to]
+                    :as   clause} :clause
+                   timeout        :timeout}]
+            (do-fx! fsm clause timeout to)
+            (db/assoc-inn db [ref attr] to))
+          db
+          fsm-fx))
 
 (defn- trace-rf
   [t event]
@@ -525,30 +524,30 @@
                     util/qonj
                     (db/queue-size)))))
 
-(defn- after-trace
+(defn- trace-after
   "Each FSM advance fx will increment the ::db/tick. But for debugging
   purposes, what we really want is the resultant ::db/tick after all
   the FSMs have been advanced. This unfortunately requires us to
   iterate twice through the fx set, though this is still fairly
   fast. When not debugging, this extra trace loop is bypassed."
-  [event advance-fx db]
+  [event fsm-fx db]
   (if (db/trace? event)
     (-> (get-in db [::db/data ::db/tick])
         (trace-rf event)
-        (reduce db advance-fx))
+        (reduce db fsm-fx))
     db))
 
 (defn- advance-after
-  "Performs FSM advance."
+  "Collects FSM advance fx, and executes them."
   [{{db-fx :db}      :effects
     {db-cofx :db
      event   :event} :coeffects
-    advance-fx       ::advance-fx
+    fsm-fx           ::fsm-fx
     :as              context}]
-  (if (not-empty advance-fx)
+  (if (not-empty fsm-fx)
     (->> (or db-fx db-cofx)
-         (after-fx event advance-fx)
-         (after-trace event advance-fx)
+         (do-fx-after event fsm-fx)
+         (trace-after event fsm-fx)
          (assoc-in context [:effects :db]))
     context))
 
@@ -567,7 +566,22 @@
   fsm-interceptors
   (constantly nil))
 
-;;;; Effects
+(defn- fsm-fx-interceptor-after
+  [fx-fn]
+  (fn [{{db-fx :db}      :effects
+        {db-cofx :db
+         event   :event} :coeffects
+        :as              context}]
+    (let [db (or db-fx db-cofx)
+          fx (fx-fn db event)]
+      (cond-> context
+        fx (update ::fsm-fx util/conjs fx)))))
+
+(defn- fsm-fx-interceptor
+  [fx-fn]
+  (f/->interceptor
+   :id (gensym :_)
+   :after (fsm-fx-interceptor-after fx-fn)))
 
 (defn- fsm-spec
   [fsm-v]
@@ -578,12 +592,6 @@
                 (util/assoc-nil :attr ::state))
         (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
-(i/reg-event-db-impl ::advance
-  fsm-interceptors
-  (fn [db [_ fsm-v to]]
-    (let [{:keys [ref attr]} (fsm-spec fsm-v)]
-      (db/assoc-inn db [ref attr] to))))
-
 (defn- first-trace!
   [{:keys [ref fsm-v]} state t]
   (->> #queue [{:t          t
@@ -593,14 +601,20 @@
               assoc-in
               [::db/fsm->transition ref fsm-v])))
 
-(defn- start-impl!
+(i/reg-event-db-impl ::advance
+  fsm-interceptors
+  (fn [db [_ fsm-v to]]
+    (let [{:keys [ref attr]} (fsm-spec fsm-v)]
+      (db/assoc-inn db [ref attr] to))))
+
+(defn- start-fx!
   [{:keys [ref attr fsm-v to]
     :as   fsm} timeout db]
   (let [state (db/get-inn db [ref attr])]
     (set-timeout! timeout fsm state)
     (when db/tap-fn
-      (->> (get-in db [::db/data ::db/tick])
-           (first-trace! fsm state)))
+      (let [t (get-in db [::db/data ::db/tick])]
+        (first-trace! fsm state t)))
     (when (contains? fsm :to)
       (f/dispatch [::advance fsm-v to]))))
 
@@ -608,32 +622,15 @@
   [fsm-v]
   (i/global-interceptor-registered? ::fsm fsm-v))
 
-(defn- advance-fx-interceptor*
-  [f]
-  (fn [{{db-fx :db}      :effects
-        {db-cofx :db
-         event   :event} :coeffects
-        :as              context}]
-    (let [db (or db-fx db-cofx)
-          a  (f db event)]
-      (cond-> context
-        a (update ::advance-fx util/conjs a)))))
-
-(defn- advance-fx-interceptor
-  [f]
-  (f/->interceptor
-   :id (gensym :_)
-   :after (advance-fx-interceptor* f)))
-
 (defn- start!
   "Do not use directly. Prefer ::start event or subscription."
   [db fsm-v]
   (let [fsm (parse (fsm-spec fsm-v))]
     (when-not (running? fsm-v)
       (let [timeout (atom nil)]
-        (start-impl! fsm timeout db)
-        (->> (partial advance-fx fsm timeout)
-             (advance-fx-interceptor)
+        (start-fx! fsm timeout db)
+        (->> (partial get-fsm-fx fsm timeout)
+             (fsm-fx-interceptor)
              (i/reg-global-interceptor ::fsm fsm-v))
         ;; Must happen after interceptor.
         (fsm-dispatch! fsm)))))

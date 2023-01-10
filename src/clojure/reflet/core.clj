@@ -116,9 +116,8 @@
        r#)))
 
 (defn- with-ref-gen
-  "Produces a debug id that is unique within a DOM tree, but not across
-  trees with the same topology. This allows us to track props across
-  hot restarts."
+  "Returns a with-ref generation that is unique within the current
+  reactive context."
   [env]
   `(let [^clj c# r*/*ratom-context*
          gen#    (or (.-withRefGeneration c#) 0)]

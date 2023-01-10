@@ -1,5 +1,5 @@
 (ns reflet.trie
-  "Trie for longest stem matching.
+  "Trie for longest prefix matching.
 
   Ideally this would implement clojure.lang interfaces."
   (:refer-clojure :exclude [merge])
@@ -10,12 +10,12 @@
   (match [obj prefix])
   (merge [obj other]))
 
-(declare ->StemTrie)
+(declare ->PrefixTrie)
 
 (defn trie
-  ([] (->StemTrie nil nil))
-  ([node] (->StemTrie node nil))
-  ([node child] (->StemTrie node child)))
+  ([] (->PrefixTrie nil nil))
+  ([node] (->PrefixTrie node nil))
+  ([node child] (->PrefixTrie node child)))
 
 (defn- upsert
   [obj prefix v]
@@ -34,7 +34,7 @@
         (recur (get c k) more))
     result))
 
-(defrecord StemTrie [node child]
+(defrecord PrefixTrie [node child]
   Trie
   (add [obj [k & more] v]
     (if k
