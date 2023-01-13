@@ -21,10 +21,15 @@
 
 (defmulti map-entry
   (fn [i k v]
-    (if (and (coll? v)
-             (not (ref? v)))
+    (if (and (coll? v) (not (ref? v)))
       ::coll
-      :default)))
+      (type v))))
+
+(defmethod map-entry :default
+  [i k v]
+  [:div {:key i}
+   [value k]
+   [value v]])
 
 (defn- pos
   [e]
@@ -41,12 +46,6 @@
   (fn [e]
     (.preventDefault e)
     (f/disp [::ui/open-context value (pos e)])))
-
-(defmethod map-entry :default
-  [i k v]
-  [:div {:key i}
-   [value k]
-   [value v]])
 
 (defmethod value :default
   [x]
@@ -121,19 +120,31 @@
         ^{:key i} [value x])
       coll))]])
 
+(declare expander)
+
 (defn- inline-coll
   [coll]
   [:div (doall
          (map-indexed
           (fn [i x]
-            ^{:key i} [value x])
+            (with-meta
+              (if (and (coll? x) (not (ref? x)))
+                [expander nil x]
+                [value x])
+              {:key i}))
           coll))])
+
+(defn expander-toggle
+  [self]
+  (when self
+    (fn [e]
+      (.preventDefault e)
+      (f/disp [::impl/toggle-expand self]))))
 
 (defn- expander
   [{:expander/keys [self]} v]
-  (let [e      (g/coll-expander)
-        toggle #(f/disp [::impl/toggle-expand self])]
-    [:div {:on-click toggle
+  (let [e (when self (g/coll-expander))]
+    [:div {:on-click (expander-toggle self)
            :class    "reflet-coll-expander"}
      (cond
        (vector? v) [:<> [:span "["] (inline-coll v) e [:span "]"]]

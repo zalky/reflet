@@ -618,6 +618,7 @@ $coll-brace-width:              0.5rem;
 }
 
 .reflet-coll-expander {
+    display: flex;
     user-select: none;
     cursor: pointer;
 
@@ -632,7 +633,8 @@ $coll-brace-width:              0.5rem;
         overflow: hidden;
 
         > * {
-            overflow: visible;
+            flex-shrink: 0;
+            overlfow: hidden;
             transition: all 0.3s ease;
 
             &:not(:last-child) {
@@ -653,7 +655,7 @@ $coll-brace-width:              0.5rem;
         font-weight: 700;
 
         .reflet-coll-expand & {
-            opacity: 0.2;
+            opacity: 0.3;
         }
     }
 
