@@ -109,16 +109,22 @@
     (.removeEventListener js/document "mouseup" anon)
     (f/disp-sync [::drag-stop!])))
 
+(def z-index-0
+  1000000000)
+
 (defn get-z-index
-  [db]
-  (get db ::z-index 1000000000))
+  [db & [ref]]
+  (case (db/get-inn db [ref :debug/type])
+    :debug.type/mark       z-index-0
+    :debug.type/mark-group z-index-0
+    (get db ::z-index z-index-0)))
 
 (defn update-z-index
   "Attempt to start panels on top all host UI elements. This still
   leaves over a billion panel interactions. Worst case the panels stop
   layering properly."
   [db ref]
-  (let [z (get-z-index db)]
+  (let [z (get-z-index db ref)]
     (-> db
         (assoc ::z-index (inc z))
         (db/update-inn [ref :debug/rect] assoc :z-index z))))
