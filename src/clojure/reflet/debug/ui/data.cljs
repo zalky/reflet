@@ -6,6 +6,10 @@
             [reflet.debug.ui.data.impl :as impl]
             [reflet.debug.ui.impl :as ui]))
 
+(def uuid-condensed-chars
+  "The number of characters to condense a UUID."
+  8)
+
 (defn- ref?
   "Returns true if x is an entity reference."
   [x]
@@ -49,8 +53,9 @@
 
 (defmethod value :default
   [x]
-  [:div {:on-context-menu (on-context-click x)}
-   (str x)])
+  [:div {:class           "reflet-value-default"
+         :on-context-menu (on-context-click x)}
+   [:div (str x)]])
 
 (defmethod value nil
   [_]
@@ -82,12 +87,12 @@
            :on-context-menu (on-context-click ref)}
      (attr->ns attr) "@"
      (if (uuid? value)
-       (subs (str value) 0 8)
+       (.slice (str value) (- uuid-condensed-chars))
        (str value))]))
 
 (defmethod value ::ref
   [ref]
-  (value-ref ref :on-click (on-click ref) ))
+  (value-ref ref :on-click (on-click ref)))
 
 (defmethod value Keyword
   [k]
@@ -95,6 +100,24 @@
          :on-context-menu (on-context-click k)}
    [:span ":"]
    [:span (apply str (rest (str k \u200E)))]])
+
+(defmethod value js/Function
+  [f]
+  [:div {:class "reflet-function"}
+   "(fn ...)"])
+
+(defmethod value js/Boolean
+  [x]
+  [:div {:class "reflet-boolean"}
+   (str x)])
+
+(defmethod value cljs.core/UUID
+  [uuid]
+  [:div {:class "reflet-uuid"
+         :on-context-menu (on-context-click uuid)}
+   (->> (- uuid-condensed-chars)
+        (.slice (str uuid))
+        (str "#uuid ..."))])
 
 (defmethod value ::map
   [m]

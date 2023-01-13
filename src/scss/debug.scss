@@ -23,6 +23,8 @@ $syntax-keyword-name:           #ac4af0; // #297bf2
 $syntax-ref:                    #ff00e9; // #d04dff;
 $syntax-string:                 #818181;
 $syntax-fsm-state:              #3733ff; // #0c56fc;
+$syntax-number:                 #8b8ab8;
+$syntax-boolean:                $syntax-number;
 
 $control-fade:                  -0.3;
 
@@ -718,12 +720,18 @@ $coll-brace-width:              0.5rem;
     text-transform: uppercase;
 }
 
-.reflet-number {
-    color: #8b8ab8;
+.reflet-number, .reflet-boolean {
+    color: $syntax-number;
     font-family: $font-family-monospace;
 }
 
 .reflet-html {
     color: $syntax-string;
     font-family: $font-family-monospace;
+}
+
+.reflet-value-default {
+    > * {
+        @include truncate;
+    }
 }
