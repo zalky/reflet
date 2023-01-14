@@ -225,14 +225,6 @@
   (->> (db/get-inn db [tap :debug/rect])
        (shift-rect (i/grab el))))
 
-(defn- panel-content-height
-  [el]
-  (let [b (* 2 (px el :border-width))]
-    (->> (.. el -firstChild -children)
-         (array-seq)
-         (map #(px % :height))
-         (reduce + b))))
-
 (f/reg-event-db ::set-rect
   (fn [db [_ self & args]]
     (letfn [(f [r]
@@ -240,18 +232,6 @@
       (-> db
           (db/update-inn [self :debug/rect] f)
           (update-z-index self)))))
-
-(def max-init-panel-height
-  275)
-
-(f/reg-event-db ::set-height
-  (fn [db [_ self el]]
-    (letfn [(f [r]
-              (->> (i/grab el)
-                   (panel-content-height)
-                   (min max-init-panel-height)
-                   (assoc r :height)))]
-      (db/update-inn db [self :debug/rect] f))))
 
 (f/reg-pull ::rect
   (fn [self]
@@ -276,6 +256,41 @@
      (f/sub [::i/grab el])])
   (fn [[rect el]]
     (shift-rect el rect)))
+
+(f/reg-event-db ::set-context-pos
+  (fn [db [_ el]]
+    (let [{l :left   r :right
+           t :top    b :bottom
+           h :height w :width}   (some-> el i/grab rect)
+          {vh :height vw :width} (viewport-size)
+
+          l (if (< vw r) (- l w) l)
+          t (if (< vh b) (- t h) t)]
+      (letfn [(f [pos]
+                (-> pos
+                    (dissoc :visibility)
+                    (assoc :left l :top t)))]
+        (update-in db [::context :debug/pos] f)))))
+
+(def max-init-panel-height
+  275)
+
+(defn- panel-content-height
+  [el]
+  (let [b (* 2 (px el :border-width))]
+    (->> (.. el -firstChild -children)
+         (array-seq)
+         (map #(px % :height))
+         (reduce + b))))
+
+(f/reg-event-db ::set-height
+  (fn [db [_ self el]]
+    (letfn [(f [r]
+              (->> (i/grab el)
+                   (panel-content-height)
+                   (min max-init-panel-height)
+                   (assoc r :height)))]
+      (db/update-inn db [self :debug/rect] f))))
 
 (defn- get-content-el
   "Returns either the first child if it exists, or the parent content
@@ -427,9 +442,10 @@
   {:debug/type  :debug.type.context/ref
    :debug/self  (db/random-ref :debug/id)
    :debug/value value
-   :debug/pos   {:left    x
-                 :top     y
-                 :z-index z}})
+   :debug/pos   {:left       x
+                 :top        y
+                 :z-index    z
+                 :visibility "hidden"}})
 
 (defn create-global-controls
   []

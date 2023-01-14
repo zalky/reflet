@@ -78,6 +78,7 @@ $coll-brace-width:              0.5rem;
     padding: 0.5rem 1rem;
     border-radius: 0;
     max-width: 500px;
+    width: max-content;
 
     background: $debug-control-bg;
     box-shadow: 4px 4px $debug-panel-drop-shadow;

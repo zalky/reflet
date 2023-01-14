@@ -385,13 +385,14 @@
        [:span "Close All"]])))
 
 (defmethod render :debug.type.context/ref
-  [{:debug/keys [pos value] :as props}]
-  (f/with-ref* {:debug/id [debug/self]
-                :in       props}
-    [:div {:class    "reflet-context"
-           :style    pos
-           :on-click #(.stopPropagation %)}
-     (prn-str value)]))
+  [{:debug/keys [pos value]}]
+  (f/with-ref* {:debug/id [debug/el]}
+    (let [cb #(f/disp [::impl/set-context-pos el])]
+      [:div {:ref      (i/el! el :mount cb)
+             :class    "reflet-context"
+             :style    pos
+             :on-click #(.stopPropagation %)}
+       (prn-str value)])))
 
 (defn- overlay
   []
