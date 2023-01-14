@@ -10,6 +10,13 @@
             [reflet.fsm :as fsm]
             [reflet.interop :as i]))
 
+(def cmp-hierarchy
+  (util/derive-pairs
+   [[:debug.type/mark
+     :debug.type/mark-group] ::mark
+    [:debug.type/ref-panel
+     :debug.type/props-panel] ::panel]))
+
 ;;;; Dragging
 
 (defn prop
@@ -113,21 +120,27 @@
   1000000000)
 
 (defn get-z-index
-  [db & [ref]]
-  (case (db/get-inn db [ref :debug/type])
-    :debug.type/mark       z-index-0
-    :debug.type/mark-group z-index-0
-    (get db ::z-index z-index-0)))
+  [db]
+  (get db ::z-index z-index-0))
 
-(defn update-z-index
+(defmulti update-z-index
   "Attempt to start panels on top all host UI elements. This still
   leaves over a billion panel interactions. Worst case the panels stop
   layering properly."
+  (fn [db ref]
+    (db/get-inn db [ref :debug/type]))
+  :hierarchy #'cmp-hierarchy)
+
+(defmethod update-z-index :default
   [db ref]
-  (let [z (get-z-index db ref)]
+  (let [z (get-z-index db)]
     (-> db
         (assoc ::z-index (inc z))
         (db/update-inn [ref :debug/rect] assoc :z-index z))))
+
+(defmethod update-z-index ::mark
+  [db ref]
+  (db/update-inn db [ref :debug/rect] assoc :z-index z-index-0))
 
 (f/reg-event-fx ::drag!
   (fn [{db :db} [_ handler ref e-mouse-down]]
@@ -172,11 +185,6 @@
        :width   w
        :height  h
        :z-index z})))
-
-(def cmp-hierarchy
-  (util/derive-pairs
-   [[:debug.type/ref-panel
-     :debug.type/props-panel] ::panel]))
 
 (defmulti get-rect
   (fn [db self & _]
