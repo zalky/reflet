@@ -191,19 +191,29 @@
     (db/get-inn db [self :debug/type]))
   :hierarchy #'cmp-hierarchy)
 
-(defn pos-or-default
-  [pos dim]
-  (+ (or pos (/ (get (viewport-size) dim) 4)) 50))
+(def new-panel-offset
+  50)
+
+(def new-panel-width
+  315)
+
+(defn- selected-el
+  [db]
+  (db/get-inn db [(::selected db) :debug/el]))
 
 (defmethod get-rect ::panel
-  [db _ _]
-  (let [sel-ref   (::selected db)
-        sel-el    (db/get-inn db [sel-ref :debug/el])
-        {t :top
-         l :left} (some-> sel-el i/grab rect)]
-    {:left  (pos-or-default l :height)
-     :top   (pos-or-default t :width)
-     :width 315}))
+  [db _ target-el]
+  (let [sel-el       (selected-el db)
+        {st :top
+         sl :left}   (some-> sel-el i/grab rect)
+        {th :height} (some-> target-el i/grab rect)
+        {vh :height
+         vw :width}  (viewport-size)]
+    {:width new-panel-width
+     :left  (min (- vw new-panel-width)
+                 (+ sl new-panel-offset))
+     :top   (min (- vh th)
+                 (+ st new-panel-offset))}))
 
 (defmethod get-rect :debug.type/mark-group
   [_ _ el {:keys [x y]}]
