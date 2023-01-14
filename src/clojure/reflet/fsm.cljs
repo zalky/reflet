@@ -412,9 +412,11 @@
   (or (t/match trie event) wct))
 
 (defn- get-transition
-  [{state-map :fsm
+  [{stop      :stop
+    state-map :fsm
     unparsed  :fsm-unparsed} state]
-  (if (contains? state-map state)
+  (if (or (contains? state-map state)
+          (contains? stop state))
     (get state-map state)
     (-> "Not a valid FROM state"
         (ex-info {:state state :fsm unparsed})
