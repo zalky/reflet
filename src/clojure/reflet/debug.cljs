@@ -74,6 +74,7 @@
   Note that this dispatch fn does not work for any other event
   but ::tap."
   [event]
+  {:pre [(= (first event) ::tap)]}
   (interop/next-tick
    (fn []
      (let [h (reg/get-handler events/kind ::tap)]
