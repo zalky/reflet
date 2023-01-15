@@ -63,9 +63,8 @@
     (doseq [ref (->> @rdb/app-db
                      (::db/id-attrs)
                      (norm/to-many refs))]
-      (when-let [{:keys [destroy unmount obj]} (get @db ref)]
+      (when-let [{:keys [destroy obj]} (get @db ref)]
         (when destroy (destroy obj))
-        (when unmount (unmount))
         (swap! db dissoc ref)))))
 
 (defn el!
@@ -78,18 +77,14 @@
             Callback function is called after DOM element is
             mounted. Accepts the DOM element as it's only argument.
 
-  :unmount
-            Callback function is called before the DOM element is
-            unmounted. Called with no arguments.
-
   :flush
             Flushes the reagent ratom queue for immediate
             computation"
-  [ref & {:keys [flush mount unmount]}]
+  [ref & {:keys [flush mount]}]
   (when-not (:obj (get (.-state db) ref))
     (fn [el]
       (when el
-        (reg ref el {:unmount unmount})
+        (reg ref el)
         (when mount (mount el))
         (when flush (r/flush!))))))
 
