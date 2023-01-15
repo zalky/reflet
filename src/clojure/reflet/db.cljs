@@ -530,18 +530,16 @@
           db)))))
 
 (defn- valid-updaten?
-  [{::keys [id-attrs]} ref tx]
-  (or (norm/ref? ref id-attrs)
-      (and (keyword? ref)
-           (every? #(norm/ref? % id-attrs) tx))))
+  [{::keys [id-attrs]} attr refs]
+  (and (keyword? attr)
+       (every? #(norm/ref? % id-attrs) refs)))
 
 (defn updaten
   "Updates a normalized link at the given attribute."
-  [db ref f tx]
-  {:pre [(valid-updaten? db ref tx)]}
-  (-> db
-      (update-in [::data ref] f tx)
-      (update ::index touch-queries ref)
+  [db attr f & refs]
+  {:pre [(valid-updaten? db attr refs)]}
+  (-> (apply update-in db [::data attr] f refs)
+      (update ::index touch-queries attr)
       (inc-tick)))
 
 (defn- normalize-and-filter

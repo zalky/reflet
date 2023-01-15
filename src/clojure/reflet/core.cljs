@@ -171,7 +171,7 @@
 
 (defn- untap
   [db ref]
-  (update db ::d/taps dissoc ref))
+  (db/updaten db ::d/taps disj ref))
 
 (defmethod cleanup :debug/id
   ;; Cleanup behaviour is specific to the debugger.
@@ -255,6 +255,16 @@
 
 (f/reg-fx ::disp-debounced
   disp-debounced)
+
+(defn props-handler
+  "Given an update handler, f, that accepts a single component argument,
+  returns lifecycle handler function that will invoke the provided fn
+  with component props. Careful, other lifecycles have different
+  signatures with respect to new and old values during an update, and
+  are not interchangeable."
+  [f]
+  (fn [this]
+    (f (r/props this))))
 
 (defn props-did-update-handler
   "Given an update handler, f, returns a componentDidUpdate lifecycle

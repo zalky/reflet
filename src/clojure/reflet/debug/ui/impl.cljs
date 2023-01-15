@@ -163,13 +163,15 @@
   [el target-rect]
   (when el
     (let [{l :left
-           t :top}    target-rect
+           t :top
+           z :z-index} target-rect
           {w :width
-           h :height} (rect el)]
-      {:left   (max (- l w) 0)
-       :top    (max (- t h) 0)
-       :width  w
-       :height h})))
+           h :height}  (rect el)]
+      {:left    (max (- l w) 0)
+       :top     (max (- t h) 0)
+       :width   w
+       :height  h
+       :z-index z})))
 
 (def cmp-hierarchy
   (util/derive-pairs
@@ -238,6 +240,24 @@
     [:debug/rect self])
   (fn [rect]
     (select-keys rect [:left :top :width :height :z-index])))
+
+(f/reg-pull ::mark-rect*
+  (fn [self]
+    [[:debug/rect
+      {:debug/tap [:debug/rect]}]
+     self])
+  (fn [{{z :z-index}    :debug/rect
+        {r :debug/rect} :debug/tap}]
+    (-> r
+        (assoc :z-index z)
+        (select-keys [:left :top :width :height :z-index]))))
+
+(f/reg-sub ::mark-rect
+  (fn [[_ self el]]
+    [(f/sub [::mark-rect* self])
+     (f/sub [::i/grab el])])
+  (fn [[rect el]]
+    (shift-rect el rect)))
 
 (defn- get-content-el
   "Returns either the first child if it exists, or the parent content
@@ -340,7 +360,7 @@
 
 (f/reg-event-db ::clear-lens
   (fn [db [_ self]]
-    (db/updaten db self dissoc :debug/lens)))
+    (db/update-inn db [self] dissoc :debug/lens)))
 
 (f/reg-event-db ::inc-trace-n
   (fn [db [_ self max-n]]
@@ -474,12 +494,15 @@
   (fn [db _]
     (vals (get db ::panels))))
 
+(f/reg-pull ::taps
+  (fn []
+    [{::d/taps '[*]}]))
+
 (f/reg-sub ::overlay-nodes
   (fn [_]
-    (f/sub [::d/taps]))
+    (f/sub [::taps]))
   (fn [taps _]
-    (let [t      (vals taps)
-          g      (c/cluster t cluster-opts)
+    (let [g      (c/cluster taps cluster-opts)
           marks  (map create-mark (:noise g))
           groups (map create-mark-group (vals (dissoc g :noise)))
           ctrls  (create-global-controls)]

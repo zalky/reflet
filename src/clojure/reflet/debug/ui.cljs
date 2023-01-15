@@ -2,10 +2,10 @@
   (:require [react-dom :as react-dom]
             [reagent.core :as r]
             [reagent.dom :as dom]
-            [reflet.css.bundled :as bundled]
             [reflet.core :as f]
-            [reflet.debug :as d]
+            [reflet.css.bundled :as bundled]
             [reflet.db :as db]
+            [reflet.debug :as d]
             [reflet.debug.glyphs :as g]
             [reflet.debug.ui.data :as data]
             [reflet.debug.ui.data.impl :as data-impl]
@@ -52,7 +52,7 @@
   (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect  (f/sub [::impl/rect self])
+    (let [rect  (f/sub [::impl/mark-rect self el])
           state (f/sub [::impl/node-fsm self])
           cb    #(f/disp [::impl/set-rect self el tap])]
       (f/once (f/disp [::impl/set-props self props]))
@@ -407,7 +407,7 @@
 
 (defn- body-el
   []
-  (.querySelector js/document "body"))
+  (.-body js/document))
 
 (defn- overlay-el
   []
@@ -470,38 +470,72 @@
   tap-el)
 
 (defn- wrap-props
-  ([props context]
-   (wrap-props props context nil))
-  ([props {:keys [debug-id]} tap-el]
-   (cond-> (assoc props :debug/id (second @debug-id))
-     tap-el (assoc :debug/rect (impl/rect tap-el)))))
+  [props {ref    :debug-id
+          target :target}]
+  (assoc props
+         :debug/id (second @ref)
+         :debug/rect (impl/rect @target)))
 
-(defn- dispatch-tap
+(defn- disp-tap
   [props]
-  (let [ref (find props :debug/id)]
-    (f/disp [::d/tap ref props])))
+  (d/disp-tap [::d/tap props]))
 
 (defn- init-tap
-  [props {:keys [debug-id]
-          :as   context}]
+  [props context]
   (fn [tap-el]
-    (some->> tap-el
-             (set-tap-point! context)
-             (set-debug-id! context)
-             (wrap-props props context)
-             (dispatch-tap))))
+    (when tap-el
+      (->> tap-el
+           (set-tap-point! context)
+           (set-debug-id! context))
+      (->> (wrap-props props context)
+           (disp-tap)))))
+
+(def ^:private poll-interval
+  1000)
+
+(defn- start-position-poll!
+  "Reactive positioning of the purple tap marks is implemented using a
+  periodic poll of the tap target. Unfortunately, a non-polling based
+  method to observing changes in the position of the element being
+  tapped is quite complex. It involves placing multiple event
+  listeners all the way up the DOM tree from the tap point, as well as
+  managing resize observers, with numerous edge cases everywhere. The
+  Popper.js implementation works through all these, but we do not want
+  to use that as it introduces a complex JS dependency, which would
+  need to be inlined and maintained over time. Nobody loves a polling
+  solution, but given how infrequently we poll (1 Hz), and that there
+  are no apparent edge cases, it is by far the most robust
+  solution. Also remember that this solution is only used for the
+  position of the purple tap marks. Literally everything else about
+  taps is reactive using normal, efficient approaches."
+  [props context]
+  (letfn [(f []
+            (-> (wrap-props props context)
+                (select-keys [:debug/id :debug/rect])
+                (disp-tap)))]
+    (js/setInterval f poll-interval)))
+
+(defn- stop-position-poll!
+  [id]
+  (js/clearInterval id))
 
 (defn- reactive-tap
-  [_]
-  (r/create-class
-   {:component-did-update
-    (f/props-did-update-handler
-     (fn [_ props]
-       (dispatch-tap props)))
+  [props context]
+  (let [id (start-position-poll! props context)]
+    (r/create-class
+     {:component-did-update
+      (f/props-did-update-handler
+       (fn [_ props]
+         (-> (wrap-props props context)
+             (disp-tap))))
 
-    :reagent-render
-    (fn [_]
-      [:div {:class "reflet-reactive-tap"}])}))
+      :component-will-unmount
+      (fn [_]
+        (stop-position-poll! id))
+
+      :reagent-render
+      (fn [_]
+        [:div {:class "reflet-reactive-tap"}])})))
 
 (defn tap
   "On mount, the tap must be situated in the target DOM to access DOM
@@ -520,7 +554,7 @@
   (if-not @(:target context)
     [:div {:class "reflet-tap"
            :ref   (init-tap props context)}]
-    (-> [reactive-tap (wrap-props props context)]
+    (-> [reactive-tap props context]
         (r/as-element)
         (react-dom/createPortal (body-el)))))
 
