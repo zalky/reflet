@@ -3,12 +3,21 @@
             [reflet.db :as db]
             [reflet.fsm :as fsm]))
 
+(defn- form-attr?
+  [k]
+  (when (keyword? k)
+    (= "attr" (namespace k))))
+
 (defn- done=
-  "The number of attributes contained in the entity must equal n. Not a
-  realistic validation, but focus here is not on validation."
+  "The number of form attributes contained in the entity must be greater
+  than or equal to n. Not a realistic validation, but focus here is
+  not on validation."
   [n]
   (fn [[e]]
-    (= (count e) n)))
+    (->> (keys e)
+         (filter form-attr?)
+         (count)
+         (<= n))))
 
 (fsm/reg-fsm ::workflow-a
   (fn [self w1 w2]

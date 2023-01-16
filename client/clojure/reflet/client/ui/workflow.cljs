@@ -7,7 +7,7 @@
 
 ;;;; Utility
 
-(def labels
+(def option-labels
   ["A" "B" "C" "D"])
 
 (defn- stroke
@@ -84,7 +84,7 @@
         on-click  #(f/disp [::impl/select self attr])]
     [:<> {:key i}
      [:div {:class "workflow-label"}
-      (nth labels i)]
+      (nth option-labels i)]
      [check {:on-click on-click
              :done     @selected?}]]))
 
@@ -107,25 +107,25 @@
   :default ::impl/step-1)
 
 (defmethod workflow-b ::impl/step-1
-  [_ {:keys [w/f1]}]
+  [_ {:keys [::f1]}]
   [form {:self     f1
          :required 2
          :total    3}])
 
 (defmethod workflow-b ::impl/step-2
-  [_ {:keys [w/f2]}]
+  [_ {:keys [::f2]}]
   [form {:self     f2
          :required 2
          :total    4}])
 
 (defmethod workflow-b ::impl/step-3
-  [_ {:keys [w/f3]}]
+  [_ {:keys [::f3]}]
   [form {:self     f3
          :required 1
          :total    3}])
 
 (defmethod workflow-b ::impl/step-4
-  [_ {:keys [w/f4]}]
+  [_ {:keys [::f4]}]
   [form {:self     f4
          :required 1
          :total    1}])
@@ -140,19 +140,19 @@
   :default ::impl/step-1)
 
 (defmethod workflow-c ::impl/step-1
-  [_ {:keys [w/f1]}]
+  [_ {:keys [::f1]}]
   [form {:self     f1
          :required 2
          :total    2}])
 
 (defmethod workflow-c ::impl/step-2
-  [_ {:keys [w/f2]}]
+  [_ {:keys [::f2]}]
   [form {:self     f2
          :required 1
          :total    4}])
 
 (defmethod workflow-c ::impl/step-3
-  [_ {:keys [w/f3]}]
+  [_ {:keys [::f3]}]
   [form {:self     f3
          :required 2
          :total    3}])
@@ -168,7 +168,7 @@
 
 (defmethod workflow-a ::impl/step-1
   [_ props]
-  (f/with-ref {:cmp/uuid [w/b w/f1 w/f2 w/f3 w/f4]
+  (f/with-ref {:cmp/uuid [::b ::f1 ::f2 ::f3 ::f4]
                :in       props}
     (let [state @(f/sub [::impl/workflow-b b f1 f2 f3 f4])]
       [:<>
@@ -188,7 +188,7 @@
 
 (defmethod workflow-a ::impl/step-2
   [_ props]
-  (f/with-ref {:cmp/uuid [w/c w/f1 w/f2 w/f3]
+  (f/with-ref {:cmp/uuid [::c ::f1 ::f2 ::f3]
                :in       props}
     (let [state @(f/sub [::impl/workflow-c c f1 f2 f3])]
       [:<>
@@ -210,7 +210,7 @@
 
 (defn workflow
   [props]
-  (f/with-ref {:cmp/uuid [w/a w/b w/c]
+  (f/with-ref {:cmp/uuid [::a ::b ::c]
                :in       props}
     (let [state @(f/sub [::impl/workflow-a a b c])]
       [:div {:class "workflow"}
