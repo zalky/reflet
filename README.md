@@ -5,11 +5,11 @@
 
 <img src="https://i.imgur.com/yWceoD5.jpg" title="zalky" align="right" width="300"/>
 
-**Reflet** is a collection of tools for building Re-frame + React based
-web apps. This includes:
+**Reflet** is a set of normalized tools for building Re-frame + React
+based web apps. This includes:
 
-1. Entity references with lifecycle management
-2. Efficient, normalized state model
+1. Entity references and their lifecycle management
+2. Performant, normalized data model
 3. Simple but powerful hierarchical FSMs
 4. JS and DOM interop utilities
 5. Novel API-driven visual debugging of complex apps (don't sleep on
@@ -50,7 +50,8 @@ At minimum include the following in your `deps.edn`:
 {:deps {io.zalky/reflet {:mvn/version "0.2.0"}}}
 ```
 
-See additional notes on how to configure the debugger for development.
+See [the additional notes](Configuration.md) on how to configure the
+debugger for development.
 
 ## Resources
 
@@ -63,7 +64,7 @@ very good. Otherwise:
 1. [Overview](#overview)
 2. [Quick Start](Quick-Start.md)
 3. [Configuration](Configuration.md)
-4. Feature Documentation
+4. Features
    - [References and Application Design](References-and-Application-Design.md)
    - [Normalized DB](Normalized-DB.md)
    - [Normalized Queries](Normalized-Queries.md)
