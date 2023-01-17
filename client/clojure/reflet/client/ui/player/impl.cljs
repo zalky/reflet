@@ -53,8 +53,14 @@
   (fn [self]
     [{:player/track
       [:system/uuid
+       :kr.track/artist
        :kr.track/name]}
-     self]))
+     self])
+  (fn [{a   :kr.track/artist
+        n   :kr.track/name
+        :as track}]
+    (when track
+      (str a " - " n))))
 
 (f/reg-pull ::track-duration
   (fn [ref]

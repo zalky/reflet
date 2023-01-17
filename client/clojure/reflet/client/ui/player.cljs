@@ -34,10 +34,10 @@
 (defn selector
   [{:player/keys [self]}]
   (let [on-click #(f/disp [::impl/toggle self])
-        info     (f/sub [::impl/track-info self])]
+        info     @(f/sub [::impl/track-info self])]
     [b/button {:color    :secondary
                :on-click on-click}
-     (:kr.track/name @info "Select Track")]))
+     (or info "Select Track")]))
 
 (defn track-list
   [{:player/keys [self]}]
@@ -63,10 +63,12 @@
     (f/props-did-update-handler interop/update-context)
 
     :reagent-render
-    (fn [{{uri :kr.track/uri} :player/track
-          el                  :player/el}]
-      [:audio {:ref (i/el! el)
-               :src uri}])}))
+    (fn [{track :player/track
+          self  :player/self
+          el    :player/el}]
+      [:audio {:ref      (i/el! el)
+               :src      (:kr.track/uri track)
+               :on-ended #(f/disp [::impl/pause self])}])}))
 
 (defn player
   [props]
