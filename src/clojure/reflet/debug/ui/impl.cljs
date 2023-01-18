@@ -350,9 +350,9 @@
 (fsm/reg-fsm ::node-fsm
   (fn [self]
     {:ref self
-     :fsm {nil      {[::set-props self] ::open}
-           ::open   {[::close self] ::closed}
-           ::closed {[::open self] ::open}}}))
+     :fsm {nil      {[::set-props self] ::closed}
+           ::closed {[::open self] ::open}
+           ::open   {[::close self] ::closed}}}))
 
 (fsm/reg-fsm ::panel-fsm
   (fn [self tap]
