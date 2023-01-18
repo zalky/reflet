@@ -49,6 +49,10 @@ $coll-brace-width:              0.5rem;
     font-size: $font-size;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: rgba(82, 82, 82, 0);
+
+    *, *::before, *::after {
+            box-sizing: border-box;
+    }
 }
 
 .reflet-tap {
@@ -138,7 +142,6 @@ $coll-brace-width:              0.5rem;
 
         > * {
             padding: $debug-radius;
-            height: 100%;
         }
 
         &:hover > * {
