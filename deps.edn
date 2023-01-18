@@ -12,8 +12,7 @@
                                        org.clojure/test.check        {:mvn/version "1.1.1"}
                                        refactor-nrepl/refactor-nrepl {:mvn/version "3.5.5"}}}
            :cljs/client {:extra-paths ["client/clojure" "client/scss"]
-                         :extra-deps  {thheller/shadow-cljs     {:mvn/version "2.20.2"}
-                                       io.zalky/reactstrap-cljs {:mvn/version "0.1.1"}}
+                         :extra-deps  {thheller/shadow-cljs {:mvn/version "2.20.2"}}
                          :main-opts   ["-m" "shadow.cljs.devtools.cli"]}
            :cljs/report {:main-opts ["-m" "shadow.cljs.build-report" "app" "target/report.html"]}
            :sass/client {:extra-paths ["client/scss" "src/scss"]

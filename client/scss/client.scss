@@ -4,17 +4,14 @@
 @import "config";
 
 
-// Bootstrap
-
-@import "bootstrap/scss/bootstrap";
-@import "bootstrap/scss/bootstrap-grid";
-@import "bootstrap/scss/bootstrap-reboot";
-
-
 // Main
 
 body {
+    margin: 0;
     color: $font-color;
+    font-family: $font-family-sans-serif;
+    font-size: $font-size;
+    background-color: $body-color;
 }
 
 * {
@@ -46,13 +43,38 @@ body {
     }
 
     .menu {
+        display: flex;
         justify-content: center;
 
-        > .nav-item {
+        > * {
             user-select: none;
             cursor: pointer;
         }
+
+        > :not(:last-child) {
+            margin-right: 2rem;
+        }
     }
+}
+
+button {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: $border-radius;
+    border: 0;
+    color: $font-color;
+    font-size: $font-size;
+    font-family: $font-family-sans-serif;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.primary {
+    background: $primary;
+}
+
+.secondary {
+    background: $secondary;
 }
 
 .view {
@@ -63,17 +85,21 @@ body {
 .player, .workflow {
     width: 30rem;
     position: absolute;
-    top: 30%;
+    top: 35%;
     left: 50%;
     transform: translate(-50%, 0);
 }
 
 .player {
-    .btn-toolbar .btn {
-        width: 5rem;
+    .controls {
+        display: flex;
     }
 
-    .btn-toolbar > :last-child {
+    .controls button {
+        min-width: 5rem;
+    }
+
+    .controls > :last-child {
         flex: 1;
         margin-left: 0.5rem;
         border-radius: $border-radius;
@@ -84,6 +110,7 @@ body {
         display: grid;
         grid-template-columns: 0.75fr 2fr auto;
         gap: 1rem 1rem;
+        margin-top: 0.5rem;
         padding: 0.5rem 1rem;
         border-radius: $border-radius;
         overflow: hidden;

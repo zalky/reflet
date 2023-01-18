@@ -1,6 +1,5 @@
 (ns reflet.client.ui.player
-  (:require [reactstrap-cljs.core :as b]
-            [reagent.core :as r]
+  (:require [reagent.core :as r]
             [reflet.client.ui.player.impl :as impl]
             [reflet.client.ui.player.interop :as interop]
             [reflet.core :as f]
@@ -16,27 +15,27 @@
 
 (defmethod controls nil
   [_]
-  [b/button {:color :primary}
+  [:button {:class "primary"}
    "Player"])
 
 (defmethod controls ::impl/playing
   [{:player/keys [self]}]
-  [b/button {:color    :primary
-             :on-click #(f/disp [::impl/pause self])}
+  [:button {:class    "primary"
+            :on-click #(f/disp [::impl/pause self])}
    "Pause"])
 
 (defmethod controls ::impl/paused
   [{:player/keys [self]}]
-  [b/button {:color    :primary
-             :on-click #(f/disp [::impl/play self])}
+  [:button {:class    "primary"
+            :on-click #(f/disp [::impl/play self])}
    "Play"])
 
 (defn selector
   [{:player/keys [self]}]
   (let [on-click #(f/disp [::impl/toggle self])
         info     @(f/sub [::impl/track-info self])]
-    [b/button {:color    :secondary
-               :on-click on-click}
+    [:button {:class    "secondary"
+              :on-click on-click}
      (or info "Select Track")]))
 
 (defn track-list
@@ -80,7 +79,7 @@
           selecting? (f/sub [::impl/selecting? self])]
       [:div {:class ["player" (when @selecting? "selecting")]}
        [player-inner (merge props @m)]
-       [b/button-toolbar
-        [b/button-group [controls props]]
-        [b/button-group [selector props]]]
+       [:div {:class "controls"}
+        [controls props]
+        [selector props]]
        [track-list props]])))

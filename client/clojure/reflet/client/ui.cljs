@@ -1,6 +1,5 @@
 (ns reflet.client.ui
-  (:require [reactstrap-cljs.core :as b]
-            [reagent.core :as r]
+  (:require [reagent.core :as r]
             [reflet.client.ui.impl :as impl]
             [reflet.client.ui.player :as player]
             [reflet.client.ui.workflow :as work]
@@ -13,13 +12,11 @@
 
 (defn menu
   [_]
-  [b/nav {:class "menu"}
-   [b/nav-item
-    [b/nav-link {:on-click #(f/disp [::impl/set-view ::player])}
-     "Player"]]
-   [b/nav-item
-    [b/nav-link {:on-click #(f/disp [::impl/set-view ::workflow])}
-     "Workflow"]]])
+  [:div {:class "menu"}
+   [:div {:on-click #(f/disp [::impl/set-view ::player])}
+    "Player"]
+   [:div {:on-click #(f/disp [::impl/set-view ::workflow])}
+    "Workflow"]])
 
 (defn app
   []
