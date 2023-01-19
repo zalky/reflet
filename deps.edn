@@ -1,7 +1,8 @@
 {:deps    {io.zalky/cinch      {:mvn/version "0.1.0"}
            org.clojure/clojure {:mvn/version "1.11.1"}
            re-frame/re-frame   {:mvn/version "1.1.2"}
-           reagent/reagent     {:mvn/version "1.1.1"}}
+           reagent/reagent     {:git/url "https://github.com/reagent-project/reagent.git"
+                                :git/sha "e67d4f8804c109868469d6e81ecd7184cf707575"}}
  :paths   ["src/clojure"]
  :aliases {:cljs/dev    {:extra-paths ["test/clojure"]
                          :extra-deps  {binaryage/devtools            {:mvn/version "1.0.6"}

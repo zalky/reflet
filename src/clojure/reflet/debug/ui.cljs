@@ -2,7 +2,7 @@
   (:require [cljs.pprint :as pprint]
             [react-dom :as react-dom]
             [reagent.core :as r]
-            [reagent.dom :as dom]
+            [reagent.dom.client :as dom]
             [reflet.core :as f]
             [reflet.css.bundled :as bundled]
             [reflet.db :as db]
@@ -591,14 +591,16 @@
         (.appendChild (body-el) el)
         el)))
 
+(defonce root
+  (dom/create-root (upsert-overlay-el!)))
+
 (defn render!
   "Renders the debugger to the DOM."
   []
   (when (f/debug?)
     (upsert-css!)
     (f/disp-sync [::impl/config])
-    (->> (upsert-overlay-el!)
-         (dom/render [overlay]))))
+    (dom/render root [(fn [] overlay)])))
 
 (defn activate!
   "Configures the debugger. This needs to be called before any react

@@ -1,17 +1,18 @@
 (ns reflet.client
   "Stand-alone client example, and testing."
   (:require [re-frame.core :as f*]
-            [reagent.dom :as dom]
+            [reagent.dom.client :as dom]
             [reflet.client.boot :as boot]
             [reflet.client.ui :as ui]
             [reflet.core :as f]))
 
+(defonce root
+  (dom/create-root (.getElementById js/document "container")))
+
 (defn render!
   []
   (f*/clear-subscription-cache!)
-  (some->> "container"
-           (.getElementById js/document)
-           (dom/render [ui/app])))
+  (dom/render root [(fn [] ui/app)]))
 
 (defn config!
   []
