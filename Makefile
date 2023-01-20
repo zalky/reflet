@@ -3,7 +3,7 @@
 version-number  = 0.2.0
 group-id        = io.zalky
 artifact-id     = reflet
-description     = A Re-frame/Reagent based library for frontend state management in Clojurescript
+description     = A set of normalized tools for building Re-frame + React based web apps
 license         = :apache
 url             = https://github.com/zalky/reflet
 
