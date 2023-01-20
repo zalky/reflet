@@ -996,7 +996,6 @@
       (fn []
         (let [t (db-tick)
               r (->> (rest result-v)
-                     (map maybe-deref)
                      (apply result-fn @input-r))]
           (enqueue-fx nil [input-ref result-v t r])
           r))
