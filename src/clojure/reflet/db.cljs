@@ -384,17 +384,16 @@
         (update-in [::trace ::fsm->transition] dissoc ref))))
 
 (defn- trace-query
-  [q-ref query-v q-tick result]
-  (when (trace? query-v)
+  [query-index q-ref query-v q-tick result]
+  (if (trace? query-v)
     (->> {:result  result
           :query-v query-v
           :t       q-tick}
-         (swap! query-index
-                update-in
-                [::q->trace q-ref query-v]
-                util/qonj
-                (queue-size))))
-  result)
+         (update-in query-index
+                    [::q->trace q-ref query-v]
+                    util/qonj
+                    (queue-size)))
+    query-index))
 
 (defn- untrace-query
   [q-ref query-v]
@@ -831,9 +830,9 @@
 (defn- update-index
   [index fresh stale query-tick q-ref]
   (-> index
-      (assoc-in [::q->e q-ref] @fresh)
-      (update ::e->q clear-stale-entities @stale q-ref)
-      (update ::e->q add-fresh-entities @fresh q-ref)
+      (assoc-in [::q->e q-ref] fresh)
+      (update ::e->q clear-stale-entities stale q-ref)
+      (update ::e->q add-fresh-entities fresh q-ref)
       (assoc-in [::q->tick q-ref] query-tick)
       (assoc ::touched-queries #{})
       (assoc ::touched-entities #{})))
@@ -867,7 +866,7 @@
                     expr)]
     {:db     db
      :result result
-     :index  (update-index index fresh stale query-tick q-ref)}))
+     :index  [@fresh @stale query-tick q-ref]}))
 
 (defn- dispose-query
   [index q-ref]
@@ -904,11 +903,32 @@
 
 ;;;; Subs
 
+(defonce query-index-fx
+  (atom #queue []))
+
+(defn- apply-fx
+  [index f fx]
+  (if fx
+    (apply f index fx)
+    index))
+
+(defn- reduce-fx
+  [index fx db-tick]
+  (reduce (fn [i {i-fx :index
+                  t-fx :trace}]
+            (-> i
+                (apply-fx update-index i-fx)
+                (apply-fx trace-query t-fx)))
+          (assoc index ::tick db-tick)
+          fx))
+
 (f/reg-sub ::db-tick
   (fn [{{db-tick ::tick} ::data} _]
     (r*/after-render
      (fn []
-       (swap! query-index assoc ::tick db-tick)))
+       (let [fx @query-index-fx]
+         (swap! query-index reduce-fx fx db-tick)
+         (reset! query-index-fx #queue []))))
     db-tick))
 
 (defn- query-tick
@@ -956,17 +976,30 @@
   [^clj input-r]
   (.-reflet-query-ref input-r))
 
+(defn- db-tick
+  []
+  (-> (.-state db/app-db)
+      (::data)
+      (::tick)))
+
+(defn- enqueue-fx
+  [index trace]
+  (->> {:index index
+        :trace trace}
+       (swap! query-index-fx conj)))
+
 (defn result-reaction
   [input-r result-fn query-v]
   (let [result-v  (get-result-v query-v)
         input-ref (reaction-ref input-r)]
     (traced-reaction input-ref result-v
       (fn []
-        (let [t (-> (.-state db/app-db) ::data ::tick)]
-          (->> (rest result-v)
-               (map maybe-deref)
-               (apply result-fn @input-r)
-               (trace-query input-ref result-v t))))
+        (let [t (db-tick)
+              r (->> (rest result-v)
+                     (map maybe-deref)
+                     (apply result-fn @input-r))]
+          (enqueue-fx nil [input-ref result-v t r])
+          r))
       (fn []
         (untrace-query input-ref result-v)))))
 
@@ -987,17 +1020,18 @@
         expr-r (apply expr-fn (rest query-v))]
     (traced-reaction q-ref query-v
       (fn []
-        (let [in {:db         (.-state db/app-db)
+        (let [t  @q-tick
+              in {:db         (.-state db/app-db)
                   :index      (.-state query-index)
                   :expr       (first expr-r)
                   :e-ref      (second expr-r)
                   :q-ref      q-ref
-                  :query-tick @q-tick}
+                  :query-tick t}
 
               {i :index
                r :result} (pull-reactive (merge config in))]
-          (reset! query-index i)
-          (trace-query q-ref query-v (.-state q-tick) r)))
+          (enqueue-fx i [q-ref query-v t r])
+          r))
       (fn []
         (swap! query-index dispose-query q-ref)
         (untrace-query q-ref query-v)
