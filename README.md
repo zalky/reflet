@@ -3,10 +3,11 @@
 
 [![Clojars Project](https://img.shields.io/clojars/v/io.zalky/reflet?labelColor=blue&color=green&style=flat-square&logo=clojure&logoColor=fff)](https://clojars.org/io.zalky/reflet)
 
-<img src="https://i.imgur.com/yWceoD5.jpg" title="zalky" align="right" width="300"/>
+<img src="https://i.imgur.com/oXRGrUO.jpg" title="zalky" align="right" width="250"/>
 
-**Reflet** is a set of normalized tools for building Re-frame + React
-based web apps. This includes:
+**Reflet** is a set of normalized tools for building
+[Re-frame](https://github.com/day8/re-frame) + React based web
+apps. This includes:
 
 1. Entity references and their lifecycle management
 2. Performant, normalized data model
@@ -17,8 +18,8 @@ based web apps. This includes:
 
 Reflet aims to be a natural progression on top of Re-frame to support
 complex, data driven requirements. In that sense, it is both easy to
-learn, but powerful. You could say it's basically Re-frame++. Its main
-design goals are:
+learn, but powerful. You could say it's sort of like Re-frame++. Its
+main design goals are:
 
 1. A la carte feature set: it is not a "framework", so use as much or
    as little of it as you want
@@ -32,7 +33,7 @@ design goals are:
    complex, data driven production applications for years
    (e.g. in Bioinformatics, Business analytics... )
 
-<img src="https://i.imgur.com/r1li2r5.jpg" title="zalky" align="center" width="1000"/>
+<img src="https://i.imgur.com/SRgAZAp.jpg" title="zalky" align="center" width="1000"/>
 
 ## Who Is This For?
 
@@ -47,8 +48,17 @@ design goals are:
 At minimum include the following in your `deps.edn`:
 
 ```clj
-{:deps {io.zalky/reflet {:mvn/version "0.2.0"}}}
+{:deps {io.zalky/reflet {:mvn/version "0.2.0-SNAPSHOT"}}}
 ```
+
+Or `project.clj`:
+
+```clj
+[io.zalky/reflet "0.2.0-SNAPSHOT"]
+```
+
+Additionally, React is considered a peer dependency, so you will have
+to [ensure that it is available](Configuration.md#react).
 
 See [the additional notes](Configuration.md) on how to configure the
 debugger for development.
