@@ -49,7 +49,7 @@
             returns a single attribute, which is the FSM state
             attribute (see the `:attr` option above).
 
-  `:default`
+  `:or`
             Advance the FSM to some default state if there is no
             state value in the db on init.
 
