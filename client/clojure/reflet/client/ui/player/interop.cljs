@@ -15,9 +15,9 @@
       (i/reg context-r context {:destroy #(.close context)})
       (i/reg source-r source))))
 
-(defn running?
+(defn ready?
   [state]
-  (isa? impl/state-hierarchy state ::impl/running))
+  (isa? impl/state-hierarchy state ::impl/ready))
 
 (defn update-context
   "Syncs the mutable state of the audio element given immutable app
@@ -27,7 +27,7 @@
   [_ {state :player/state
       el-r  :player/el
       :as   props}]
-  (when (running? state)
+  (when (ready? state)
     (let [el (i/grab el-r)]
       (create-context props)
       (case state

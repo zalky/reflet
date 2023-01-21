@@ -6,7 +6,7 @@
 
 (def state-hierarchy
   (util/derive-pairs
-   [[::paused ::playing] ::running]))
+   [[::paused ::playing] ::ready]))
 
 (fsm/reg-fsm ::selector-fsm
   (fn [self]
