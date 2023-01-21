@@ -49,8 +49,9 @@
             returns a single attribute, which is the FSM state
             attribute (see the `:attr` option above).
 
-  `:to`
-            Advance the FSM to some starting state.
+  `:default`
+            Advance the FSM to some default state if there is no
+            state value in the db on init.
 
   `:dispatch`
             One or more events to dispatch immediately after starting
@@ -221,6 +222,7 @@
 
 (s/def ::ref ::s*/ref)
 (s/def ::state (s/nilable qualified-keyword?))
+(s/def ::or qualified-keyword?)
 (s/def ::to ::state)
 (s/def ::ms number?)
 
@@ -363,7 +365,7 @@
 (s/def ::fsm-map
   (s/keys :req-un [::ref]
           :opt-un [:state-map/fsm
-                   ::to ::stop
+                   ::or ::stop
                    ::dispatch ::dispatch-later]))
 
 (defn- default-nil-state
@@ -595,7 +597,8 @@
         (throw (ex-info "No FSM handler" {:fsm-v fsm-v})))))
 
 (defn- first-trace!
-  [{:keys [ref fsm-v]} state t]
+  [{ref   :ref
+    fsm-v :fsm-v} state t]
   (->> #queue [{:t          t
                 :fsm-v      fsm-v
                 :init-state state}]
@@ -605,20 +608,26 @@
 
 (i/reg-event-db-impl ::advance
   fsm-interceptors
-  (fn [db [_ fsm-v to]]
+  (fn [db [_ fsm-v state]]
     (let [{:keys [ref attr]} (fsm-spec fsm-v)]
-      (db/assoc-inn db [ref attr] to))))
+      (db/assoc-inn db [ref attr] state))))
+
+(defn- init-state!
+  [{:keys    [ref attr fsm-v]
+    or-state :or} db]
+  (let [db-state (db/get-inn db [ref attr])]
+    (if (and or-state (nil? db-state))
+      (do (f/dispatch [::advance fsm-v or-state])
+          or-state)
+      db-state)))
 
 (defn- start-fx!
-  [{:keys [ref attr fsm-v to]
-    :as   fsm} timeout db]
-  (let [state (db/get-inn db [ref attr])]
+  [fsm timeout db]
+  (let [state (init-state! fsm db)]
     (set-timeout! timeout fsm state)
     (when db/tap-fn
       (let [t (get-in db [::db/data ::db/tick])]
-        (first-trace! fsm state t)))
-    (when (contains? fsm :to)
-      (f/dispatch [::advance fsm-v to]))))
+        (first-trace! fsm state t)))))
 
 (defn running?
   [fsm-v]

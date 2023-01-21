@@ -22,7 +22,7 @@
 (fsm/reg-fsm ::workflow-a
   (fn [self w1 w2]
     {:ref self
-     :to  ::step-1
+     :or  ::step-1
      :fsm {::step-1 {[::done w1] ::step-2}
            ::step-2 {[::done w2] ::done}
            ::done   nil}}))
@@ -30,7 +30,7 @@
 (fsm/reg-fsm ::workflow-b
   (fn [self f1 f2 f3 f4]
     {:ref self
-     :to  ::step-1
+     :or  ::step-1
      :fsm {::step-1 {[::done f1] ::step-2}
            ::step-2 {[::done f2] ::step-3}
            ::step-3 {[::done f3] ::step-4}
@@ -41,7 +41,7 @@
 (fsm/reg-fsm ::workflow-c
   (fn [self f1 f2 f3]
     {:ref self
-     :to  ::step-1
+     :or  ::step-1
      :fsm {::step-1 {[::done f1] ::step-2}
            ::step-2 {[::done f2] ::step-3}
            ::step-3 {[::done f3] {:to       ::done

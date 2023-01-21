@@ -263,12 +263,12 @@
        [:span "No Queries"]])))
 
 (defn- fsm-transition
-  [{{to   :to
-     c    :when
-     pull :pull} :clause
-    e            :event
-    from         :prev-state
-    :as          transition}]
+  [{{to    :to
+     [_ c] :when
+     pull  :pull} :clause
+    e             :event
+    from          :prev-state
+    :as           transition}]
   [:div {:class "reflet-transition"}
    (if (contains? transition :init-state)
      [:div
@@ -282,7 +282,7 @@
       [data/value to]])
    [:div
     (when e    [:<> [:div "event:"] [data/value e]])
-    (when c    [:<> [:div "when:"]  [data/value c]])
+    (when c    [:<> [:div "when:"]  [data/value [c]]])
     (when pull [:<> [:div "pull:"]  [data/value pull]])]])
 
 (defn- fsm-traces

@@ -133,7 +133,7 @@
      (fsm/reg-fsm ::start-in-state
        (fn [self]
          {:ref self
-          :to  ::starting
+          :or  ::starting
           :fsm {::starting {[::advance self] ::started}}}))
 
      (f/reg-no-op ::advance)
