@@ -199,7 +199,7 @@
   [:div
    [:div {:class "reflet-divider"}]
    [:div t]
-   [data/value e]])
+   [data/value e {:inline true}]])
 
 (defmethod ref-lens :debug.lens/events
   [{:debug/keys [ref] :as props}]
@@ -243,7 +243,7 @@
       [:div
        [:div {:class "reflet-divider"}]
        [:div t]
-       [data/value q]
+       [data/value q {:inline true}]
        [trace-controls props traces]
        [data/value r]])))
 
@@ -281,7 +281,7 @@
       [:div "\u2192"]
       [data/value to]])
    [:div
-    (when e    [:<> [:div "event:"] [data/value e]])
+    (when e    [:<> [:div "event:"] [data/value e {:inline true}]])
     (when c    [:<> [:div "when:"]  [data/value [c]]])
     (when pull [:<> [:div "pull:"]  [data/value pull]])]])
 
@@ -296,7 +296,7 @@
       [:div
        [:div {:class "reflet-divider"}]
        [:div t]
-       [data/value v]
+       [data/value v {:inline true}]
        [trace-controls props traces]
        [fsm-transition transition]])))
 

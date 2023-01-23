@@ -17,7 +17,7 @@
   (norm/ref? x @(f/sub [::db/id-attrs])))
 
 (defmulti value
-  (fn [x]
+  (fn [x & _]
     (cond
       (ref? x)  ::ref
       (map? x)  ::map
@@ -34,7 +34,7 @@
   [i k v]
   [:div {:key i}
    [value k]
-   [value v]])
+   [value v {:inline true}]])
 
 (defn- pos
   [e]
@@ -53,23 +53,23 @@
     (f/disp [::ui/open-context value (pos e)])))
 
 (defmethod value :default
-  [x]
+  [x & _]
   [:div {:class           "reflet-value-default"
          :on-context-menu (on-context-click x)}
    [:div (str x)]])
 
 (defmethod value nil
-  [_]
+  [& _]
   [:div {:class "reflet-nil"} "nil"])
 
 (defmethod value js/Number
-  [n]
+  [n & _]
   [:div {:class           "reflet-number"
          :on-context-menu (on-context-click n)}
    n])
 
 (defmethod value js/String
-  [s]
+  [s & _]
   [:div {:class           "reflet-string"
          :on-context-menu (on-context-click s)}
    [:span (str \" s \")]])
@@ -92,43 +92,76 @@
        (str value))]))
 
 (defmethod value ::ref
-  [ref]
+  [ref & _]
   (value-ref ref :on-click (on-click ref)))
 
 (defmethod value Keyword
-  [k]
+  [k & _]
   [:div {:class           "reflet-keyword"
          :on-context-menu (on-context-click k)}
    [:span ":"]
    [:span (apply str (rest (str k \u200E)))]])
 
 (defmethod value js/Function
-  [f]
+  [f & _]
   [:div {:class "reflet-function"}
    "(fn ...)"])
 
 (defmethod value js/Boolean
-  [x]
+  [x & _]
   [:div {:class "reflet-boolean"}
    (str x)])
 
 (defmethod value cljs.core/UUID
-  [uuid]
+  [uuid & _]
   [:div {:class "reflet-uuid"
          :on-context-menu (on-context-click uuid)}
    (->> (- uuid-condensed-chars)
         (.slice (str uuid))
         (str "#uuid ..."))])
 
+(defn- coll-class
+  [coll expand? {:keys [inline]}]
+  [(cond
+     (map? coll)    "reflet-map"
+     (vector? coll) "reflet-vec"
+     (list? coll)   "reflet-list"
+     (set? coll)    "reflet-set")
+   (when inline
+     "reflet-coll-inline")
+   (when expand?
+     "reflet-coll-expand")])
+
+(defn expander-toggle
+  [self]
+  (when self
+    (fn [e]
+      (.preventDefault e)
+      (f/disp [::impl/toggle-expand self]))))
+
+(defn wrap-expander
+  [opts coll expr]
+  (f/with-ref* {:cmp/uuid [coll/self]}
+    (let [expand? @(f/sub [::impl/expand? self])]
+      [:<>
+       [:div {:class (coll-class coll expand? opts)}
+        expr
+        (when (not-empty coll)
+          (g/coll-expander
+           {:class    "reflet-coll-expander"
+            :on-click (expander-toggle self)}))]
+       (when (and (not-empty coll) expand?)
+         [value coll])])))
+
 (defmethod value ::map
-  [m]
-  [:div {:class "reflet-map"}
-   [:div {:class "reflet-map-data"}
-    (doall
-     (map-indexed
-      (fn [i [k v]]
-        ^{:key i} [map-entry i k v])
-      m))]])
+  [m & [opts]]
+  (wrap-expander opts m
+    [:div {:class "reflet-map-data"}
+     (doall
+      (map-indexed
+       (fn [i [k v]]
+         ^{:key i} [map-entry i k v])
+       m))]))
 
 (defn- coll-item
   [x]
@@ -143,62 +176,13 @@
     "reflet-coll-shrink"))
 
 (defmethod value ::coll
-  [coll]
+  [coll & [opts]]
   (f/with-ref* {:el/uuid [el]}
-    [:div {:class (cond
-                    (vector? coll) "reflet-vec"
-                    (list? coll)   "reflet-list"
-                    (set? coll)    "reflet-set"
-                    :else          nil)}
-     [:div {:ref   (i/el! el)
-            :class ["reflet-coll-data" (coll-shrink el)]}
-      (doall
-       (map-indexed
-        (fn [i x]
-          ^{:key i} [coll-item x])
-        coll))]]))
-
-(declare expander)
-
-(defn- inline-coll
-  [coll]
-  [:div (doall
-         (map-indexed
-          (fn [i x]
-            (with-meta
-              (if (and (coll? x) (not (ref? x)))
-                [expander nil x]
-                [value x])
-              {:key i}))
-          coll))])
-
-(defn expander-toggle
-  [self]
-  (when self
-    (fn [e]
-      (.preventDefault e)
-      (f/disp [::impl/toggle-expand self]))))
-
-(defn- expander
-  [{:expander/keys [self]} v]
-  (let [e (when self (g/coll-expander))]
-    [:div {:on-click (expander-toggle self)
-           :class    "reflet-coll-expander"}
-     (cond
-       (vector? v) [:<> [:span "["] (inline-coll v) e [:span "]"]]
-       (map? v)    [:<> [:span "{"] (inline-coll (flatten (seq v))) e [:span "}"]]
-       (list? v)   [:<> [:span "("] (inline-coll v) e [:span ")"]]
-       (set? v)    [:<> [:span "#{"] (inline-coll v) e [:span "}"]])]))
-
-(defmethod map-entry ::coll
-  [i k v]
-  (f/with-ref* {:cmp/uuid [expander/self]
-                :in       props}
-    (let [expand? (f/sub [::impl/expand? self])]
-      [:<> {:key i}
-       [:div {:class (when @expand? "reflet-coll-expand")}
-        [value k]
-        [expander props v]]
-       (when @expand?
-         [:div {:class "reflet-coll-expanded"}
-          [value v]])])))
+    (wrap-expander opts coll
+      [:div {:ref   (i/el! el)
+             :class ["reflet-coll-data" (coll-shrink el)]}
+       (doall
+        (map-indexed
+         (fn [i x]
+           ^{:key i} [coll-item x])
+         coll))])))

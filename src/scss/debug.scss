@@ -413,16 +413,6 @@ $coll-brace-width:              0.5rem;
             overflow: hidden;
         }
     }
-
-    .reflet-coll-data {
-        display: flex;
-        flex-direction: row;
-
-        > *:not(:first-child) {
-            margin-left: 0.5rem;
-            flex-shrink: 0.35;
-        }
-    }
 }
 
 .reflet-query-lens, .reflet-fsm-lens {
@@ -542,17 +532,35 @@ $coll-brace-width:              0.5rem;
 .reflet-map {
     display: flex;
     font-family: $font-family-monospace;
+    transition: opacity 0.3s ease;
+    opacity: 1;
 
     @include brace;
+
+    &.reflet-coll-expand .reflet-map-data {
+        opacity: 0.2;
+    }
 }
 
 .reflet-map-data {
     display: grid;
     grid-template-columns: auto auto;
     column-gap: 0.5rem;
-    flex: 1;
+    flex-grow: 1;
     font-family: $font-family-monospace;
     color: $font-color;
+    overflow: scroll;
+    transition: opacity 0.3s ease;
+    opacity: 1;
+
+    .reflet-coll-inline & {
+        display: flex;
+        flex-grow: 0;
+    }
+
+    .reflet-coll-inline ~ .reflet-map > & {
+        flex-grow: 0;
+    }
 
     > div {
         display: contents;
@@ -566,6 +574,11 @@ $coll-brace-width:              0.5rem;
         > :nth-child(2) {
             justify-content: flex-end;
         }
+
+        > :nth-child(3) {
+            grid-column-start: 1;
+            grid-column-end: span 2;
+        }
     }
 }
 
@@ -575,6 +588,10 @@ $coll-brace-width:              0.5rem;
     overflow: hidden;
 
     @include brace;
+
+    &.reflet-coll-expand .reflet-coll-data {
+        opacity: 0.2;
+    }
 }
 
 .reflet-coll-data {
@@ -582,8 +599,22 @@ $coll-brace-width:              0.5rem;
     flex-direction: column;
     overflow: scroll;
     white-space: nowrap;
+    transition: opacity 0.3s ease;
+    opacity: 1;
+
+    .reflet-coll-inline & {
+        flex-direction: row;
+
+        > :nth-child(n + 1):not(:last-child) {
+            margin-right: 0.5rem;
+        }
+    }
 
     &:not(.reflet-coll-shrink) {
+        // Used to generate dynamic flex-shrink properties in CLJS
+        // based on the original size of the collection
+        // elements. However, in order to do that, we first need to
+        // measure the full width of the elements with no shrink.
         flex-shrink: 0;
 
         * {
@@ -632,60 +663,28 @@ $coll-brace-width:              0.5rem;
 }
 
 .reflet-coll-expander {
-    display: flex;
+    display: none;
     user-select: none;
     cursor: pointer;
+    margin: 0 0.25rem;
 
-    > *, svg {
+    .reflet-coll-inline > & {
+        display: flex;
+    }
+
+    svg {
         display: flex;
         transition: all 0.3s ease;
         white-space: nowrap;
-    }
-
-    > :nth-child(2) {
-        flex: 1 0 0;
-        overflow: hidden;
-
-        > * {
-            flex-shrink: 0;
-            overlfow: hidden;
-            transition: all 0.3s ease;
-
-            &:not(:last-child) {
-                margin-right: 0.5rem;
-            }
-
-            .reflet-coll-expand & {
-                opacity: 0.1;
-            }
-        }
     }
 
     .reflet-coll-expand & svg {
         transform: scale(1, -1);
     }
 
-    > :first-child, > :last-child {
-        font-weight: 700;
-
-        .reflet-coll-expand & {
-            opacity: 0.3;
-        }
-    }
-
-    .reflet-glyph {
-        margin: 0 0.5rem;
-        padding-top: 1px;
-    }
-
     svg {
         width: 12px;
     }
-}
-
-.reflet-coll-expanded > * {
-    grid-column-start: 1;
-    grid-column-end: span 2;
 }
 
 .reflet-ref {

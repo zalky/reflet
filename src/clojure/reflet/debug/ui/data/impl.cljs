@@ -21,7 +21,7 @@
   [el el-width]
   (let [p  (.-parentElement el)
         pw (ui/px p :width)]
-    (->> (/ (- pw ui/new-panel-width) 3)
+    (->> (/ (- pw ui/new-panel-width) 6)
          (max 0)
          (+ 40)
          (min el-width))))
