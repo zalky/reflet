@@ -580,8 +580,16 @@ $coll-brace-width:              0.5rem;
 .reflet-coll-data {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: scroll;
     white-space: nowrap;
+
+    &:not(.reflet-coll-shrink) {
+        flex-shrink: 0;
+
+        * {
+            flex-shrink: 0;
+        }
+    }
 
     > * {
         display: flex;

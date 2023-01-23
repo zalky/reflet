@@ -4,7 +4,8 @@
             [reflet.db.normalize :as norm]
             [reflet.debug.glyphs :as g]
             [reflet.debug.ui.data.impl :as impl]
-            [reflet.debug.ui.impl :as ui]))
+            [reflet.debug.ui.impl :as ui]
+            [reflet.interop :as i]))
 
 (def uuid-condensed-chars
   "The number of characters to condense a UUID."
@@ -129,19 +130,33 @@
         ^{:key i} [map-entry i k v])
       m))]])
 
+(defn- coll-item
+  [x]
+  (f/with-ref* {:el/uuid [el]}
+    [:div {:ref   (i/el! el)
+           :style @(f/sub [::impl/coll-item-style el])}
+     [value x]]))
+
+(defn- coll-shrink
+  [el]
+  (when @(f/sub [::i/grab el])
+    "reflet-coll-shrink"))
+
 (defmethod value ::coll
   [coll]
-  [:div {:class (cond
-                  (vector? coll) "reflet-vec"
-                  (list? coll)   "reflet-list"
-                  (set? coll)    "reflet-set"
-                  :else          nil)}
-   [:div {:class "reflet-coll-data"}
-    (doall
-     (map-indexed
-      (fn [i x]
-        ^{:key i} [value x])
-      coll))]])
+  (f/with-ref* {:el/uuid [el]}
+    [:div {:class (cond
+                    (vector? coll) "reflet-vec"
+                    (list? coll)   "reflet-list"
+                    (set? coll)    "reflet-set"
+                    :else          nil)}
+     [:div {:ref   (i/el! el)
+            :class ["reflet-coll-data" (coll-shrink el)]}
+      (doall
+       (map-indexed
+        (fn [i x]
+          ^{:key i} [coll-item x])
+        coll))]]))
 
 (declare expander)
 

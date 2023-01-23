@@ -1,6 +1,8 @@
 (ns reflet.debug.ui.data.impl
   (:require [reflet.core :as f]
-            [reflet.db :as db]))
+            [reflet.db :as db]
+            [reflet.debug.ui.impl :as ui]
+            [reflet.interop :as i]))
 
 (f/reg-pull ::entity
   (fn [ref]
@@ -13,3 +15,27 @@
 (f/reg-event-db ::toggle-expand
   (fn [db [_ self]]
     (db/update-inn db [self ::expand] not)))
+
+(defn coll-item-min-width
+  "Minimum width for collection elements."
+  [el el-width]
+  (let [p  (.-parentElement el)
+        pw (ui/px p :width)]
+    (->> (/ (- pw ui/new-panel-width) 3)
+         (max 0)
+         (+ 40)
+         (min el-width))))
+
+(defn- coll-item-width
+  [^js el]
+  (let [w  (ui/px el :width)
+        mw (coll-item-min-width el w)]
+    {:min-width   (if (< mw w) mw w)
+     :flex-shrink (js/Math.sqrt (/ w mw))}))
+
+(f/reg-sub ::coll-item-style
+  (fn [[_ el-r]]
+    (f/sub [::i/grab el-r]))
+  (fn [el _]
+    (when el
+      (coll-item-width el))))

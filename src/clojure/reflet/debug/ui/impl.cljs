@@ -29,7 +29,7 @@
   [el m]
   (let [style (.-style el)]
     (doseq [[k v] m]
-      (.setProperty style (prop k) v))
+      (aset style (prop k) v))
     el))
 
 (defn computed-style
