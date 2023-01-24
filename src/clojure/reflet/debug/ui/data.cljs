@@ -121,8 +121,9 @@
         (str "#uuid ..."))])
 
 (defn- coll-class
-  [coll expand? {:keys [inline]}]
-  [(cond
+  [coll expand? {:keys [inline class]}]
+  [class
+   (cond
      (map? coll)    "reflet-map"
      (vector? coll) "reflet-vec"
      (list? coll)   "reflet-list"

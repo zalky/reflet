@@ -487,8 +487,12 @@ $coll-brace-width:              0.5rem;
         grid-template-columns: fit-content(3rem) auto;
         grid-column-gap: 0.5rem;
 
-        > :nth-child(2n + 1) {
+        > .reflet-fsm-details-label {
             color: $syntax-string;
+        }
+
+        > .reflet-fsm-details ~ .reflet-vec {
+            grid-column-start: 2;
         }
     }
 }
@@ -683,7 +687,7 @@ $coll-brace-width:              0.5rem;
     }
 
     svg {
-        width: 12px;
+        width: 8px;
     }
 }
 

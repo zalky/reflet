@@ -262,6 +262,13 @@
              :class "reflet-no-data"}
        [:span "No Queries"]])))
 
+(defn- fsm-details
+  [label x]
+  [:<>
+   [:div {:class "reflet-fsm-details-label"} label]
+   [data/value x {:inline true
+                  :class  "reflet-fsm-details"}]])
+
 (defn- fsm-transition
   [{{to    :to
      [_ c] :when
@@ -281,9 +288,9 @@
       [:div "\u2192"]
       [data/value to]])
    [:div
-    (when e    [:<> [:div "event:"] [data/value e {:inline true}]])
-    (when c    [:<> [:div "when:"]  [data/value [c]]])
-    (when pull [:<> [:div "pull:"]  [data/value pull]])]])
+    (when e    (fsm-details "event:" e))
+    (when c    (fsm-details "when:" [c]))
+    (when pull (fsm-details "pull:" pull))]])
 
 (defn- fsm-traces
   [traces]
