@@ -30,13 +30,19 @@
          (+ 40)
          (min el-width))))
 
+(defn- normalize
+  [width min-width]
+  (let [shrink (js/Math.sqrt (/ width min-width))]
+    (if (js/isNaN shrink)
+      0
+      shrink)))
+
 (defn- coll-item-width
   [^js el]
   (let [w  (ui/px el :width)
         mw (coll-item-min-width el w)]
-    (.log js/console el w mw (js/Math.sqrt (/ w mw)))
     {:min-width   (if (< mw w) mw w)
-     :flex-shrink (js/Math.sqrt (/ w mw))}))
+     :flex-shrink (normalize w mw)}))
 
 (f/reg-sub ::coll-item-style
   (fn [[_ el-r]]
