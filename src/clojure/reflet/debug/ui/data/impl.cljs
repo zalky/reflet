@@ -16,12 +16,16 @@
   (fn [db [_ self]]
     (db/update-inn db [self ::expand] not)))
 
+(def dynamic-flex-shrink-factor
+  30)
+
 (defn coll-item-min-width
   "Minimum width for collection elements."
   [el el-width]
   (let [p  (.-parentElement el)
         pw (ui/px p :width)]
-    (->> (/ (- pw ui/new-panel-width) 6)
+    (->> dynamic-flex-shrink-factor
+         (/ (- pw ui/new-panel-width))
          (max 0)
          (+ 40)
          (min el-width))))
@@ -30,6 +34,7 @@
   [^js el]
   (let [w  (ui/px el :width)
         mw (coll-item-min-width el w)]
+    (.log js/console el w mw (js/Math.sqrt (/ w mw)))
     {:min-width   (if (< mw w) mw w)
      :flex-shrink (js/Math.sqrt (/ w mw))}))
 
