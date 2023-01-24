@@ -3,7 +3,7 @@
 
 [![Clojars Project](https://img.shields.io/clojars/v/io.zalky/reflet?labelColor=blue&color=green&style=flat-square&logo=clojure&logoColor=fff)](https://clojars.org/io.zalky/reflet)
 
-<img src="https://i.imgur.com/oXRGrUO.jpg" title="zalky" align="right" width="250"/>
+<img src="https://i.imgur.com/1nfbVFZ.jpg" title="zalky" align="right" width="250"/>
 
 **Reflet** is a set of tools for building
 [Re-frame](https://github.com/day8/re-frame) + React based web apps
