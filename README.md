@@ -5,12 +5,12 @@
 
 <img src="https://i.imgur.com/oXRGrUO.jpg" title="zalky" align="right" width="250"/>
 
-**Reflet** is a set of normalized tools for building
-[Re-frame](https://github.com/day8/re-frame) + React based web
-apps. This includes:
+**Reflet** is a set of tools for building
+[Re-frame](https://github.com/day8/re-frame) + React based web apps
+with normalized and un-normalized data models. This includes:
 
 1. Entity references and their lifecycle management
-2. Performant, normalized data model
+2. Performant, normalized queries and mutations
 3. Simple but powerful hierarchical FSMs
 4. JS and DOM interop utilities
 5. Novel API-driven visual debugging of complex apps (don't sleep on
@@ -33,7 +33,7 @@ main design goals are:
    complex, data driven production applications for years
    (e.g. in Bioinformatics, Business analytics... )
 
-<img src="https://i.imgur.com/SRgAZAp.jpg" title="zalky" align="center" width="1000"/>
+<img src="https://i.imgur.com/AOkO7yZ.png" title="zalky" align="center" width="1000"/>
 
 ## Who Is This For?
 
