@@ -621,9 +621,25 @@
           or-state)
       db-state)))
 
+(defonce ^:private unique-interceptors
+  ;; Having more than one FSM inteceptor instantiated with the same
+  ;; ref/attr pair is not allowed. Used strictly for uniqueness check.
+  (atom #{}))
+
+(defn- assert-uniqueness!
+  [{:keys [ref attr fsm-v]}]
+  (if-not (get @unique-interceptors [ref attr])
+    (swap! unique-interceptors conj [ref attr])
+    (-> "FSM already exists for ref attr pair"
+        (ex-info {:ref   ref
+                  :attr  attr
+                  :fsm-v fsm-v})
+        (throw))))
+
 (defn- start-fx!
   [fsm timeout db]
   (let [state (init-state! fsm db)]
+    (assert-uniqueness! fsm)
     (set-timeout! timeout fsm state)
     (when db/tap-fn
       (let [t (get-in db [::db/data ::db/tick])]
@@ -646,10 +662,16 @@
         ;; Must happen after interceptor.
         (fsm-dispatch! fsm)))))
 
+(defn- cleanup-uniqueness!
+  [fsm-v]
+  (let [{:keys [ref attr]} (fsm-spec fsm-v)]
+    (swap! unique-interceptors disj [ref attr])))
+
 (defn- stop!
   "Do not use directly. Prefer ::stop event or subscription."
   [fsm-v]
   (when (i/same-cycle? fsm-v)
+    (cleanup-uniqueness! fsm-v)
     (i/clear-global-interceptor ::fsm fsm-v)))
 
 ;; In general, an FSM cannot be reliably started or stopped via FX if
