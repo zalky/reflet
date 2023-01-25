@@ -405,7 +405,7 @@
   []
   (let [nodes     (f/sub [::impl/overlay])
         marks-on? (f/sub [::impl/toggle-marks-fsm])]
-    [:div {:class ["reflet-overlay"
+    [:div {:class ["reflet-debug-overlay"
                    (when @marks-on?
                      "reflet-marks-on")]}
      (doall
@@ -419,7 +419,7 @@
 
 (defn- overlay-el
   []
-  (.querySelector js/document "#reflet-overlay"))
+  (.querySelector js/document "#reflet-debug-overlay"))
 
 (defn- get-tap-point
   "Search siblings for first element that is not a debug tap. If no
@@ -543,7 +543,7 @@
 
       :reagent-render
       (fn [_]
-        [:div {:class "reflet-reactive-tap"}])})))
+        [:div {:class "reflet-debug-reactive-tap"}])})))
 
 (defn tap
   "On mount, the tap must be situated in the target DOM to access DOM
@@ -560,7 +560,7 @@
   `:component-did-update` phase of the component lifecycle."
   [props context]
   (if-not @(:target context)
-    [:div {:class "reflet-tap"
+    [:div {:class "reflet-debug-tap"
            :ref   (init-tap props context)}]
     (-> [reactive-tap props context]
         (r/as-element)
@@ -568,9 +568,9 @@
 
 (defn- upsert-css-el!
   []
-  (or (js/document.getElementById "reflet-css")
+  (or (js/document.getElementById "reflet-debug-css")
       (let [el (js/document.createElement "style")]
-        (set! (.-id el) "reflet-css")
+        (set! (.-id el) "reflet-debug-css")
         (js/document.body.appendChild el)
         el)))
 
@@ -583,7 +583,7 @@
   []
   (or (overlay-el)
       (let [el (.createElement js/document "div")]
-        (set! (.-id el) "reflet-overlay")
+        (set! (.-id el) "reflet-debug-overlay")
         (.appendChild (body-el) el)
         el)))
 

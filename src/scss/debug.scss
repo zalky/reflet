@@ -39,7 +39,7 @@ $coll-brace-width:              0.5rem;
     }
 }
 
-.reflet-overlay {
+.reflet-debug-overlay {
     all: initial;               // Ignore all host client styles
     display: block;
     margin: 0;
@@ -55,7 +55,7 @@ $coll-brace-width:              0.5rem;
     }
 }
 
-.reflet-tap {
+.reflet-debug-tap {
     display: none;
 }
 
