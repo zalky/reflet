@@ -116,12 +116,22 @@
     (.removeEventListener js/document "mouseup" anon)
     (f/disp-sync [::drag-stop!])))
 
+;; Independent z-index tracking is required for marks and panels so
+;; that all marks are always below all panels.
+
 (def z-index-0
+  1500000000)
+
+(def z-index-0-marks
   1000000000)
 
 (defn get-z-index
   [db]
   (get db ::z-index z-index-0))
+
+(defn get-z-index-marks
+  [db]
+  (get db ::z-index-marks z-index-0-marks))
 
 (defmulti update-z-index
   "Attempt to start panels on top all host UI elements. This still
@@ -140,7 +150,10 @@
 
 (defmethod update-z-index ::mark
   [db ref]
-  (db/update-inn db [ref :debug/rect] assoc :z-index z-index-0))
+  (let [z (get-z-index-marks db)]
+    (-> db
+        (assoc ::z-index-marks (inc z))
+        (db/update-inn [ref :debug/rect] assoc :z-index z))))
 
 (f/reg-event-fx ::drag!
   (fn [{db :db} [_ handler ref e-mouse-down]]
@@ -360,7 +373,11 @@
      :fsm {nil    {[::set-props self] ::open}
            ::open {[::close-panel tap] nil}}}))
 
-(f/reg-no-op ::open ::close ::ready-to-size)
+(f/reg-no-op ::close ::ready-to-size)
+
+(f/reg-event-db ::open
+  (fn [db [_ self]]
+    (update-z-index db self)))
 
 (def observer-config
   #js {:attributes true
