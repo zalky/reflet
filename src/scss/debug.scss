@@ -97,6 +97,8 @@ $coll-brace-width:              0.5rem;
     right: 1rem;
     padding: 0.5rem 1rem;
     border-radius: 0;
+    // Global controls always just under marks
+    z-index: (1000000000 - 1);
 
     background: $debug-control-bg;
     font-size: $font-size-sm;
