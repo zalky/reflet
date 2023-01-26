@@ -577,7 +577,7 @@ $coll-brace-width:              0.5rem;
             white-space: nowrap;
 
             .reflet-coll-inline & {
-                min-width: 40px;
+                flex-shrink: 0;
             }
         }
 
