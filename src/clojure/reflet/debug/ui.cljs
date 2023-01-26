@@ -430,7 +430,7 @@
   (loop [el (.-nextSibling tap-el)]
     (if el
       (let [c (.-className el)]
-        (if (= c "reflet-tap")
+        (if (= c "reflet-debug-tap")
           (recur (.-nextSibling el))
           el))
       (.-parentElement tap-el))))
@@ -445,7 +445,7 @@
   [p c]
   (->> p
        (.-children)
-       (remove #(= (.-className %) "reflet-tap"))
+       (remove #(= (.-className %) "reflet-debug-tap"))
        (map-indexed vector)
        (some (fn [[n sib]]
                (when (= sib c) n)))))
