@@ -24,18 +24,6 @@
       (coll? x) ::coll
       :else     (type x))))
 
-(defmulti map-entry
-  (fn [i k v]
-    (if (and (coll? v) (not (ref? v)))
-      ::coll
-      (type v))))
-
-(defmethod map-entry :default
-  [i k v]
-  [:div {:key i}
-   [value k]
-   [value v {:inline true}]])
-
 (defn- pos
   [e]
   {:x (.-clientX e)
@@ -153,6 +141,12 @@
             :on-click (expander-toggle self)}))]
        (when (and (not-empty coll) expand?)
          [value coll])])))
+
+(defn- map-entry
+  [i k v]
+  [:div {:key i}
+   [value k]
+   [value v {:inline true}]])
 
 (defmethod value ::map
   [m & [opts]]

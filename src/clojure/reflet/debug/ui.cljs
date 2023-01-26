@@ -289,23 +289,23 @@
       [data/value to]])
    [:div
     (when e    (fsm-details "event:" e))
-    (when c    (fsm-details "when:" [c]))
+    (when c    (fsm-details "when:" c))
     (when pull (fsm-details "pull:" pull))]])
 
 (defn- fsm-traces
   [traces]
   (f/with-ref* {:cmp/uuid [trace/self]
                 :in       props}
-    (let [n                (f/sub [::impl/trace-n self])
+    (let [n                @(f/sub [::impl/trace-n self])
           {t   :t
            v   :fsm-v
-           :as transition} (nth traces @n)]
+           :as transition} (nth traces n)]
       [:div
        [:div {:class "reflet-divider"}]
        [:div t]
        [data/value v {:inline true}]
        [trace-controls props traces]
-       [fsm-transition transition]])))
+       ^{:key n} [fsm-transition transition]])))
 
 (defmethod ref-lens :debug.lens/fsm
   [{:debug/keys [ref] :as props}]

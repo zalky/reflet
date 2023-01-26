@@ -575,6 +575,10 @@ $coll-brace-width:              0.5rem;
             display: flex;
             overflow: hidden;
             white-space: nowrap;
+
+            .reflet-coll-inline & {
+                min-width: 40px;
+            }
         }
 
         > :nth-child(2) {
@@ -678,6 +682,10 @@ $coll-brace-width:              0.5rem;
         display: flex;
     }
 
+    .reflet-coll-inline .reflet-coll-inline & {
+        display: none;
+    }
+
     svg {
         display: flex;
         transition: all 0.3s ease;
@@ -744,6 +752,10 @@ $coll-brace-width:              0.5rem;
 
 .reflet-html {
     color: $syntax-string;
+    font-family: $font-family-monospace;
+}
+
+.reflet-function {
     font-family: $font-family-monospace;
 }
 
