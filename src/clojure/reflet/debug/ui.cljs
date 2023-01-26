@@ -1,5 +1,6 @@
 (ns reflet.debug.ui
-  (:require [react-dom :as react-dom]
+  (:require [cljs.pprint :as pprint]
+            [react-dom :as react-dom]
             [reagent.core :as r]
             [reagent.dom :as dom]
             [reflet.core :as f]
@@ -399,7 +400,7 @@
              :class    "reflet-context"
              :style    pos
              :on-click #(.stopPropagation %)}
-       (prn-str value)])))
+       (with-out-str (pprint/pprint value))])))
 
 (defn- overlay
   []

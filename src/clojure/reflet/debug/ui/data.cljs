@@ -137,8 +137,9 @@
         expr
         (when (not-empty coll)
           (g/coll-expander
-           {:class    "reflet-coll-expander"
-            :on-click (expander-toggle self)}))]
+           {:class           "reflet-coll-expander"
+            :on-click        (expander-toggle self)
+            :on-context-menu (on-context-click coll)}))]
        (when (and (not-empty coll) expand?)
          [value coll])])))
 
