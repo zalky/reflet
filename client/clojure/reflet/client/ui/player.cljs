@@ -45,14 +45,14 @@
      (doall
       (for [{id     :system/uuid
              artist :kr.track/artist
-             name   :kr.track/name} @tracks]
+             name   :kr/name} @tracks]
         (let [ref      [:system/uuid id]
               duration @(f/sub [::impl/track-duration ref])
               on-click #(f/disp [::impl/selected self ref])]
           ^{:key id}
           [:div {:on-click on-click}
-           [:div artist]
            [:div name]
+           [:div (:kr/name artist)]
            [:div duration]])))]))
 
 (defn player-inner
@@ -66,7 +66,7 @@
           self  :player/self
           el    :player/el}]
       [:audio {:ref      (i/el! el)
-               :src      (:kr.track/uri track)
+               :src      (:kr/uri track)
                :on-ended #(f/disp [::impl/pause self])}])}))
 
 (defn player

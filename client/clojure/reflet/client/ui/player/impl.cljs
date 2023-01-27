@@ -40,27 +40,27 @@
   (fn []
     [{:user/track-list
       [:system/uuid
-       :kr.track/artist
-       :kr.track/name]}]))
+       :kr/name
+       {:kr.track/artist [:kr/name]}]}]))
 
 (f/reg-pull ::materialized
   (fn [self]
     [[:player/state
-      {:player/track [:kr.track/uri]}]
+      {:player/track [:kr/uri]}]
      self]))
 
 (f/reg-pull ::track-info
   (fn [self]
     [{:player/track
       [:system/uuid
-       :kr.track/artist
-       :kr.track/name]}
+       {:kr.track/artist [:kr/name]}
+       :kr/name]}
      self])
   (fn [{a   :kr.track/artist
-        n   :kr.track/name
+        n   :kr/name
         :as track}]
     (when track
-      (str a " - " n))))
+      (str (:kr/name a) " - " n))))
 
 (f/reg-pull ::track-duration
   (fn [ref]

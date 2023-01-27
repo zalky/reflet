@@ -16,7 +16,7 @@
 (defn config!
   []
   (f/disp-sync [::f/config])
-  (f/disp-sync [::boot/init-tracks]))
+  (f/disp-sync [::boot/init-data]))
 
 (defn init!
   []
