@@ -94,7 +94,7 @@ You can either submit an issue here on Github, or alternatively tag me
 
 ## Contribution Acknowledgements
 
-Special thanks to [https://github.com/ingesolvoll](Inge Solvoll).
+Special thanks to [Inge Solvoll](https://github.com/ingesolvoll).
 
 ## License
 
