@@ -53,17 +53,23 @@
          :kr/uri            "/audio/DbMaj7b5.mp3"}]
        (tx/walk-maps add-id)))
 
-(f/reg-event-db ::init-data
-  ;; Data stub. Normally we would never want to generate random
-  ;; references directly in our handler like this. This data would be
-  ;; returned from some remote request, or maybe we would use the
-  ;; `::f/with-ref` cofx to generate some random references.
-  (fn [db _]
-    (let [davis    (db/random-ref :system/uuid)
-          shorter  (db/random-ref :system/uuid)
-          album    (db/random-ref :system/uuid)
-          tracks   (tracks-tx davis shorter album)
-          entities (entities-tx davis shorter album tracks)]
-      (-> db
-          (db/assocn :user/track-list tracks)
-          (db/mergen entities)))))
+(f*/reg-cofx ::remote-response
+  ;; Stub out remote request.
+  (fn [cofx]
+    (let [d        (db/random-ref :system/uuid)
+          s        (db/random-ref :system/uuid)
+          a        (db/random-ref :system/uuid)
+          tracks   (tracks-tx d s a)
+          entities (entities-tx d s a tracks)]
+      (->> {::tracks   tracks
+            ::entities entities}
+           (assoc cofx ::response)))))
+
+(f/reg-event-fx ::init-data
+  (f*/inject-cofx ::remote-response)
+  (fn [{db                    :db
+        {tracks   ::tracks
+         entities ::entities} ::response} _]
+    {:db (-> db
+             (db/assocn :user/track-list tracks)
+             (db/mergen entities))}))
