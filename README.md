@@ -30,7 +30,7 @@ main design goals are:
    excellent, pluggable APIs
 5. Makes very few assumptions about your application boundaries
 6. Performance and stability: Reflet has already been deployed in
-   complex, data driven production applications for years
+   complex, data driven production applications for 4+ years
    (e.g. in Bioinformatics, Business analytics... )
 
 <img src="https://i.imgur.com/6MAwZgS.jpg" title="zalky" align="center" width="1000"/>
