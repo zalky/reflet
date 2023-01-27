@@ -92,6 +92,10 @@ You can either submit an issue here on Github, or alternatively tag me
 (`@zalky`) with your question in the `#re-frame` channel on the
 [Clojurians](https://clojurians.slack.com) slack.
 
+## Contribution Acknowledgements
+
+Special thanks to [https://github.com/ingesolvoll](Inge Solvoll).
+
 ## License
 
 Reflet is distributed under the terms of the Apache License 2.0.
