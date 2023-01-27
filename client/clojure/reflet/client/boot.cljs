@@ -53,22 +53,17 @@
          :kr/uri            "/audio/DbMaj7b5.mp3"}]
        (tx/walk-maps add-id)))
 
-(f*/reg-cofx ::tracks
-  (fn [cofx]
+(f/reg-event-db ::init-data
+  ;; Data stub. Normally we would never want to generate random
+  ;; references directly in our handler like this. This data would be
+  ;; returned from some remote request, or maybe we would use the
+  ;; `::f/with-ref` cofx to generate some random references.
+  (fn [db _]
     (let [davis    (db/random-ref :system/uuid)
           shorter  (db/random-ref :system/uuid)
           album    (db/random-ref :system/uuid)
           tracks   (tracks-tx davis shorter album)
           entities (entities-tx davis shorter album tracks)]
-      (assoc cofx
-             ::tracks tracks
-             ::entities entities))))
-
-(f/reg-event-fx ::init-data
-  (f*/inject-cofx ::tracks)
-  (fn [{db       :db
-        tracks   ::tracks
-        entities ::entities} _]
-    {:db (-> db
-             (db/assocn :user/track-list tracks)
-             (db/mergen entities))}))
+      (-> db
+          (db/assocn :user/track-list tracks)
+          (db/mergen entities)))))
