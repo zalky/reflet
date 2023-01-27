@@ -545,15 +545,11 @@ $coll-brace-width:              0.5rem;
     opacity: 1;
 
     @include brace;
-
-    &.reflet-coll-expand .reflet-map-data {
-        opacity: 0.2;
-    }
 }
 
 .reflet-map-data {
     display: grid;
-    grid-template-columns: auto auto;
+    grid-template-columns: auto minmax(auto, min-content);
     column-gap: 0.5rem;
     flex-grow: 1;
     font-family: $font-family-monospace;
@@ -582,10 +578,6 @@ $coll-brace-width:              0.5rem;
             .reflet-coll-inline & {
                 flex-shrink: 0;
             }
-        }
-
-        > :nth-child(2) {
-            justify-content: flex-end;
         }
 
         > :nth-child(3) {
@@ -673,6 +665,19 @@ $coll-brace-width:              0.5rem;
 
 .reflet-list::after {
     content: ")";
+}
+
+.reflet-coll-expand::before,
+.reflet-coll-expand::after,
+.reflet-coll-expand * {
+    transition: opacity 0.3s ease;
+    opacity: 0;
+}
+
+.reflet-coll-expander,
+.reflet-coll-expander * {
+    user-select: none;
+    opacity: 1;
 }
 
 .reflet-coll-expander {
