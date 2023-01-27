@@ -54,7 +54,7 @@
        (tx/walk-maps add-id)))
 
 (f*/reg-cofx ::remote-response
-  ;; Stub out remote request.
+  ;; Stub out remote response.
   (fn [cofx]
     (let [d        (db/random-ref :system/uuid)
           s        (db/random-ref :system/uuid)
