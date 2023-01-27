@@ -33,7 +33,7 @@ main design goals are:
    complex, data driven production applications for years
    (e.g. in Bioinformatics, Business analytics... )
 
-<img src="https://i.imgur.com/AOkO7yZ.png" title="zalky" align="center" width="1000"/>
+<img src="https://i.imgur.com/A1NcHD4.png" title="zalky" align="center" width="1000"/>
 
 ## Who Is This For?
 
