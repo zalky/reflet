@@ -132,6 +132,7 @@ $coll-brace-width:              0.5rem;
 .reflet-mark-list {
     position: absolute;
     display: grid;
+    grid-auto-flow: dense;
     grid-template-columns: auto auto;
     grid-template-rows: 4 * $debug-radius;
     align-items: start;
@@ -140,6 +141,38 @@ $coll-brace-width:              0.5rem;
     background: $debug-control-bg;
     font-size: $font-size-xs;
     box-shadow: 4px 4px $debug-panel-drop-shadow;
+
+    $flip-x: calc((-100% + 4 * $debug-radius));
+    $flip-y: calc((-100% + 4 * $debug-radius) + 1px);
+
+    @mixin flip {
+        > div {
+            > :nth-child(1) {
+                grid-column: 2;
+            }
+
+            > :nth-child(2) {
+                padding-right: $debug-radius;
+                padding-left: 1rem;
+            }
+        }
+    }
+
+    &.reflet-flip-height {
+        transform: translateY($flip-y);
+    }
+
+    &.reflet-flip-width {
+        transform: translateX($flip-x);
+
+        @include flip;
+    }
+
+    &.reflet-flip-width.reflet-flip-height {
+        transform: translate($flip-x, $flip-y);
+
+        @include flip;
+    }
 
     > div {
         display: contents;
@@ -153,12 +186,12 @@ $coll-brace-width:              0.5rem;
             background: $debug-control-bg-hover;
         }
 
-        > :nth-child(2n+1) {
+        > :nth-child(1) {
             color: $debug-mark-color;
             font-weight: 600;
         }
 
-        > :nth-child(2n) {
+        > :nth-child(2) {
             cursor: pointer;
             color: $font-color;
             padding-right: 1rem;
@@ -192,7 +225,7 @@ $coll-brace-width:              0.5rem;
     .reflet-mark-list {
         margin-left: -$debug-radius;
         margin-top: -$debug-radius;
-        transition: all 0.3s linear;
+        transition: opacity 0.3s linear, visibility 0.3s linear;
         visibility: hidden;
         opacity: 0;
         @include disable-safari-transitions;

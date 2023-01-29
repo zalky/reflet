@@ -220,8 +220,8 @@
         {st :top
          sl :left}   (some-> sel-el i/grab rect)
         {th :height} (some-> target-el i/grab rect)
-        {vh :height
-         vw :width}  (viewport-size)]
+        {vw :width
+         vh :height} (viewport-size)]
     {:width new-panel-width
      :left  (min (- vw new-panel-width)
                  (+ sl new-panel-offset))
@@ -270,12 +270,24 @@
   (fn [[rect el]]
     (shift-rect el rect)))
 
+(f/reg-sub ::bound?
+  (fn [[_ self el-r]]
+    [(f/sub [::rect self])
+     (f/sub [::i/grab el-r])])
+  (fn [[{l :left t :top} el]]
+    (when (and rect el)
+      (let [{w :width h :height}   (rect el)
+            {vw :width vh :height} (viewport-size)]
+        (str
+         (when (< vw (+ l w)) "reflet-flip-width ")
+         (when (< vh (+ t h)) "reflet-flip-height"))))))
+
 (f/reg-event-db ::set-context-pos
   (fn [db [_ el]]
-    (let [{l :left   r :right
-           t :top    b :bottom
-           h :height w :width}   (some-> el i/grab rect)
-          {vh :height vw :width} (viewport-size)
+    (let [{l :left  r :right
+           t :top   b :bottom
+           w :width h :height}   (some-> el i/grab rect)
+          {vw :width vh :height} (viewport-size)
 
           l (if (< vw r) (- l w) l)
           t (if (< vh b) (- t h) t)]

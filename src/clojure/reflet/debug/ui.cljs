@@ -70,21 +70,24 @@
           [g/mark-icon]]]))))
 
 (defn- marks-expanded
-  [{:debug/keys [group]}]
-  [:div {:class "reflet-mark-list"}
-   (doall
-    (for [{id  :debug/self
-           :as n} group]
-      ^{:key id} [mark-expanded n]))])
+  [{:debug/keys [group self]}]
+  (f/with-ref* {:el/uuid [el]}
+    (let [bound? (f/sub [::impl/bound? self el])]
+      [:div {:ref   (i/el! el)
+             :class ["reflet-mark-list" @bound?]}
+       (doall
+        (for [{id  :debug/self
+               :as n} group]
+          ^{:key id} [mark-expanded n]))])))
 
 (defmethod render :debug.type/mark-group
   [{:debug/keys [centroid] :as props}]
   (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect  (f/sub [::impl/rect self])
-          state (f/sub [::impl/node-fsm self])
-          cb    #(f/disp [::impl/set-rect self el centroid])]
+    (let [rect   (f/sub [::impl/rect self])
+          state  (f/sub [::impl/node-fsm self])
+          cb     #(f/disp [::impl/set-rect self el centroid])]
       (f/once (f/disp [::impl/set-props self props]))
       (when @state
         [:div {:ref   (i/el! el :mount cb)
