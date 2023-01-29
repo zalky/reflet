@@ -53,6 +53,10 @@ $coll-brace-width:              0.5rem;
     *, *::before, *::after {
             box-sizing: border-box;
     }
+
+    svg {
+        width: 100%;
+    }
 }
 
 .reflet-debug-tap {
