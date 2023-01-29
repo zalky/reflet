@@ -270,7 +270,7 @@
   (fn [[rect el]]
     (shift-rect el rect)))
 
-(f/reg-sub ::bound?
+(f/reg-sub ::flip-marks?
   (fn [[_ self el-r]]
     [(f/sub [::rect self])
      (f/sub [::i/grab el-r])])

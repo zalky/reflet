@@ -72,9 +72,9 @@
 (defn- marks-expanded
   [{:debug/keys [group self]}]
   (f/with-ref* {:el/uuid [el]}
-    (let [bound? (f/sub [::impl/bound? self el])]
+    (let [flip? (f/sub [::impl/flip-marks? self el])]
       [:div {:ref   (i/el! el)
-             :class ["reflet-mark-list" @bound?]}
+             :class ["reflet-mark-list" @flip?]}
        (doall
         (for [{id  :debug/self
                :as n} group]
