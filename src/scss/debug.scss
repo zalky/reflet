@@ -551,6 +551,8 @@ $coll-brace-width:              0.5rem;
 @mixin truncate {
     display: inline;
     overflow: hidden;
+    // This text-overflow property does not play well with overflow
+    // hidden and rtl text direction in Safari
     text-overflow: ellipsis;
     min-width: 0.25rem;
 }
