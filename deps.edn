@@ -17,7 +17,7 @@
            :cljs/report {:main-opts ["-m" "shadow.cljs.build-report" "app" "target/report.html"]}
            :sass/client {:extra-paths ["client/scss" "src/scss"]
                          :extra-deps  {io.zalky/dart-sass-clj {:mvn/version "0.2.0"}
-                                       io.zalky/runway        {:mvn/version "0.2.0"}
+                                       io.zalky/runway        {:mvn/version "0.2.1"}
                                        org.webjars/bootstrap  {:mvn/version "5.2.2"}}
                          :exec-fn     runway.core/exec
                          :exec-args   {dart-sass-clj.core/compile {:source-dirs  ["client/scss" "src/scss"]
