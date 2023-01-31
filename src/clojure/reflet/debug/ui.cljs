@@ -108,9 +108,11 @@
   (let [props    (f/sub [::impl/props-panel self])
         dragging (f/sub [::impl/dragging])
         on-close #(f/disp [::impl/close-props-panel tap])
+        on-dc    #(f/disp [::impl/toggle-min self])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
-    [:div {:class         "reflet-header"
-           :on-mouse-down on-drag}
+    [:div {:class           "reflet-header"
+           :on-double-click on-dc
+           :on-mouse-down   on-drag}
      [:div [:span "with-ref"]]
      (props-name @props)
      [g/x {:class         ["reflet-close"]
@@ -142,14 +144,17 @@
   (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect  (f/sub [::impl/rect-quantized self el])
-          state (f/sub [::impl/panel-fsm self el tap])]
+    (let [rect       (f/sub [::impl/rect-quantized self el])
+          state      (f/sub [::impl/panel-fsm self el tap])
+          minimized? (f/sub [::impl/minimized? self])]
       (f/once (f/disp [::impl/set-props self props]))
       (when (display? @state)
         [:div {:ref      (i/el! el)
                :style    @rect
                :on-click #(f/disp [::impl/select self])
-               :class    ["reflet-panel" (dragging-class)]}
+               :class    ["reflet-panel"
+                          (dragging-class)
+                          (when @minimized? "reflet-panel-minimized")]}
          [:div {:class "reflet-content"}
           [header props]
           [props-content props]]
@@ -161,9 +166,11 @@
   (let [lens     (f/sub [::impl/lens self])
         on-back  #(f/disp [::impl/clear-lens self])
         on-close #(f/disp [::impl/close-ref-panel self])
+        on-dc    #(f/disp [::impl/toggle-min self])
         on-drag  #(f/disp-sync [::impl/drag! ::impl/move self %])]
-    [:div {:class         "reflet-header"
-           :on-mouse-down on-drag}
+    [:div {:class           "reflet-header"
+           :on-double-click on-dc
+           :on-mouse-down   on-drag}
      (when @lens
        [:div
         [g/menu {:class         "reflet-control"
@@ -370,14 +377,17 @@
   (f/with-ref* {:debug/id [debug/self]
                 :el/uuid  [debug/el]
                 :in       props}
-    (let [rect  (f/sub [::impl/rect-quantized self el])
-          state (f/sub [::impl/panel-fsm self el ref])]
+    (let [rect       (f/sub [::impl/rect-quantized self el])
+          state      (f/sub [::impl/panel-fsm self el ref])
+          minimized? (f/sub [::impl/minimized? self])]
       (f/once (f/disp [::impl/set-props self props]))
       (when (display? @state)
         [:div {:ref      (i/el! el)
                :style    @rect
                :on-click #(f/disp [::impl/select self])
-               :class    ["reflet-panel" (dragging-class)]}
+               :class    ["reflet-panel"
+                          (dragging-class)
+                          (when @minimized? "reflet-panel-minimized")]}
          [:div {:class "reflet-content"}
           [header props]
           [ref-content props]]

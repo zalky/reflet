@@ -304,6 +304,10 @@ $coll-brace-width:              0.5rem;
     &.reflet-resize {
         cursor: nwse-resize;
     }
+
+    &.reflet-panel-minimized {
+        min-height: 0;
+    }
 }
 
 @function bordered-radius($radius) {

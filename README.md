@@ -75,7 +75,7 @@ you are not familiar with Re-frame, [check out that
 documentation](https://day8.github.io/re-frame/re-frame/) first, it is
 very good. Otherwise:
 
-1. [Overview](#overview)
+1. [Rationale and Overview](Home.md#overview)
 2. [Quick Start](Quick-Start.md)
 3. [Configuration](Configuration.md)
 4. Features

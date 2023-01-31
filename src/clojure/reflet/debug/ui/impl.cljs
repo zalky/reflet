@@ -317,6 +317,14 @@
                    (assoc r :height)))]
       (db/update-inn db [self :debug/rect] f))))
 
+(f/reg-event-db ::toggle-min
+  (fn [db [_ self]]
+    (db/update-inn db [self :debug/minimized] not)))
+
+(f/reg-pull ::minimized?
+  (fn [self]
+    [:debug/minimized self]))
+
 (defn- get-content-el
   "Returns either the first child if it exists, or the parent content
   element."
@@ -334,15 +342,27 @@
   (-> (get-content-el el)
       (px :padding-top)
       (* 2)
-      (+ 1)                             ; for border width
+      (+ 1)          ; for border width
       (+ lh)
       (/  2)))
 
+(defn- get-header-el
+  [el]
+  (.. el -firstChild -firstChild))
+
+(defn- panel-header-height
+  [el]
+  (-> (get-header-el el)
+      (px :height)
+      (+ 3)))        ; for border width, header already has 1px border
+
 (defn- height-qfn
-  [height el lh]
-  (let [h      (adjusted-quant-factor el lh)
-        offset (mod (panel-content-height el) h)]
-    (+ (quant height h) offset)))
+  [height el lh minimized?]
+  (if minimized?
+    (panel-header-height el)
+    (let [h      (adjusted-quant-factor el lh)
+          offset (mod (panel-content-height el) h)]
+      (+ (quant height h) offset))))
 
 (f/reg-sub ::rect-quantized
   ;; Quantize size and position with respect to line-height. For nicer
@@ -351,8 +371,9 @@
   ;; padding.
   (fn [[_ self el]]
     [(f/sub [::rect self])
-     (f/sub [::i/grab el])])
-  (fn [[rect ^js el] _]
+     (f/sub [::i/grab el])
+     (f/sub [::minimized? self])])
+  (fn [[rect ^js el minimized?] _]
     (when (and el (not-empty rect))
       (let [qfn (comp int quant)
             lh  (px el :line-height)]
@@ -360,7 +381,7 @@
             (update :left qfn lh)
             (update :top qfn lh)
             (update :width qfn lh)
-            (update :height height-qfn el lh))))))
+            (update :height height-qfn el lh minimized?))))))
 
 (f/reg-event-db ::set-props
   (fn [db [_ self props]]
