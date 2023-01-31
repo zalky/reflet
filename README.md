@@ -58,7 +58,11 @@ Or `project.clj`:
 ```
 
 Additionally, React is considered a peer dependency, so you will have
-to [ensure that it is available](Configuration.md#react).
+to [ensure that it is available](Configuration.md#react). The same
+approach you would use to provide React for
+[Reagent](https://github.com/reagent-project/reagent) or
+[Re-frame](https://github.com/day8/re-frame) will also work for
+Reflet.
 
 See [the additional notes](Configuration.md) on how to configure the
 debugger for development.
