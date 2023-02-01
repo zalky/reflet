@@ -17,7 +17,7 @@
            :cljs/report {:main-opts ["-m" "shadow.cljs.build-report" "app" "target/report.html"]}
            :sass/client {:extra-paths ["client/scss" "src/scss"]
                          :extra-deps  {io.zalky/dart-sass-clj {:mvn/version "0.2.0"}
-                                       io.zalky/runway        {:mvn/version "0.2.1"}
+                                       io.zalky/runway        {:mvn/version "0.2.2"}
                                        org.webjars/bootstrap  {:mvn/version "5.2.2"}}
                          :exec-fn     runway.core/exec
                          :exec-args   {dart-sass-clj.core/compile {:source-dirs  ["client/scss" "src/scss"]
@@ -26,7 +26,7 @@
                                                                    :source-maps  true
                                                                    :watch        true}}}
            :css/bundle  {:extra-paths ["src/scss"]
-                         :extra-deps  {io.zalky/axle {:mvn/version "0.2.0"}}
+                         :extra-deps  {io.zalky/axle {:mvn/version "0.2.1"}}
                          :exec-fn     runway.core/exec
                          :exec-args   {reflet.css.bundle/bundle {}}}
            :build       {:deps       {io.zalky/build-clj {:git/url "https://github.com/zalky/build-clj.git"
