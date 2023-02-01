@@ -338,13 +338,13 @@
   event panels. It will be fractionally off for the data panels, but
   because they don't have dividers, it will not be perceptible, even
   when zoomed in."
-  [el lh]
+  [el line-height]
   (-> (get-content-el el)
       (px :padding-top)
       (* 2)
       (+ 1)          ; for border width
-      (+ lh)
-      (/  2)))
+      (+ line-height)
+      (/ 2)))
 
 (defn- get-header-el
   [el]
@@ -357,11 +357,12 @@
       (+ 3)))        ; for border width, header already has 1px border
 
 (defn- height-qfn
-  [height el lh minimized?]
+  [height el line-height minimized?]
   (if minimized?
     (panel-header-height el)
-    (let [h      (adjusted-quant-factor el lh)
-          offset (mod (panel-content-height el) h)]
+    (let [h         (adjusted-quant-factor el line-height)
+          content-h (panel-content-height el)
+          offset    (mod content-h h)]
       (+ (quant height h) offset))))
 
 (f/reg-sub ::rect-quantized
