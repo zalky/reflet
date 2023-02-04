@@ -614,7 +614,9 @@
     :as   context} effect result]
   (let [[expr params] (unquote-list effect)]
     (when pull-fx-fn
-      (pull-fx-fn params {:db db :ref ref}))
+      (pull-fx-fn params {:db   db
+                          :ref  ref
+                          :expr expr}))
     (pull* context expr result)))
 
 (defn- pull-join
