@@ -18,8 +18,8 @@ with normalized and un-normalized data models. This includes:
 
 Reflet aims to be a natural progression on top of Re-frame to support
 complex, data driven requirements. In that sense, it is both easy to
-learn, but powerful. You could say it's sort of like Re-frame++. Its
-main design goals are:
+learn, but powerful. You could say it's sort of like Re-frame++ (or
+Fulcro for Re-frame). Its main design goals are:
 
 1. A la carte feature set: it is not a "framework", so use as much or
    as little of it as you want

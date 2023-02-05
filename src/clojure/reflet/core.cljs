@@ -70,8 +70,8 @@
 (def pull-fx db/pull-fx)
 
 (defmethod pull-fx :default
-  [_ {ref :ref}]
-  (logf/console :debug "pull effect:" ref))
+  [{id :id} _]
+  (logf/console :warn "no pull-fx defined for:" id))
 
 (f/reg-event-fx ::config
   (fn [{db :db} [_ {id-attrs :id-attrs
