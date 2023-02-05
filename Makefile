@@ -3,7 +3,7 @@
 version-number  = 0.2.0
 group-id        = io.zalky
 artifact-id     = reflet
-description     = A set of normalized tools for building Re-frame + React based web apps
+description     = A set of tools for building Re-frame + React based web apps with normalized and un-normalized data models
 license         = :apache
 url             = https://github.com/zalky/reflet
 
