@@ -195,14 +195,13 @@
       (f/disp [::impl/set-height self el]))))
 
 (defmethod ref-lens :debug.lens/db
-  [{:debug/keys [ref] :as props}]
-  (f/with-ref* {:el/uuid [el]}
-    (if-let [e @(f/sub [::data-impl/entity ref])]
-      [:div {:ref (i/el! el :mount (set-height props))}
-       [data/value e]]
-      [:div {:ref   (set-height props)
-             :class "reflet-no-data"}
-       [:span "No Data"]])))
+  [{:debug/keys [ref self el] :as props}]
+  (f/once (f/disp [::impl/set-height self el]))
+  (if-let [e @(f/sub [::data-impl/entity ref])]
+    [data/value e]
+    [:div {:ref   (set-height props)
+           :class "reflet-no-data"}
+     [:span "No Data"]]))
 
 (defn- event-trace
   [{t :t
@@ -213,19 +212,17 @@
    [data/value e {:inline true}]])
 
 (defmethod ref-lens :debug.lens/events
-  [{:debug/keys [ref] :as props}]
-  (f/with-ref* {:el/uuid [el]}
-    (if-let [events @(f/sub [::d/e->events ref])]
-      [:div {:ref   (i/el! el :mount (set-height props))
-             :class "reflet-event-lens"}
-       (doall
-        (map-indexed
-         (fn [i e]
-           ^{:key i} [event-trace e])
-         events))]
-      [:div {:ref   (set-height props)
-             :class "reflet-no-data"}
-       [:span "No Events"]])))
+  [{:debug/keys [ref self el] :as props}]
+  (f/once (f/disp [::impl/set-height self el]))
+  (if-let [events @(f/sub [::d/e->events ref])]
+    [:div {:class "reflet-event-lens"}
+     (doall
+      (map-indexed
+       (fn [i e]
+         ^{:key i} [event-trace e])
+       events))]
+    [:div {:class "reflet-no-data"}
+     [:span "No Events"]]))
 
 (defn- trace-controls
   [{:keys [trace/self]} traces]
@@ -259,19 +256,17 @@
        [data/value r]])))
 
 (defmethod ref-lens :debug.lens/query
-  [{:debug/keys [ref] :as props}]
-  (f/with-ref* {:el/uuid [el]}
-    (if-let [traces @(f/sub [::d/e->queries ref])]
-      [:div {:ref   (i/el! el :mount (set-height props))
-             :class "reflet-query-lens"}
-       (doall
-        (map-indexed
-         (fn [i traces]
-           ^{:key i} [query-traces traces])
-         traces))]
-      [:div {:ref   (set-height props)
-             :class "reflet-no-data"}
-       [:span "No Queries"]])))
+  [{:debug/keys [ref self el] :as props}]
+  (f/once (f/disp [::impl/set-height self el]))
+  (if-let [traces @(f/sub [::d/e->queries ref])]
+    [:div {:class "reflet-query-lens"}
+     (doall
+      (map-indexed
+       (fn [i traces]
+         ^{:key i} [query-traces traces])
+       traces))]
+    [:div {:class "reflet-no-data"}
+     [:span "No Queries"]]))
 
 (defn- fsm-details
   [label x]
@@ -319,19 +314,17 @@
        ^{:key n} [fsm-transition transition]])))
 
 (defmethod ref-lens :debug.lens/fsm
-  [{:debug/keys [ref] :as props}]
-  (f/with-ref* {:el/uuid [el]}
-    (if-let [traces @(f/sub [::d/fsm->transitions ref])]
-      [:div {:ref   (i/el! el :mount (set-height props))
-             :class "reflet-fsm-lens"}
-       (doall
-        (map-indexed
-         (fn [i traces]
-           ^{:key i} [fsm-traces traces])
-         traces))]
-      [:div {:ref   (set-height props)
-             :class "reflet-no-data"}
-       [:span "No FSMs"]])))
+  [{:debug/keys [ref self el] :as props}]
+  (f/once (f/disp [::impl/set-height self el]))
+  (if-let [traces @(f/sub [::d/fsm->transitions ref])]
+    [:div {:class "reflet-fsm-lens"}
+     (doall
+      (map-indexed
+       (fn [i traces]
+         ^{:key i} [fsm-traces traces])
+       traces))]
+    [:div {:class "reflet-no-data"}
+     [:span "No FSMs"]]))
 
 (defmethod ref-lens :default
   [{:debug/keys [self el]}]
