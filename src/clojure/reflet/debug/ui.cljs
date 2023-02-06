@@ -188,19 +188,12 @@
   (fn [{:debug/keys [self]}]
     @(f/sub [::impl/lens self])))
 
-(defn- set-height
-  [{:debug/keys [self el]}]
-  (fn [x]
-    (when x
-      (f/disp [::impl/set-height self el]))))
-
 (defmethod ref-lens :debug.lens/db
   [{:debug/keys [ref self el] :as props}]
   (f/once (f/disp [::impl/set-height self el]))
   (if-let [e @(f/sub [::data-impl/entity ref])]
     [data/value e]
-    [:div {:ref   (set-height props)
-           :class "reflet-no-data"}
+    [:div {:class "reflet-no-data"}
      [:span "No Data"]]))
 
 (defn- event-trace
