@@ -1,12 +1,12 @@
 (ns reflet.debug.ui.impl
   (:require [cinch.core :as util]
             [clojure.set :as set]
+            [dbscan-clj.core :as c]
             [reagent.ratom :as r]
             [reflet.config :as config]
             [reflet.core :as f]
             [reflet.db :as db]
             [reflet.debug :as d]
-            [reflet.debug.cluster :as c]
             [reflet.fsm :as fsm]
             [reflet.interop :as i]))
 
@@ -454,7 +454,19 @@
   (fn [db [_ self]]
     (db/update-inn db [self :debug/trace-n] #(max (dec %) 0))))
 
-(def cluster-opts
+(def dbscan-cluster-opts
+  "DBSCAN cluster options.
+
+  One potential drawback of the DBSCAN algorithm for this application
+  is that it can produce clusters that are arbitrarily large as long
+  as they are densely connected. However, UI elements possess a high
+  degree of geometric regularity, and so with a correctly tuned
+  `:epsilon` parameter it should be able to produce good results. A
+  naive grid clustering approach, while guaranteeing bounded clusters,
+  can potentially fail to cluster points that are adjacent, but on
+  opposite sides of a partition. There are hierarchical grid
+  clustering algorithms that might mitigate this issue, but with the
+  right tuning DBSCAN should be fine."
   {:attrs      {:id #(find % :debug/id)
                 :x  #(get-in % [:debug/rect :left])
                 :y  #(get-in % [:debug/rect :top])}
@@ -470,7 +482,7 @@
 
 (defn create-mark-group
   [xs]
-  (let [c (c/centroid xs cluster-opts)]
+  (let [c (c/centroid xs dbscan-cluster-opts)]
     {:debug/type     :debug.type/mark-group
      :debug/self     [:debug/id (str "mark-group" c)]
      :debug/group    (map create-mark xs)
@@ -587,7 +599,7 @@
   (fn [_]
     (f/sub [::taps]))
   (fn [taps _]
-    (let [g      (c/cluster taps cluster-opts)
+    (let [g      (c/cluster taps dbscan-cluster-opts)
           marks  (map create-mark (:noise g))
           groups (map create-mark-group (vals (dissoc g :noise)))
           ctrls  (create-global-controls)]

@@ -1,4 +1,5 @@
 {:deps    {io.zalky/cinch      {:mvn/version "0.1.0"}
+           io.zalky/dbscan-clj {:mvn/version "0.1.0"}
            org.clojure/clojure {:mvn/version "1.11.1"}
            re-frame/re-frame   {:mvn/version "1.1.2"}
            reagent/reagent     {:mvn/version "1.1.1"}}
