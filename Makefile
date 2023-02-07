@@ -9,6 +9,8 @@ url             = https://github.com/zalky/reflet
 
 include make-clj/Makefile
 
+release = true
+
 .makecache/npm-install: package.json
 	npm install
 	@mkdir -p .makecache

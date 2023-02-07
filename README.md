@@ -59,14 +59,16 @@ Or `project.clj`:
 ```
 
 Additionally, React is considered a peer dependency, so you will have
-to [ensure that it is available](Configuration.md#react). The same
-approach you would use to provide React for
+to [ensure that it is
+available](https://github.com/zalky/reflet/wiki/Configuration#react). The
+same approach you would use to provide React for
 [Reagent](https://github.com/reagent-project/reagent) or
 [Re-frame](https://github.com/day8/re-frame) will also work for
 Reflet.
 
-See [the additional notes](Configuration.md) on how to configure the
-debugger for development.
+See [the additional
+notes](https://github.com/zalky/reflet/wiki/Configuration#debugger) on
+how to configure the debugger for development.
 
 ## Resources
 
@@ -76,20 +78,20 @@ you are not familiar with Re-frame, [check out that
 documentation](https://day8.github.io/re-frame/re-frame/) first, it is
 very good. Otherwise:
 
-1. [Rationale and Overview](Home.md#overview)
-2. [Quick Start](Quick-Start.md)
-3. [Configuration](Configuration.md)
+1. [Rationale and Overview](https://github.com/zalky/reflet/wiki#overview)
+2. [Quick Start](https://github.com/zalky/reflet/wiki/Quick-Start)
+3. [Configuration](https://github.com/zalky/reflet/wiki/Configuration)
 4. Features
-   - [References and Application Design](References-and-Application-Design.md)
-   - [Multi Model DB](Multi-Model-DB.md)
-   - [Graph Queries](Graph-Queries.md)
-   - [Finite State Machines](Finite-State-Machines.md)
-   - [Mutable State](Mutable-State.md)
-   - [Debugging](Debugging.md)
-   - [Testing](Testing.md)
-   - [Advanced Usage](Advanced-Usage.md)
-5. [Example Client](Example-Client.md)
-6. [General Development Tips](General-Development-Tips.md)
+   - [References and Application Design](https://github.com/zalky/reflet/wiki/References-and-Application-Design)
+   - [Multi Model DB](https://github.com/zalky/reflet/wiki/Multi-Model-DB)
+   - [Graph Queries](https://github.com/zalky/reflet/wiki/Graph-Queries)
+   - [Finite State Machines](https://github.com/zalky/reflet/wiki/Finite-State-Machines)
+   - [Mutable State](https://github.com/zalky/reflet/wiki/Mutable-State)
+   - [Debugging](https://github.com/zalky/reflet/wiki/Debugging)
+   - [Testing](https://github.com/zalky/reflet/wiki/Testing)
+   - [Advanced Usage](https://github.com/zalky/reflet/wiki/Advanced-Usage)
+5. [Example Client](https://github.com/zalky/reflet/wiki/Example-Client)
+6. [General Development Tips](https://github.com/zalky/reflet/wiki/General-Development-Tips)
 
 ## Getting Help
 
