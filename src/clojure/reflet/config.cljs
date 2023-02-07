@@ -5,7 +5,7 @@
 
   :id-attrs
             A set of unique id attributes that configure the db
-            normalized data model.
+            graph data model.
 
   :dispatch
             An initial dispatch immediately after configuration.

@@ -132,7 +132,7 @@
         (pull-reaction query-v))))
 
 (defn reg-comp
-  "Composes a series of named, normalized reactions, where the result of
+  "Composes a series of named, graph reactions, where the result of
   each reaction in the sequence is provided as input to the
   next. Semantics are similar to `clojure.core/comp`. Except for the
   first, every other reaction in the pipeline should expect only a

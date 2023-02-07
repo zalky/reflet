@@ -7,10 +7,10 @@
 
 **Reflet** is a set of tools for building
 [Re-frame](https://github.com/day8/re-frame) + React based web apps
-with normalized and un-normalized data models. This includes:
+with graph and non-graph data models. This includes:
 
 1. Entity references and their lifecycle management
-2. Performant, normalized queries and mutations
+2. Performant multi-model DB with graph queries and mutations
 3. Simple but powerful hierarchical FSMs
 4. JS and DOM interop utilities
 5. Novel API-driven visual debugging of complex apps (don't sleep on
@@ -25,7 +25,8 @@ Fulcro for Re-frame). Its main design goals are:
    as little of it as you want
 2. Bring sanity to existing Re-frame applications: iterative, minimal
    approach to integration, so big re-writes can be avoided
-3. Normalized and un-normalized data models can be mixed freely
+3. Graph and non-graph data models can be mixed freely with a single
+   source of truth: a Clojure map
 4. Entity references connect things together: this encourages
    excellent, pluggable APIs
 5. Makes very few assumptions about your application boundaries
@@ -37,9 +38,9 @@ Fulcro for Re-frame). Its main design goals are:
 
 ## Who Is This For?
 
-1. Anyone who needs a powerful normalized data model for Re-frame
-2. You already have an existing un-normalized Re-frame application,
-   and need to take it to the next level
+1. Anyone who needs a powerful graph data model for Re-frame
+2. You already have an existing non-graph Re-frame application, and
+   need to take it to the next level
 3. You are learning Re-frame, and want to get started right away with
    scalable data models and well-built component APIs
 
@@ -80,8 +81,8 @@ very good. Otherwise:
 3. [Configuration](Configuration.md)
 4. Features
    - [References and Application Design](References-and-Application-Design.md)
-   - [Normalized DB](Normalized-DB.md)
-   - [Normalized Queries](Normalized-Queries.md)
+   - [Multi Model DB](Multi-Model-DB.md)
+   - [Graph Queries](Graph-Queries.md)
    - [Finite State Machines](Finite-State-Machines.md)
    - [Mutable State](Mutable-State.md)
    - [Debugging](Debugging.md)

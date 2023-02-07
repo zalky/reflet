@@ -2,20 +2,20 @@
   "Provides an event sourced, reactive db, with mutation and query
   methods.
 
-  Storing data in normalized form has many benefits for application
-  and data design. The main trade-off is the performance cost of
+  Storing data in graph form has many benefits for application and
+  data design. The main trade-off is the performance cost of
   normalizing data during writes, and de-normalizing data during
-  queries. Specifically, some normalized queries can end up spanning
-  the entire db, and so in a reactive application, understanding when
-  to re-run queries is key to performance.
+  queries. Specifically, some graph queries can end up spanning the
+  entire db, and so in a reactive application, understanding when to
+  re-run queries is key to performance.
 
   The naive approach of just re-running every query whenever the db
   changes is rarely feasible. Just one expensive query will grind the
   entire app to a halt, and predicting the cost of a query is a
   run-time calculation that depends on the data.
 
-  A key insight that can help optimize query denormalization is that
-  g  for the set of queries that conform to EQL, a result cannot change
+  A key insight that can help optimize query denormalization is that g
+  for the set of queries that conform to EQL, a result cannot change
   if the entities that were traversed while walking the joins have not
   changed.
 
@@ -52,7 +52,7 @@
   Another key design point is that query operations must be
   commutative and idempotent with respect to the tracking index. On
   the mutation side, any set of db operations that were previously
-  commutative or idempotent on unnormalized data should remain so.
+  commutative or idempotent on non-graph data should remain so.
 
   The db mutation operations are pure functions that operate on the db
   value provided to event handlers. They can be arbitrarily composed
@@ -112,22 +112,21 @@
      to the db tick.
 
   The above algorithm will only react to db changes via the db
-  mutation functions. Specifically, the normalized data stored at
+  mutation functions. Specifically, the graph data stored at
   the ::data key of the Re-frame db should never be directly
   manipulated, except via the mutation functions.
 
   However, aside from this one constraint, all regular db operation on
-  un-normalized data are completely orthogonal to the differential
+  non-graph data are completely orthogonal to the differential
   reactive loop. At the end of the day, the db is still just a map,
   and you can mutate it in any way as long as you persist the ::data
   key.
 
   This namespace additionally provides an implementation for link
   queries similar to those in Fulcro or Om Next. A link attribute
-  allows you to store normalized data at a semantically meaningful,
-  global keyword in the normalized db. For example, you could store
-  normalized user data at a global `::current-user` attribute in the
-  db index.
+  allows you to store graph data at a semantically meaningful, global
+  keyword in the graph db. For example, you could store graph user
+  data at a global `::current-user` attribute in the db index.
 
   Finally, this algorithm is implemented entirely via existing reagent
   and Re-frame machinery."
@@ -411,8 +410,8 @@
     index))
 
 (defn- touch-queries
-  "Given a normalized entity ref, touches any queries that are tracking
-  that entity in the index."
+  "Given a normalized entity ref, touches any graph queries that are
+  tracking that entity in the index."
   [index e-ref]
   (touch-queries* update index e-ref))
 
@@ -456,8 +455,8 @@
 
 (defn mergen
   "Normalizes the given tx data, merges all normalized entities into the
-  db, touches any queries tracking those entities in the index, and
-  increments the db and index ticks."
+  graph db, touches any queries tracking those entities in the index,
+  and increments the db and index ticks."
   [db tx]
   (let [opts (get-opts db)]
     (loop [data       (transient (::data db {}))
@@ -484,9 +483,9 @@
 (defn assoc-inn
   "Adds the unnormalized value to entity at path. Similar semantics to
   assoc-in, where the entity ref is first part of path. Additionally
-  touches any queries that are tracking the entity and increments the
-  db and index ticks. Does not resolve entity references, so it cannot
-  do deep updates in normalized data."
+  touches any graph queries that are tracking the entity and
+  increments the db and index ticks. Does not resolve entity
+  references, so it cannot do deep updates in graph data."
   [db [[a v :as ref] :as path] value]
   {:pre [(valid-path? db path)]}
   (warn-on-transient-write ref)
@@ -498,11 +497,11 @@
         (inc-tick))))
 
 (defn update-inn
-  "Updates the value at the normalized db path. Similar semantics to
+  "Updates the value at the graph db path. Similar semantics to
   clojure.core/update-in, where the entity ref or link attribute is
   first part of path. The updated value is either an entity, a link
   attribute value, or an attribute of an entity. Does not resolve
-  entity references, so it cannot do deep updates in normalized data."
+  entity references, so it cannot do deep updates in graph data."
   [db [[a v :as ref] :as path] f & args]
   {:pre [(valid-path? db path)]}
   (warn-on-transient-write ref)
@@ -755,14 +754,14 @@
       (get :pull-fn default-pull-impl)))
 
 (defn getn
-  "Pulls the normalized entity from the db at the given path. Uses get
+  "Pulls the graph entity from the db at the given path. Uses get
   semantics. This is a non-reactive fn meant to be used in event
   handlers."
   [db ref & [or]]
   (get-in db [::data ref] or))
 
 (defn get-inn
-  "Pulls normalized data from the given db at the given path. First
+  "Pulls graph data from the given db at the given path. First
   element in path should be an entity ref. Uses get-in semantics. Does
   not resolve references. This is a non-reactive fn meant to be used
   in event handlers."
@@ -770,7 +769,7 @@
   (get-in db (cons ::data path) or))
 
 (defn pull
-  "Pulls normalized data from the given db. This is a non-reactive,
+  "Pulls graph data from the given db. This is a non-reactive,
   functionally pure version of pull-reactive for use in event
   handlers. The data is pulled from the entity according to a pull
   pattern that conforms to:
@@ -852,10 +851,10 @@
 
 (defn- pull-reactive
   "Given a pull expression and an entity reference, returns the
-  de-normalized entity data from the database. Additionally adds newly
-  tracked entities to the query index, updates the given query tick
-  for the given query, clears stale entities from the previous pull,
-  and clears touched queries."
+  de-normalized graph entity data from the database. Additionally adds
+  newly tracked entities to the query index, updates the given query
+  tick for the given query, clears stale entities from the previous
+  pull, and clears touched queries."
   [{:keys [db index expr e-ref q-ref query-tick]}]
   (let [fresh  (volatile! #{})
         stale  (volatile! (q->e index q-ref #{}))
@@ -893,7 +892,7 @@
     context))
 
 (def inject-query-index
-  "Injects query index into app state for normalized data fns to work."
+  "Injects query index into app state for graph data fns to work."
   (f/->interceptor
    :id ::inject-index
    :before inject-index-before
