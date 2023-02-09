@@ -23,7 +23,7 @@ Fulcro for Re-frame). Its main design goals are:
 
 1. A la carte feature set: it is not a "framework", so use as much or
    as little of it as you want
-2. Bring sanity to existing Re-frame applications: iterative, minimal
+2. Power up existing Re-frame applications: iterative, minimal
    approach to integration, so big re-writes can be avoided
 3. Graph and non-graph data models can be mixed freely with a single
    source of truth: a Clojure map
