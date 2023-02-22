@@ -7,14 +7,22 @@
 
 **Reflet** is a set of tools for building
 [Re-frame](https://github.com/day8/re-frame) + React based web apps
-with graph and non-graph data models. This includes:
+with graph and non-graph data models.
 
-1. Entity references and their lifecycle management
-2. Performant multi-model DB with graph queries and mutations
-3. Simple but powerful hierarchical FSMs
-4. JS and DOM interop utilities
-5. Novel API-driven visual debugging of complex apps (don't sleep on
+At the core of Reflet is a single macro, `with-ref`, that generates
+references to any kind of thing, and also transparently manages the
+lifecycles of those things throughout your application. This leads to
+highly extensible components, and excellent APIs.
+
+Besides `with-ref`, Reflet also provides:
+
+1. Performant multi-model DB with graph queries and mutations
+2. Simple but powerful hierarchical FSMs
+3. JS and DOM interop utilities
+4. Novel API-driven visual debugging of complex apps (don't sleep on
    this!)
+
+And more!
 
 Reflet aims to be a natural progression on top of Re-frame to support
 complex, data driven requirements. In that sense, it is both easy to
