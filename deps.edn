@@ -6,10 +6,10 @@
  :paths   ["src/clojure"]
  :aliases {:cljs/dev    {:extra-paths ["test/clojure"]
                          :extra-deps  {binaryage/devtools            {:mvn/version "1.0.6"}
+                                       cider/cider-nrepl             {:mvn/version "0.28.5"}
                                        day8.re-frame/re-frame-10x    {:mvn/version "1.5.0"}
                                        day8.re-frame/test            {:mvn/version "0.1.5"}
                                        nrepl/nrepl                   {:mvn/version "0.8.3"}
-                                       cider/cider-nrepl             {:mvn/version "0.28.5"}
                                        org.clojure/test.check        {:mvn/version "1.1.1"}
                                        refactor-nrepl/refactor-nrepl {:mvn/version "3.5.5"}}}
            :cljs/client {:extra-paths ["client/clojure" "client/scss"]
@@ -27,7 +27,7 @@
                                                                    :source-maps  true
                                                                    :watch        true}}}
            :css/bundle  {:extra-paths ["src/scss"]
-                         :extra-deps  {io.zalky/axle {:mvn/version "0.2.1"}}
+                         :extra-deps  {io.zalky/runway {:mvn/version "0.2.2"}}
                          :exec-fn     runway.core/exec
                          :exec-args   {reflet.css.bundle/bundle {}}}
            :build       {:deps       {io.zalky/build-clj {:git/url "https://github.com/zalky/build-clj.git"
