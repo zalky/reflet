@@ -297,6 +297,11 @@
               {:system/uuid "nested 2"
                :kr/name     "nested 2"}])))
 
+    (testing "Link query no join"
+      (is (= (db/pull dbv ::link)
+             [[:system/uuid "nested 1"]
+              [:system/uuid "nested 2"]])))
+
     (testing "Infinite recursive pull"
       (is (= (db/pull dbv
                       [:kr/name
