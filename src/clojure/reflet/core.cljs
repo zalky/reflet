@@ -1,6 +1,5 @@
 (ns reflet.core
   "Reflet API and convenience utilities."
-  (:refer-clojure :exclude [uuid])
   (:require [cljs.spec.alpha :as s]
             [re-frame.core :as f]
             [re-frame.interop :as interop]
@@ -124,6 +123,40 @@
      (fn [_ query-v]
        (pull-reaction query-v)))))
 
+(defn- desc-expr-fn
+  [[context e-ref]]
+  (fn [& _]
+    (if (keyword? e-ref)
+      [{e-ref (db/wrap-desc context)}]
+      [(db/wrap-desc context) e-ref])))
+
+(reg-sub-raw ::desc
+  (fn [_ [_ query-v]]
+    (-> query-v
+        (desc-expr-fn)
+        (pull-reaction query-v))))
+
+(defn- bituple?
+  [x]
+  (and (vector? x) (= (count x) 2)))
+
+(defn desc
+  [query-v]
+  {:pre [(bituple? query-v)
+         (keyword? (first query-v))
+         (or (bituple? (second query-v))
+             (keyword? (second query-v)))]}
+  (sub [::desc query-v]))
+
+(defn reg-desc-impl
+  "Do not use, see reg-desc macro."
+  [id desc]
+  {:pre [(or (and (bituple? id)
+                  (keyword? (first id))
+                  (keyword? (second id)))
+             (= id :default))]}
+  (reg/register-handler ::db/desc id desc))
+
 (defn- reg-comp-rf
   [r id]
   (let [query-v [id r]]
@@ -132,15 +165,17 @@
         (pull-reaction query-v))))
 
 (defn reg-comp
-  "Composes a series of named, graph reactions, where the result of
-  each reaction in the sequence is provided as input to the
-  next. Semantics are similar to `clojure.core/comp`. Except for the
-  first, every other reaction in the pipeline should expect only a
-  single argument.  As with comp, the order of operations is reversed
-  from the order in which they are declared. The resultant reaction
-  returned by the composition is cached according to the input
-  arguments of the pipeline. No intermediary reactions are cached."
+  "Composes a series of named, graph reactions, where the result of each
+  reaction in the sequence is provided as input to the next. Semantics
+  are similar to `clojure.core/comp`. Except for the first, every
+  other reaction in the pipeline should expect only a single
+  argument. As with comp, the order of operations is reversed from the
+  order in which they are declared. The resultant reaction returned by
+  the composition is cached according to the input arguments of the
+  pipeline. No intermediary reactions are cached. Does not currently
+  work with entity descriptions."
   [id comp-ids]
+  {:pre [(every? keyword? comp-ids)]}
   (let [[r1-id & ids] (reverse comp-ids)]
     (reg-sub-raw id
       (fn [_ query-v]

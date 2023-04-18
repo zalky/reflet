@@ -1,11 +1,13 @@
 (ns reflet.core-test
-  (:require [cljs.test :refer [deftest testing is are use-fixtures]]
+  (:require [cinch.core :as util]
+            [cljs.test :refer [deftest testing is are use-fixtures]]
             [re-frame.registrar :as reg]
             [reagent.ratom :as r]
             [reflet.core :as f]
             [reflet.db :as db]
             [reflet.db.normalize :as norm]
-            [reflet.fixtures :as fix]))
+            [reflet.fixtures :as fix]
+            [reflet.poly :as p]))
 
 (defn random-ref-test
   [id-attr meta k]
@@ -482,3 +484,295 @@
        (is (= {:system/uuid (second id2)
                :kr/name     "2"}
               @r))))))
+
+(deftest reg-desc-test
+  (testing "Descriptions"
+    (fix/run-test-sync
+     ;; Note: outside a reactive context, reactions are re-run every
+     ;; time they are dereferenced. Therefore some of the reactive
+     ;; properties of pull queries are only really testable in a mounted
+     ;; application.
+
+     (f/reg-event-db ::init
+       (fn [db [_ id1 id2 id3 join1 join2]]
+         (let [h (util/derive-pairs
+                  [:kr.type/a :kr.type/b
+                   :kr.type/b :kr.type/c
+                   :kr.type/c :kr.type/d
+                   :kr.type/d :kr.type/e
+                   :kr.context/a :kr.context/b
+                   :kr.context/b :kr.context/c])
+               p (p/prefer-pairs
+                  [[:kr.context/c :kr.type/e] [:kr.context/c :kr.type/d]])]
+           (-> db
+               (db/mergen [{:system/uuid    (second id1)
+                            :kr/type        :kr.type/a
+                            :kr/name        "name"
+                            :kr/description "description"
+                            :kr/role        "role"
+                            :kr/join        {:system/uuid    (second join1)
+                                             :kr/type        :kr.type/a
+                                             :kr/description "description"
+                                             :kr/date        "date"
+                                             :kr/category    "category"}}
+                           {:system/uuid    (second id2)
+                            :kr/type        :kr.type/b
+                            :kr/name        "name"
+                            :kr/role        "role"
+                            :kr/description "description"}
+                           {:system/uuid    (second id3)
+                            :kr/type        :kr.type/c
+                            :kr/name        "name"
+                            :kr/role        "role"
+                            :kr/description "description"
+                            :kr/join        {:system/uuid    (second join2)
+                                             :kr/type        :kr.type/c
+                                             :kr/description "description"
+                                             :kr/date        "date"
+                                             :kr/category    "category"}}])
+               (db/assocn ::link id1)
+               (assoc ::db/hierarchy h
+                      ::db/prefers   p)))))
+
+     (f/with-ref {:system/uuid [id1 id2 id3 join1 join2 missing]}
+       (f/disp [::init id1 id2 id3 join1 join2])
+
+       (is (thrown-with-msg? js/Error #"No description for"
+                             @(f/desc [:kr.context/missing id1])))
+
+       (testing "props"
+         (f/reg-desc [:kr.context/a :kr.type/a]
+           [:system/uuid
+            :kr/type
+            :kr/name
+            :kr/description])
+
+         (is (= @(f/desc [:kr.context/a id1])
+                {:system/uuid    (second id1)
+                 :kr/type        :kr.type/a
+                 :kr/name        "name"
+                 :kr/description "description"})))
+
+       (testing "no entity"
+         (is (nil? @(f/desc [:kr.context/a missing]))))
+
+       (testing "polymorphic type matching"
+         (f/reg-desc [:kr.context/c :kr.type/b]
+           [:system/uuid
+            :kr/type
+            :kr/name
+            :kr/role])
+
+         (is (= @(f/desc [:kr.context/c id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"
+                 :kr/role     "role"})))
+
+       (testing "polymorphic context matching"
+         (f/reg-desc [:kr.context/b :kr.type/b]
+           [:system/uuid
+            :kr/type
+            :kr/description])
+
+         (is (= @(f/desc [:kr.context/a id2])
+                {:system/uuid    (second id2)
+                 :kr/type        :kr.type/b
+                 :kr/description "description"})))
+
+       (testing "polymorphic context and type matching"
+         (testing "most specific"
+           (is (= @(f/desc [:kr.context/a id1])
+                  {:system/uuid    (second id1)
+                   :kr/type        :kr.type/a
+                   :kr/name        "name"
+                   :kr/description "description"})))
+
+         (f/reg-desc [:kr.context/c :kr.type/d]
+           [:system/uuid
+            :kr/type
+            :kr/role])
+
+         (testing "least specific"
+           (is (= @(f/desc [:kr.context/a id3])
+                  {:system/uuid (second id3)
+                   :kr/type     :kr.type/c
+                   :kr/role     "role"}))))
+
+       (testing "polymorphic default matching"
+         (f/reg-desc :default
+           [:system/uuid
+            :kr/type
+            :kr/name])
+
+         (is (= @(f/desc [:kr.context/missing id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"}))
+
+         (is (= @(f/desc [:default id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"})))
+
+       (testing "joins"
+         (f/reg-desc [:kr.context/join :kr.type/a]
+           [:system/uuid
+            :kr/type
+            :kr/name
+            :kr/role
+            {:kr/join [:system/uuid
+                       :kr/type
+                       :kr/date
+                       :kr/category]}])
+
+         (is (= @(f/desc [:kr.context/join id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"
+                 :kr/role     "role"
+                 :kr/join     {:system/uuid (second join1)
+                               :kr/type     :kr.type/a
+                               :kr/date     "date"
+                               :kr/category "category"}})))
+
+       (testing "joins recursive"
+         (f/reg-desc [:kr.context/join-recur :kr.type/a]
+           [:system/uuid
+            :kr/type
+            :kr/name
+            :kr/role
+            {:kr/join :kr.context/a}])
+
+         (is (= @(f/desc [:kr.context/join-recur id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"
+                 :kr/role     "role"
+                 :kr/join     {:system/uuid    (second join1)
+                               :kr/type        :kr.type/a
+                               :kr/description "description"}})))
+
+       (testing "joins recursive poly"
+         (f/reg-desc [:kr.context/c :kr.type/e]
+           [:system/uuid
+            :kr/type
+            :kr/date
+            :kr/category])
+
+         (f/reg-desc [:kr.context/join-recur-poly :kr.type/c]
+           [:system/uuid
+            :kr/type
+            :kr/role
+            {:kr/join :kr.context/b}])
+
+         (is (= @(f/desc [:kr.context/join-recur-poly id3])
+                {:system/uuid (second id3)
+                 :kr/type     :kr.type/c
+                 :kr/role     "role"
+                 :kr/join     {:system/uuid (second join2)
+                               :kr/type     :kr.type/c
+                               :kr/date     "date"
+                               :kr/category "category"}})))
+
+       (is (= @(f/desc [:kr.context/a ::link])
+              {:system/uuid    (second id1)
+               :kr/type        :kr.type/a
+               :kr/name        "name"
+               :kr/description "description"}))))))
+
+(deftest reg-desc-error-test
+  (testing "Ambiguous descriptions errors"
+    (fix/run-test-sync
+     ;; Note: outside a reactive context, reactions are re-run every
+     ;; time they are dereferenced. Therefore some of the reactive
+     ;; properties of pull queries are only really testable in a mounted
+     ;; application.
+
+     (f/reg-event-db ::init
+       (fn [db [_ id1]]
+         (let [h (util/derive-pairs
+                  [:kr.type/a :kr.type/b
+                   :kr.context/a :kr.context/b])]
+           (-> db
+               (db/mergen [{:system/uuid    (second id1)
+                            :kr/type        :kr.type/a
+                            :kr/name        "name"
+                            :kr/description "description"
+                            :kr/role        "role"}])
+               (assoc ::db/hierarchy h)))))
+
+     (f/with-ref {:system/uuid [id1]}
+       (f/disp [::init id1])
+
+       (testing "props"
+         (f/reg-desc [:kr.context/b :kr.type/a]
+           [:system/uuid
+            :kr/type
+            :kr/name])
+
+         (f/reg-desc [:kr.context/a :kr.type/b]
+           [:system/uuid
+            :kr/type
+            :kr/description])
+
+         (is (thrown-with-msg? js/Error #"Multiple dispatch candidates"
+                               @(f/desc [:kr.context/a id1])))
+
+     (f/reg-event-db ::update-prefers
+       (fn [db _]
+         (->> [[:kr.context/a :kr.type/b] [:kr.context/b :kr.type/a]]
+              (p/prefer-pairs)
+              (assoc db ::db/prefers))))
+
+         (f/disp [::update-prefers])
+
+         (is (= @(f/desc [:kr.context/a id1])
+                {:system/uuid    (second id1)
+                 :kr/type        :kr.type/a
+                 :kr/description "description"})))))))
+
+(deftest reg-desc-pull-test
+  (testing "Descriptions in pull queries"
+    (fix/run-test-sync
+     (f/reg-event-db ::init
+       (fn [db [_ id1 join1]]
+         (let [h (util/derive-pairs
+                  [:kr.type/e :kr.type/f
+                   :kr.context/e :kr.context/f])]
+           (-> db
+               (db/mergen [{:system/uuid    (second id1)
+                            :kr/type        :kr.type/e
+                            :kr/name        "name"
+                            :kr/description "description"
+                            :kr/role        "role"
+                            :kr/join        {:system/uuid    (second join1)
+                                             :kr/type        :kr.type/e
+                                             :kr/description "description"
+                                             :kr/date        "date"
+                                             :kr/category    "category"}}])
+               (assoc ::db/hierarchy h)))))
+
+     (f/with-ref {:system/uuid [id1 join1]}
+       (f/disp [::init id1 join1])
+
+       (f/reg-pull ::pull-desc
+         (fn [ref]
+           [[:system/uuid
+             :kr/name
+             {:kr/join :kr.context/f}]
+            ref]))
+
+       (f/reg-desc [:kr.context/f :kr.type/f]
+         [:system/uuid
+          :kr/category
+          :kr/description])
+
+       (is (= @(f/sub [::pull-desc id1])
+              {:system/uuid (second id1)
+               :kr/name     "name"
+               :kr/join     {:system/uuid    (second join1)
+                             :kr/category    "category"
+                             :kr/description "description"}}))))))
+
+

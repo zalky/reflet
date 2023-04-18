@@ -184,13 +184,19 @@
 (defmacro reg-pull
   "Registers a named pull query. Semantics are similar to Datomic pull,
   but with link and attribute queries. See wiki for full
-  details. Macro prevents keyword evaluation. This is a convenience to
-  facilitate sync expressions."
+  details. Macro list evaluation. This is a convenience to facilitate
+  pull fx."
   [& [id [_ bindings & spec] result-fn]]
   (concat
    `(reg-pull-impl ~id
      (fn ~bindings ~@(no-eval-keywords spec)))
    (when result-fn [result-fn])))
+
+(defmacro reg-desc
+  "Registers an entity description. See wiki for full details. Macro
+  list evaluation. This is a convenience to facilitate pull fx."
+  [id desc]
+  `(reg-desc-impl ~id ~(no-eval-keywords desc)))
 
 (defmacro once
   [& forms]
