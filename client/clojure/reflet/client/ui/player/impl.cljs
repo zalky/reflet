@@ -38,7 +38,7 @@
 
 (f/reg-pull ::track-list
   (fn []
-    [{:user/track-list
+    [{:player/track-list
       [:system/uuid
        :kr/name
        {:kr.track/artist [:kr/name]}]}]))

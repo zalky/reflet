@@ -6,6 +6,7 @@
 
 // Main
 
+
 body {
     margin: 0;
     color: $font-color;
@@ -46,14 +47,18 @@ body {
         display: flex;
         justify-content: center;
 
-        > * {
-            user-select: none;
-            cursor: pointer;
-        }
-
         > :not(:last-child) {
             margin-right: 2rem;
         }
+    }
+}
+
+a {
+    user-select: none;
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
     }
 }
 
@@ -82,12 +87,50 @@ button {
     flex: 1;
 }
 
-.player, .workflow {
+@mixin card {
+    padding: 2rem;
+    border-radius: $border-radius;
+    background: $gray-100;
+}
+
+.player, .workflow, .descriptions {
     width: 30rem;
     position: absolute;
     top: 35%;
     left: 50%;
     transform: translate(-50%, 0);
+}
+
+.descriptions {
+    top: 1rem;
+    width: 50rem;
+    overflow: scroll;
+
+    > div:first-child {
+        margin: 2rem;
+        display: flex;
+        justify-content: center;
+
+        > :not(:first-child) {
+            margin-left: 1rem;
+        }
+    }
+    pre:not(:nth-child(2)) {
+        background: #f2f2f2;
+        padding: 1rem;
+    }
+}
+
+code {
+    font-size: $font-size-sm;
+    font-family: $font-family-monospace;
+}
+
+.description {
+    padding: 0.5rem 1rem;
+    grid-column-start: 1;
+    grid-column-end: span 3;
+    @include card;
 }
 
 .player {
@@ -212,9 +255,8 @@ button {
         grid-template-columns: min-content min-content;
         grid-column-gap: 2rem;
         margin-top: 2rem;
-        padding: 2rem;
-        border-radius: $border-radius;
-        background: $gray-100;
+
+        @include card;
     }
 
     &-required {

@@ -4,10 +4,11 @@
             [reagent.dom :as dom]
             [reflet.client.boot :as boot]
             [reflet.client.ui :as ui]
+            [reflet.client.ui.desc.impl :as desc]
             [reflet.core :as f]))
 
 (def config-desc
-  {})
+  {:hierarchy desc/hierarchy})
 
 (defn render!
   "Also called on every hot-reload."
