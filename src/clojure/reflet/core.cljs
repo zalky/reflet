@@ -1,12 +1,13 @@
 (ns reflet.core
   "Reflet API and convenience utilities."
-  (:require [cljs.spec.alpha :as s]
+  (:require [cinch.core :as util]
+            [cljs.spec.alpha :as s]
             [re-frame.core :as f]
             [re-frame.interop :as interop]
             [re-frame.loggers :as logf]
             [re-frame.registrar :as reg]
             [reagent.core :as r]
-            [reagent.impl.component :as util]
+            [reagent.impl.component :as comp]
             [reflet.config :as config]
             [reflet.db :as db]
             [reflet.debug :as d]
@@ -14,6 +15,7 @@
             [reflet.interceptors :as itor]
             [reflet.interop :as i]
             [reflet.log :as log]
+            [reflet.poly :as p]
             [reflet.ref-spec :as rs]
 
             ;; Required for macro use.
@@ -71,14 +73,6 @@
 (defmethod pull-fx :default
   [{id :id} _]
   (logf/console :warn "no pull-fx defined for:" id))
-
-(f/reg-event-fx ::config
-  (fn [{db :db} [_ {id-attrs :id-attrs
-                    dispatch :dispatch
-                    :as      config}]]
-    (cond-> {:db             (db/new-db db id-attrs)
-             ::config/config config}
-      dispatch (assoc :dispatch dispatch))))
 
 (defn- reg-expr-fn
   [id expr-fn]
@@ -243,6 +237,26 @@
   cleanup-interceptors
   cleanup)
 
+;;;; Configuration
+
+(defn- config-db
+  [db {a :id-attrs
+       h :hierarchy
+       p :prefers}]
+  (let [h* (if (vector? h) (util/derive-pairs h) h)
+        p* (if (vector? p) (p/prefer-pairs p) p)]
+    (-> db
+        (db/new-db a)
+        (assoc ::db/hierarchy h*)
+        (assoc ::db/prefers p*))))
+
+(f/reg-event-fx ::config
+  (fn [{db :db} [_ {:keys [dispatch]
+                    :as   config}]]
+    (cond-> {:db (config-db db config)
+             ::config/config config}
+      dispatch (assoc :dispatch dispatch))))
+
 ;;;; Additional Utilities
 
 (defn reg-no-op
@@ -312,5 +326,5 @@
   [f]
   (fn [this old-argv]
     (let [new (r/props this)
-          old (util/extract-props old-argv)]
+          old (comp/extract-props old-argv)]
       (f old new))))
