@@ -9,6 +9,7 @@
 (defn render!
   []
   (f*/clear-subscription-cache!)
+  (f/clear-stale-vars!)
   (some->> "container"
            (.getElementById js/document)
            (dom/render [ui/app])))

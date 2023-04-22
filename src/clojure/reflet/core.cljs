@@ -257,6 +257,15 @@
              ::config/config config}
       dispatch (assoc :dispatch dispatch))))
 
+(defn remove-desc
+  "Used to remove stale descriptions from the global registry. Semantics
+  are similar to clojure.core/remove-method."
+  [id]
+  (when (reg/get-handler ::db/desc id)
+    (-> reg/kind->id->handler
+        (swap! update-in [::db/desc] dissoc id)
+        (boolean))))
+
 ;;;; Additional Utilities
 
 (defn reg-no-op
