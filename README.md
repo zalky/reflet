@@ -17,15 +17,16 @@ highly extensible components, and excellent APIs.
 Besides `with-ref`, Reflet also provides:
 
 1. Performant multi-model DB with graph queries and mutations
-2. Simple but powerful hierarchical FSMs
-3. JS and DOM interop utilities
-4. Novel API-driven visual debugging of complex apps (don't sleep on
+2. Beyond union queries: data-driven, polymorphic descriptions
+3. Simple but powerful hierarchical FSMs
+4. JS and DOM interop utilities
+5. Novel API-driven visual debugging of complex apps (don't sleep on
    this!)
 
 And more!
 
 Reflet aims to be a natural progression on top of Re-frame to support
-complex, data driven requirements. In that sense, it is both easy to
+complex, data-driven requirements. In that sense, it is both easy to
 learn, but powerful. You could say it's sort of like Re-frame++ (or
 Fulcro for Re-frame). Its main design goals are:
 
@@ -39,7 +40,7 @@ Fulcro for Re-frame). Its main design goals are:
    excellent, pluggable APIs
 5. Makes very few assumptions about your application boundaries
 6. Performance and stability: Reflet has already been deployed in
-   complex, data driven production applications for 4+ years
+   complex, data-driven production applications for 4+ years
    (e.g. in Bioinformatics, Business analytics... )
 
 <img src="https://i.imgur.com/6MAwZgS.jpg" title="zalky" align="center" width="1000"/>
@@ -93,6 +94,7 @@ very good. Otherwise:
    - [References and Application Design](https://github.com/zalky/reflet/wiki/References-and-Application-Design)
    - [Multi Model DB](https://github.com/zalky/reflet/wiki/Multi-Model-DB)
    - [Graph Queries](https://github.com/zalky/reflet/wiki/Graph-Queries)
+   - [Polymorphic Descriptions](https://github.com/zalky/reflet/wiki/Polymorphic-Descriptions)
    - [Finite State Machines](https://github.com/zalky/reflet/wiki/Finite-State-Machines)
    - [Mutable State](https://github.com/zalky/reflet/wiki/Mutable-State)
    - [Debugging](https://github.com/zalky/reflet/wiki/Debugging)
