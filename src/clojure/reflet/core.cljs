@@ -20,7 +20,7 @@
 
             ;; Required for macro use.
             [cinch.core])
-  (:require-macros [reflet.core]))
+  (:require-macros [reflet.core :refer [clear-stale-vars!]]))
 
 ;;;; Re-frame API
 
@@ -239,21 +239,35 @@
 
 ;;;; Configuration
 
-(defn- config-db
-  [db {a :id-attrs
+(defn- config-desc
+  [db {p :prefers
        h :hierarchy
-       p :prefers}]
-  (let [h* (if (vector? h) (util/derive-pairs h) h)
-        p* (if (vector? p) (p/prefer-pairs p) p)]
-    (-> db
-        (db/new-db a)
-        (assoc ::db/hierarchy h*)
-        (assoc ::db/prefers p*))))
+       t :type-attrs
+       d :descriptions}]
+  (let [h* (if (vector? h)
+             (util/derive-pairs h) h)
+        p* (if (vector? p)
+             (p/prefer-pairs p) p)]
+    (assoc db
+           ::db/type-attrs   t
+           ::db/hierarchy    h*
+           ::db/prefers      p*
+           ::db/descriptions d)))
+
+(f/reg-fx ::clear-stale-vars!
+  (fn [_]
+    (clear-stale-vars!)))
+
+(f/reg-event-fx ::config-desc
+  (fn [{db :db} [_ config]]
+    {:db (config-desc db config)
+     ::clear-stale-vars! true}))
 
 (f/reg-event-fx ::config
-  (fn [{db :db} [_ {:keys [dispatch]
-                    :as   config}]]
-    (cond-> {:db (config-db db config)
+  (fn [{db :db} [_ {id-attrs :id-attrs
+                    dispatch :dispatch
+                    :as      config}]]
+    (cond-> {:db (db/new-db db id-attrs)
              ::config/config config}
       dispatch (assoc :dispatch dispatch))))
 

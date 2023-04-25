@@ -626,6 +626,18 @@
                           :expr expr}))
     (pull* context expr result)))
 
+(f/reg-sub ::type-attrs
+  (fn [db _]
+    (get db ::type-attrs)))
+
+(f/reg-sub ::hierarchy
+  (fn [db _]
+    (get db ::hierarchy)))
+
+(f/reg-sub ::prefers
+  (fn [db _]
+    (get db ::prefers)))
+
 (defrecord Description [context])
 
 (defn- wrap-desc
@@ -636,11 +648,23 @@
   [expr]
   (instance? Description expr))
 
+(defn- type-attr
+  [{reactive?  :acc-fn
+    type-attrs :type-attrs} {c :context}]
+  (let [attrs (if reactive?
+                @(f/subscribe [::type-attrs])
+                type-attrs)]
+    (or (get attrs c)
+        (get attrs :default)
+        :kr/type)))
+
 (defn- desc-type
-  [{:keys [db ref acc-fn]}]
+  [{:keys [db ref acc-fn]
+    :as   context} expr]
   (when (and acc-fn ref)
     (acc-fn ref))
-  (get-in db [ref :kr/type]))
+  (let [attr (type-attr context expr)]
+    (get-in db [ref attr])))
 
 (defn- desc-candidates
   []
@@ -653,14 +677,6 @@
     :hierarchy    hierarchy
     :prefers      prefers
     :dispatch-val [context type]}))
-
-(f/reg-sub ::hierarchy
-  (fn [db _]
-    (get db ::hierarchy)))
-
-(f/reg-sub ::prefers
-  (fn [db _]
-    (get db ::prefers)))
 
 (f/reg-sub ::poly-resolve
   (fn [_]
@@ -687,7 +703,7 @@
 
 (defn- pull-desc
   [context expr result]
-  (when-let [type (desc-type context)]
+  (when-let [type (desc-type context expr)]
     (let [id   (desc-id context expr type)
           desc (get-desc type id)]
       (pull* context desc result))))
@@ -884,11 +900,12 @@
    (pull db expr nil))
   ([db expr e-ref]
    (let [pfn (get-pull-fn)]
-     (pfn {:id-attrs  (::id-attrs db)
-           :db        (::data db)
-           :hierarchy (::hierarchy db)
-           :prefers   (::prefers db)
-           :ref       e-ref}
+     (pfn {:db         (::data db)
+           :id-attrs   (::id-attrs db)
+           :type-attrs (::type-attrs db)
+           :hierarchy  (::hierarchy db)
+           :prefers    (::prefers db)
+           :ref        e-ref}
           expr))))
 
 (defn- clear-stale-entities

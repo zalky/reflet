@@ -6,10 +6,14 @@
             [reflet.client.ui :as ui]
             [reflet.core :as f]))
 
+(def config-desc
+  {})
+
 (defn render!
+  "Also called on every hot-reload."
   []
   (f*/clear-subscription-cache!)
-  (f/clear-stale-vars!)
+  (f/disp-sync [::f/config-desc config-desc])
   (some->> "container"
            (.getElementById js/document)
            (dom/render [ui/app])))
@@ -20,6 +24,7 @@
   (f/disp-sync [::boot/init-data]))
 
 (defn init!
+  "Called once on boot."
   []
   (config!)
   (render!))
