@@ -638,6 +638,10 @@
   (fn [db _]
     (get db ::prefers)))
 
+(f/reg-sub ::descriptions
+  (fn [db _]
+    (get db ::descriptions)))
+
 (defrecord Description [context])
 
 (defn- wrap-desc
@@ -666,46 +670,50 @@
   (let [attr (type-attr context expr)]
     (get-in db [ref attr])))
 
-(defn- desc-candidates
+(defn- handler-descs
   []
   (reg/get-handler ::desc))
 
+(defn- get-desc
+  [resolved-id descriptions context type]
+  (or (get descriptions resolved-id)
+      (get descriptions :default)
+      (-> "Could not resolve description"
+          (ex-info {:type    type
+                    :context context})
+          (throw))))
+
 (defn- poly-resolve
-  [hierarchy prefers context type]
-  (p/poly-resolve
-   {:candidates   (keys (desc-candidates))
-    :hierarchy    hierarchy
-    :prefers      prefers
-    :dispatch-val [context type]}))
+  [hierarchy prefers descriptions context type]
+  (let [descs (merge (handler-descs) descriptions)]
+    (-> {:candidates   (keys descs)
+         :hierarchy    hierarchy
+         :prefers      prefers
+         :dispatch-val [context type]}
+        (p/poly-resolve)
+        (get-desc descs context type))))
 
 (f/reg-sub ::poly-resolve
   (fn [_]
     [(f/subscribe [::hierarchy])
-     (f/subscribe [::prefers])])
-  (fn [[h p] [_ context type]]
-    (poly-resolve h p context type)))
+     (f/subscribe [::prefers])
+     (f/subscribe [::descriptions])])
+  (fn [[h p descs] [_ context type]]
+    (poly-resolve h p descs context type)))
 
-(defn- desc-id
+(defn- resolve-desc
   [{reactive? :acc-fn
     h         :hierarchy
-    p         :prefers} {c :context} type]
-  (cond
-    (= c :default) c
-    reactive?      @(f/subscribe [::poly-resolve c type])
-    :else          (poly-resolve h p c type)))
-
-(defn- get-desc
-  [type resolved-id]
-  (let [descs (desc-candidates)]
-    (or (get descs resolved-id)
-        (get descs :default)
-        (throw (js/Error. (str "No description for type" type))))))
+    p         :prefers
+    descs     :descriptions} {c :context} type]
+  (if reactive?
+    @(f/subscribe [::poly-resolve c type])
+    (poly-resolve h p descs c type)))
 
 (defn- pull-desc
   [context expr result]
   (when-let [type (desc-type context expr)]
-    (let [id   (desc-id context expr type)
-          desc (get-desc type id)]
+    (let [desc (resolve-desc context expr type)]
       (pull* context desc result))))
 
 (defn- pull-join
@@ -900,12 +908,13 @@
    (pull db expr nil))
   ([db expr e-ref]
    (let [pfn (get-pull-fn)]
-     (pfn {:db         (::data db)
-           :id-attrs   (::id-attrs db)
-           :type-attrs (::type-attrs db)
-           :hierarchy  (::hierarchy db)
-           :prefers    (::prefers db)
-           :ref        e-ref}
+     (pfn {:db           (::data db)
+           :id-attrs     (::id-attrs db)
+           :type-attrs   (::type-attrs db)
+           :hierarchy    (::hierarchy db)
+           :prefers      (::prefers db)
+           :descriptions (::descriptions db)
+           :ref          e-ref}
           expr))))
 
 (defn- clear-stale-entities

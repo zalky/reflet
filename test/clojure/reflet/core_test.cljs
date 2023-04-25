@@ -537,7 +537,7 @@
      (f/with-ref {:system/uuid [id1 id2 id3 join1 join2 missing]}
        (f/disp [::init id1 id2 id3 join1 join2])
 
-       (is (thrown-with-msg? js/Error #"No description for"
+       (is (thrown-with-msg? js/Error #"Could not resolve description"
                              @(f/desc [:kr.context/missing id1])))
 
        (testing "props"
@@ -666,6 +666,171 @@
             :kr/role
             {:kr/join :kr.context/b}])
 
+         (is (= @(f/desc [:kr.context/join-recur-poly id3])
+                {:system/uuid (second id3)
+                 :kr/type     :kr.type/c
+                 :kr/role     "role"
+                 :kr/join     {:system/uuid (second join2)
+                               :kr/type     :kr.type/c
+                               :kr/date     "date"
+                               :kr/category "category"}})))
+
+       (is (= @(f/desc [:kr.context/a ::link])
+              {:system/uuid    (second id1)
+               :kr/type        :kr.type/a
+               :kr/name        "name"
+               :kr/description "description"}))))))
+
+(deftest reg-desc-data-test
+  (testing "Descriptions as data"
+    (fix/run-test-sync
+     (f/reg-event-db ::init
+       (fn [db [_ id1 id2 id3 join1 join2]]
+         (let [h     (util/derive-pairs
+                      [:kr.type/a :kr.type/b
+                       :kr.type/b :kr.type/c
+                       :kr.type/c :kr.type/d
+                       :kr.type/d :kr.type/e
+                       :kr.context/a :kr.context/b
+                       :kr.context/b :kr.context/c])
+               p     (p/prefer-pairs
+                      [[:kr.context/c :kr.type/e] [:kr.context/c :kr.type/d]])
+               descs {[:kr.context/a :kr.type/a]               [:system/uuid
+                                                                :kr/type
+                                                                :kr/name
+                                                                :kr/description]
+                      [:kr.context/c :kr.type/b]               [:system/uuid
+                                                                :kr/type
+                                                                :kr/name
+                                                                :kr/role]
+                      [:kr.context/b :kr.type/b]               [:system/uuid
+                                                                :kr/type
+                                                                :kr/description]
+                      [:kr.context/c :kr.type/d]               [:system/uuid
+                                                                :kr/type
+                                                                :kr/role]
+                      :default                                 [:system/uuid
+                                                                :kr/type
+                                                                :kr/name]
+                      [:kr.context/join :kr.type/a]            [:system/uuid
+                                                                :kr/type
+                                                                :kr/name
+                                                                :kr/role
+                                                                {:kr/join [:system/uuid
+                                                                           :kr/type
+                                                                           :kr/date
+                                                                           :kr/category]}]
+                      [:kr.context/join-recur :kr.type/a]      [:system/uuid
+                                                                :kr/type
+                                                                :kr/name
+                                                                :kr/role
+                                                                {:kr/join :kr.context/a}]
+                      [:kr.context/c :kr.type/e]               [:system/uuid
+                                                                :kr/type
+                                                                :kr/date
+                                                                :kr/category]
+                      [:kr.context/join-recur-poly :kr.type/c] [:system/uuid
+                                                                :kr/type
+                                                                :kr/role
+                                                                {:kr/join :kr.context/b}]}]
+           (-> db
+               (db/mergen [{:system/uuid    (second id1)
+                            :kr/type        :kr.type/a
+                            :kr/name        "name"
+                            :kr/description "description"
+                            :kr/role        "role"
+                            :kr/join        {:system/uuid    (second join1)
+                                             :kr/type        :kr.type/a
+                                             :kr/description "description"
+                                             :kr/date        "date"
+                                             :kr/category    "category"}}
+                           {:system/uuid    (second id2)
+                            :kr/type        :kr.type/b
+                            :kr/name        "name"
+                            :kr/role        "role"
+                            :kr/description "description"}
+                           {:system/uuid    (second id3)
+                            :kr/type        :kr.type/c
+                            :kr/name        "name"
+                            :kr/role        "role"
+                            :kr/description "description"
+                            :kr/join        {:system/uuid    (second join2)
+                                             :kr/type        :kr.type/c
+                                             :kr/description "description"
+                                             :kr/date        "date"
+                                             :kr/category    "category"}}])
+               (db/assocn ::link id1)
+               (assoc ::db/hierarchy    h
+                      ::db/prefers      p
+                      ::db/descriptions descs)))))
+
+     (f/with-ref {:system/uuid [id1 id2 id3 join1 join2 missing]}
+       (f/disp [::init id1 id2 id3 join1 join2])
+
+       (testing "props"
+         (is (= @(f/desc [:kr.context/a id1])
+                {:system/uuid    (second id1)
+                 :kr/type        :kr.type/a
+                 :kr/name        "name"
+                 :kr/description "description"})))
+
+       (testing "no entity"
+         (is (nil? @(f/desc [:kr.context/a missing]))))
+
+       (testing "polymorphic type matching"
+         (is (= @(f/desc [:kr.context/c id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"
+                 :kr/role     "role"})))
+
+       (testing "polymorphic context matching"
+         (is (= @(f/desc [:kr.context/a id2])
+                {:system/uuid    (second id2)
+                 :kr/type        :kr.type/b
+                 :kr/description "description"})))
+
+       (testing "polymorphic context and type matching"
+         (testing "most specific"
+           (is (= @(f/desc [:kr.context/a id1])
+                  {:system/uuid    (second id1)
+                   :kr/type        :kr.type/a
+                   :kr/name        "name"
+                   :kr/description "description"}))))
+
+       (testing "polymorphic default matching"
+         (is (= @(f/desc [:kr.context/missing id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"}))
+
+         (is (= @(f/desc [:default id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"})))
+
+       (testing "joins"
+         (is (= @(f/desc [:kr.context/join id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"
+                 :kr/role     "role"
+                 :kr/join     {:system/uuid (second join1)
+                               :kr/type     :kr.type/a
+                               :kr/date     "date"
+                               :kr/category "category"}})))
+
+       (testing "joins recursive"
+         (is (= @(f/desc [:kr.context/join-recur id1])
+                {:system/uuid (second id1)
+                 :kr/type     :kr.type/a
+                 :kr/name     "name"
+                 :kr/role     "role"
+                 :kr/join     {:system/uuid    (second join1)
+                               :kr/type        :kr.type/a
+                               :kr/description "description"}})))
+
+       (testing "joins recursive poly"
          (is (= @(f/desc [:kr.context/join-recur-poly id3])
                 {:system/uuid (second id3)
                  :kr/type     :kr.type/c
