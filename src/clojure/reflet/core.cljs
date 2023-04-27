@@ -259,11 +259,13 @@
     (clear-stale-vars!)))
 
 (f/reg-event-fx ::config-desc
+  ;; Description configuration. See wiki for more info.
   (fn [{db :db} [_ config]]
     {:db (config-desc db config)
      ::clear-stale-vars! true}))
 
 (f/reg-event-fx ::config
+  ;; Reflet configuration. See wiki for more info.
   (fn [{db :db} [_ {id-attrs :id-attrs
                     dispatch :dispatch
                     :as      config}]]
@@ -272,8 +274,12 @@
       dispatch (assoc :dispatch dispatch))))
 
 (defn remove-desc
-  "Used to remove stale descriptions from the global registry. Semantics
-  are similar to clojure.core/remove-method."
+  "Manually removes a descriptions from the global description
+  registry. Similar to clojure.core/remove-method. If you're using
+  shadow-cljs and have configured hot-reloading as described in the
+  description wiki, Reflet will automatically clear stale descriptions
+  and you should never have to use this function. This should also be
+  unnecessary in production builds."
   [id]
   (when (reg/get-handler ::db/desc id)
     (-> reg/kind->id->handler

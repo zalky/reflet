@@ -186,7 +186,7 @@
 (defmacro reg-pull
   "Registers a named pull query. Semantics are similar to Datomic pull,
   but with link and attribute queries. See wiki for full
-  details. Macro list evaluation. This is a convenience to facilitate
+  details. Macro prevents list evaluation, part of the grammar for
   pull fx."
   [& [id [_ bindings & spec] result-fn]]
   (concat
@@ -202,9 +202,9 @@
 
 (defmacro reg-desc
   "Registers an entity description. See wiki for full details. Macro
-  list evaluation. This is a convenience to facilitate pull
-  fx. Registers a var symbol for each description so that stale
-  descriptions can be removed on hot reload."
+  prevents list evaluation, part of the grammar for pull fx. Registers
+  a var symbol for each description so that stale descriptions can be
+  removed on hot reload."
   [id desc]
   (let [sym    (var-sym id)
         ns     (env-namespace &env)
@@ -221,9 +221,7 @@
     (cljs/gets @env/*compiler* ::cljs/namespaces ns :defs n)))
 
 (defmacro clear-stale-vars-impl!
-  "Do not call directly. In order for this to work on hot reloads this
-  needs to be evaluated on every compile, not just when reflet.core
-  changes."
+  "Do not call directly."
   []
   `(doseq [id# ~(->> @env/*compiler*
                      (::vars)
