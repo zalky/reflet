@@ -574,7 +574,9 @@
 
 (defn- link?
   [ref expr]
-  (and (map? expr) (not ref)))
+  (and (or (map? expr)
+           (keyword? expr))
+       (not ref)))
 
 (defn- wildcard?
   [expr]
@@ -671,14 +673,20 @@
                (reduce-kv walk-attr result)))
         (walk-attr result attr expr)))))
 
+(defn- parse-link
+  [expr]
+  (if (map? expr)
+    [pull-join (ffirst (seq expr))]
+    [pull-prop expr]))
+
 (defn- pull-link
   [{:keys [db acc-fn] :as context} link result]
-  (let [[[attr]] (seq link)]
+  (let [[pull-fn attr] (parse-link link)]
     (when (and acc-fn attr)
       (acc-fn attr))
     (-> context
         (assoc :entity db)
-        (pull-join link result)
+        (pull-fn link result)
         (get attr))))
 
 (defn- pull-wildcard
