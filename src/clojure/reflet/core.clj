@@ -220,13 +220,18 @@
         ns (symbol (namespace sym))]
     (cljs/gets @env/*compiler* ::cljs/namespaces ns :defs n)))
 
+(defn- remove-var
+  [[sym id]]
+  (swap! env/*compiler* update ::vars dissoc sym)
+  id)
+
 (defmacro clear-stale-vars-impl!
   "Do not call directly."
   []
   `(doseq [id# ~(->> @env/*compiler*
                      (::vars)
                      (remove (comp defined-var? first))
-                     (mapv second))]
+                     (mapv remove-var))]
      (remove-desc id#)))
 
 (defn shadow-cljs?
