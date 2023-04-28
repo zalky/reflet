@@ -17,7 +17,7 @@ highly extensible components, and excellent APIs.
 Besides `with-ref`, Reflet also provides:
 
 1. Performant multi-model DB with graph queries and mutations
-2. Beyond union queries: data-driven, polymorphic descriptions
+2. Data-driven descriptions: a new kind of polymorphic query
 3. Simple but powerful hierarchical FSMs
 4. JS and DOM interop utilities
 5. Novel API-driven visual debugging of complex apps (don't sleep on
