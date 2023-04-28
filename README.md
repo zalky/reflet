@@ -58,13 +58,13 @@ Fulcro for Re-frame). Its main design goals are:
 At minimum include the following in your `deps.edn`:
 
 ```clj
-{:deps {io.zalky/reflet {:mvn/version "0.2.0"}}}
+{:deps {io.zalky/reflet {:mvn/version "0.3.0-rc1"}}}
 ```
 
 Or `project.clj`:
 
 ```clj
-[io.zalky/reflet "0.2.0"]
+[io.zalky/reflet "0.3.0-rc1"]
 ```
 
 Additionally, React is considered a peer dependency, so you will have
