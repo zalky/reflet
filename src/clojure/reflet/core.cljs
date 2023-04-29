@@ -120,9 +120,10 @@
 (defn- desc-expr-fn
   [[context e-ref]]
   (fn [& _]
-    (if (keyword? e-ref)
-      [{e-ref (db/wrap-desc context)}]
-      [(db/wrap-desc context) e-ref])))
+    (let [desc (db/wrap-desc context)]
+      (if (keyword? e-ref)
+        [{e-ref desc}]
+        [desc e-ref]))))
 
 (reg-sub-raw ::desc
   (fn [_ [_ query-v]]
@@ -244,14 +245,12 @@
        h :hierarchy
        t :type-attrs
        d :descriptions}]
-  (let [h* (if (vector? h)
-             (util/derive-pairs h) h)
-        p* (if (vector? p)
-             (p/prefer-pairs p) p)]
+  (let [h* (if (vector? h) (util/derive-pairs h) h)
+        p* (if (vector? p) (p/prefer-pairs p) p)]
     (assoc db
-           ::db/type-attrs   t
-           ::db/hierarchy    h*
            ::db/prefers      p*
+           ::db/hierarchy    h*
+           ::db/type-attrs   t
            ::db/descriptions d)))
 
 (f/reg-fx ::clear-stale-vars!

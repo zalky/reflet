@@ -6,12 +6,85 @@
 
 (t/use-fixtures :each fix/base-fixtures)
 
-(def hierarchy
-  (util/derive-pairs
-   [::a ::b
-    ::a ::c
-    ::c ::d
-    ::b ::e]))
+(def entries
+  {::a "a"
+   ::b "b"})
+
+(t/deftest poly-resolve-test
+  (is (= (p/poly-resolve
+          {:entries      {nil   "nil"
+                          false "false"}
+           :dispatch-val nil})
+         "nil"))
+  (is (= (p/poly-resolve
+          {:entries      {nil   "nil"
+                          false "false"}
+           :dispatch-val false})
+         "false"))
+  (is (= (p/poly-resolve
+          {:entries      entries
+           :dispatch-val ::a})
+         "a"))
+  (is (= (p/poly-resolve
+          {:entries      (assoc entries :default "default")
+           :dispatch-val ::missing})
+         "default"))
+  (is (= (p/poly-resolve
+          {:entries              (assoc entries :custom-default "custom-default")
+           :dispatch-val         ::missing
+           :default-dispatch-val :custom-default})
+         "custom-default"))
+  (is (= (p/poly-resolve
+          {:entries      entries
+           :hierarchy    (util/derive-pairs [::a ::b])
+           :dispatch-val ::a})
+         "a"))
+  (is (= (p/poly-resolve
+          {:entries      entries
+           :hierarchy    (util/derive-pairs [::d ::a])
+           :dispatch-val ::d})
+         "a"))
+  (is (= (p/poly-resolve
+          {:entries      entries
+           :hierarchy    (util/derive-pairs [::d ::a ::e ::d ::f ::e])
+           :dispatch-val ::f})
+         "a"))
+  (is (= (p/poly-resolve
+          {:entries      entries
+           :hierarchy    (util/derive-pairs [::d [::a ::b]])
+           :prefers      {::a #{::b}}
+           :dispatch-val ::d})
+         "a"))
+  (is (= (p/poly-resolve
+          {:entries      {[::a* ::b] "one"
+                          [::a ::b*] "two"}
+           :hierarchy    (util/derive-pairs [::a ::a* ::b ::b*])
+           :prefers      {[::a* ::b] #{[::a ::b*]}}
+           :dispatch-val [::a ::b]})
+         "one")))
+
+(t/deftest poly-resolve-error-test
+  (is (thrown-with-msg? js/Error
+                        #"Could not resolve entry"
+                        (p/poly-resolve nil)))
+  (is (thrown-with-msg? js/Error
+                        #"Could not resolve entry"
+                        (p/poly-resolve
+                         {:entries      entries
+                          :dispatch-val ::missing})))
+  (is (thrown-with-msg? js/Error
+                        #"Multiple dispatch entries"
+                        (p/poly-resolve
+                         {:entries      entries
+                          :hierarchy    (util/derive-pairs [::d [::a ::b]])
+                          :dispatch-val ::d})))
+  (is (thrown-with-msg? js/Error
+                        #"Multiple dispatch entries"
+                        (p/poly-resolve
+                         {:entries      {[::a* ::b] "one"
+                                         [::a ::b*] "two"}
+                          :hierarchy    (util/derive-pairs [::a ::a* ::b ::b*])
+                          :dispatch-val [::a ::b]}))))
 
 (t/deftest prefers?-test
   (is (false? (p/prefers? {} ::a ::b)))

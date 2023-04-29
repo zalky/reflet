@@ -674,24 +674,13 @@
   []
   (reg/get-handler ::desc))
 
-(defn- get-desc
-  [resolved-id descriptions context type]
-  (or (get descriptions resolved-id)
-      (get descriptions :default)
-      (-> "Could not resolve description"
-          (ex-info {:type    type
-                    :context context})
-          (throw))))
-
 (defn- poly-resolve
   [hierarchy prefers descriptions context type]
-  (let [descs (merge (handler-descs) descriptions)]
-    (-> {:candidates   (keys descs)
-         :hierarchy    hierarchy
-         :prefers      prefers
-         :dispatch-val [context type]}
-        (p/poly-resolve)
-        (get-desc descs context type))))
+  (p/poly-resolve
+   {:entries      (merge (handler-descs) descriptions)
+    :hierarchy    hierarchy
+    :prefers      prefers
+    :dispatch-val [context type]}))
 
 (f/reg-sub ::poly-resolve
   (fn [_]

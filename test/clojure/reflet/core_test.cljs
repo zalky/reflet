@@ -537,7 +537,8 @@
      (f/with-ref {:system/uuid [id1 id2 id3 join1 join2 missing]}
        (f/disp [::init id1 id2 id3 join1 join2])
 
-       (is (thrown-with-msg? js/Error #"Could not resolve description"
+       (is (thrown-with-msg? js/Error
+                             #"Could not resolve entry"
                              @(f/desc [:kr.context/missing id1])))
 
        (testing "props"
@@ -846,6 +847,44 @@
                :kr/name        "name"
                :kr/description "description"}))))))
 
+(deftest reg-desc-type-attrs-test
+  (testing "Context dependent type attrs"
+    (fix/run-test-sync
+     (f/reg-event-db ::init
+       (fn [db [_ id1]]
+         (-> db
+             (db/mergen [{:system/uuid       (second id1)
+                          :test/type         :test.type/a
+                          :test.context/type :test.context.type/a
+                          :kr/name           "name"
+                          :kr/other-data     "other-data"
+                          :kr/more-data      "more-data"}])
+             (assoc ::db/type-attrs {:default        :test/type
+                                     :test.context/a :test.context/type}))))
+
+     (f/with-ref {:system/uuid [id1]}
+       (f/disp [::init id1])
+
+       (f/reg-desc [:test.context/b :test.type/a]
+         [:system/uuid
+          :test/type
+          :kr/other-data])
+
+       (f/reg-desc [:test.context/a :test.context.type/a]
+         [:system/uuid
+          :test.context/type
+          :kr/more-data])
+
+       (is (= @(f/desc [:test.context/b id1])
+              {:system/uuid   (second id1)
+               :test/type     :test.type/a
+               :kr/other-data "other-data"}))
+
+       (is (= @(f/desc [:test.context/a id1])
+              {:system/uuid       (second id1)
+               :test.context/type :test.context.type/a
+               :kr/more-data      "more-data"}))))))
+
 (deftest reg-desc-error-test
   (testing "Ambiguous descriptions errors"
     (fix/run-test-sync
@@ -881,7 +920,8 @@
             :kr/type
             :kr/description])
 
-         (is (thrown-with-msg? js/Error #"Multiple dispatch candidates"
+         (is (thrown-with-msg? js/Error
+                               #"Multiple dispatch entries"
                                @(f/desc [:kr.context/a id1])))
 
      (f/reg-event-db ::update-prefers
