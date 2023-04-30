@@ -121,7 +121,7 @@
   [[context e-ref]]
   (fn [& _]
     (let [desc (db/wrap-desc context)]
-      (if (keyword? e-ref)
+      (if (db/prop? e-ref)
         [{e-ref desc}]
         [desc e-ref]))))
 
@@ -138,17 +138,17 @@
 (defn desc
   [query-v]
   {:pre [(bituple? query-v)
-         (keyword? (first query-v))
+         (db/prop? (first query-v))
          (or (bituple? (second query-v))
-             (keyword? (second query-v)))]}
+             (db/prop? (second query-v)))]}
   (sub [::desc query-v]))
 
 (defn reg-desc-impl
   "Do not use, see reg-desc macro."
   [id desc]
   {:pre [(or (and (bituple? id)
-                  (keyword? (first id))
-                  (keyword? (second id)))
+                  (db/prop? (first id))
+                  (db/prop? (second id)))
              (= id :default))]}
   (reg/register-handler ::db/desc id desc))
 

@@ -146,6 +146,10 @@
             [reflet.util.transients :as t])
   (:require-macros [reflet.db :refer [traced-reaction]]))
 
+(defn prop?
+  [expr]
+  (or (keyword? expr) (string? expr)))
+
 (defmulti random-ref-impl
   "Extend this to produce different kinds of random entity references
   for new id attributes."
@@ -530,7 +534,7 @@
 
 (defn- valid-updaten?
   [{::keys [id-attrs]} attr refs]
-  (and (keyword? attr)
+  (and (prop? attr)
        (every? #(norm/ref? % id-attrs) refs)))
 
 (defn updaten
@@ -569,10 +573,6 @@
 
 (declare pull*)
 
-(defn- prop?
-  [expr]
-  (or (keyword? expr) (string? expr)))
-
 (defn- strict-map?
   [expr]
   (and (map? expr) (not (record? expr))))
@@ -580,7 +580,7 @@
 (defn- link?
   [ref expr]
   (and (or (strict-map? expr)
-           (keyword? expr))
+           (prop? expr))
        (not ref)))
 
 (defn- wildcard?
@@ -721,10 +721,10 @@
           (recursive-join-expr []
             (let [[[attr expr]] (seq join)]
               (cond
-                (keyword? expr) [attr (wrap-desc expr)]
-                (number? expr)  [attr (dec-recursive-join expr)]
-                (= expr '...)   [attr pattern]
-                :else           [attr expr])))
+                (prop? expr)   [attr (wrap-desc expr)]
+                (number? expr) [attr (dec-recursive-join expr)]
+                (= expr '...)  [attr pattern]
+                :else          [attr expr])))
 
           (r-pull [expr value]
             (if (and (norm/ref? value id-attrs)
@@ -797,7 +797,7 @@
 (defn- attr-expr
   [expr]
   (cond
-    (keyword? expr)    expr
+    (prop? expr)       expr
     (strict-map? expr) (ffirst expr)
     (list? expr)       (attr-expr (first expr))
     :else              nil))
