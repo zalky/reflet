@@ -1,5 +1,6 @@
 (ns reflet.client.ui
   (:require [reagent.core :as r]
+            [reflet.client.ui.desc :as desc]
             [reflet.client.ui.impl :as impl]
             [reflet.client.ui.player :as player]
             [reflet.client.ui.workflow :as work]
@@ -13,10 +14,12 @@
 (defn menu
   [_]
   [:div {:class "menu"}
-   [:div {:on-click #(f/disp [::impl/set-view ::player])}
+   [:a {:on-click #(f/disp [::impl/set-view ::player])}
     "Player"]
-   [:div {:on-click #(f/disp [::impl/set-view ::workflow])}
-    "Workflow"]])
+   [:a {:on-click #(f/disp [::impl/set-view ::workflow])}
+    "Workflow"]
+   [:a {:on-click #(f/disp [::impl/set-view ::descriptions])}
+    "Descriptions"]])
 
 (defn app
   []
@@ -28,5 +31,6 @@
       [menu props]]
      [:div {:class "view"}
       (case @(f/sub [::impl/view])
-        ::workflow [work/workflow props]
+        ::workflow     [work/workflow props]
+        ::descriptions [desc/descriptions props]
         [player/player props])]]))

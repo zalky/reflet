@@ -142,8 +142,13 @@
             [reagent.ratom :as r]
             [reflet.config :as config]
             [reflet.db.normalize :as norm]
+            [reflet.poly :as p]
             [reflet.util.transients :as t])
   (:require-macros [reflet.db :refer [traced-reaction]]))
+
+(defn prop?
+  [expr]
+  (or (keyword? expr) (string? expr)))
 
 (defmulti random-ref-impl
   "Extend this to produce different kinds of random entity references
@@ -529,7 +534,7 @@
 
 (defn- valid-updaten?
   [{::keys [id-attrs]} attr refs]
-  (and (keyword? attr)
+  (and (prop? attr)
        (every? #(norm/ref? % id-attrs) refs)))
 
 (defn updaten
@@ -568,14 +573,14 @@
 
 (declare pull*)
 
-(defn- prop?
+(defn- strict-map?
   [expr]
-  (or (keyword? expr) (string? expr)))
+  (and (map? expr) (not (record? expr))))
 
 (defn- link?
   [ref expr]
-  (and (or (map? expr)
-           (keyword? expr))
+  (and (or (strict-map? expr)
+           (prop? expr))
        (not ref)))
 
 (defn- wildcard?
@@ -607,10 +612,11 @@
     effect))
 
 (defn- pull-effects
-  "Parses effect expression and runs effect-fn, if configured, for side
-  effects. The pull-fx-fn has two args: a map of effect parameters,
-  and a subset of the query context. The default pull implementation
-  should have no effects configured, and is pure."
+  "Parses effect expression and runs pull-fx-fn, if configured, for
+  side-effects. pull-fx-fn has two args: a map of effect parameters,
+  and a subset of the query execution context. There should be a
+  version of pull that can be configured to be functionally pure, with
+  no side-effects."
   [{:keys [db ref pull-fx-fn]
     :as   context} effect result]
   (let [[expr params] (unquote-list effect)]
@@ -620,25 +626,105 @@
                           :expr expr}))
     (pull* context expr result)))
 
+(f/reg-sub ::type-attrs
+  (fn [db _]
+    (get db ::type-attrs)))
+
+(f/reg-sub ::hierarchy
+  (fn [db _]
+    (get db ::hierarchy)))
+
+(f/reg-sub ::prefers
+  (fn [db _]
+    (get db ::prefers)))
+
+(f/reg-sub ::descriptions
+  (fn [db _]
+    (get db ::descriptions)))
+
+(defrecord Description [context])
+
+(defn- wrap-desc
+  [expr]
+  (Description. expr))
+
+(defn- desc?
+  [expr]
+  (instance? Description expr))
+
+(defn- type-attr
+  [{reactive?  :acc-fn
+    type-attrs :type-attrs} {c :context}]
+  (let [attrs (if reactive?
+                @(f/subscribe [::type-attrs])
+                type-attrs)]
+    (or (get attrs c)
+        (get attrs :default)
+        :kr/type)))
+
+(defn- desc-type
+  [{:keys [db ref acc-fn]
+    :as   context} expr]
+  (when (and acc-fn ref)
+    (acc-fn ref))
+  (let [attr (type-attr context expr)]
+    (get-in db [ref attr])))
+
+(defn- handler-descs
+  []
+  (reg/get-handler ::desc))
+
+(defn- poly-resolve
+  [hierarchy prefers descriptions context type]
+  (p/poly-resolve
+   {:entries      (merge (handler-descs) descriptions)
+    :hierarchy    hierarchy
+    :prefers      prefers
+    :dispatch-val [context type]}))
+
+(f/reg-sub ::poly-resolve
+  (fn [_]
+    [(f/subscribe [::hierarchy])
+     (f/subscribe [::prefers])
+     (f/subscribe [::descriptions])])
+  (fn [[h p descs] [_ context type]]
+    (poly-resolve h p descs context type)))
+
+(defn- resolve-desc
+  [{reactive? :acc-fn
+    h         :hierarchy
+    p         :prefers
+    descs     :descriptions} {c :context} type]
+  (if reactive?
+    @(f/subscribe [::poly-resolve c type])
+    (poly-resolve h p descs c type)))
+
+(defn- pull-desc
+  [context expr result]
+  (when-let [type (desc-type context expr)]
+    (let [desc (resolve-desc context expr type)]
+      (pull* context desc result))))
+
 (defn- pull-join
-  [{:keys [entity pattern id-attrs join?] :as context} join result]
-  (letfn [(dec-recursive-join []
-            (mapv
-             (fn [expr]
-               (if (= expr join)
-                 (let [[[k n]] (seq expr)]
-                   {k (dec n)})
-                 expr))
-             pattern))
+  [{:keys [entity pattern id-attrs join?]
+    :as   context} join result]
+  (letfn [(dec-recursive-join [expr*]
+            (when (pos? expr*)
+              (mapv
+               (fn [expr]
+                 (if (= expr join)
+                   (let [[[k n]] (seq expr)]
+                     {k (dec n)})
+                   expr))
+               pattern)))
 
           (recursive-join-expr []
             (let [[[attr expr]] (seq join)]
-              (if (number? expr)
-                [attr (when (pos? expr)
-                        (dec-recursive-join))]
-                (if (= expr '...)
-                  [attr pattern]
-                  [attr expr]))))
+              (cond
+                (prop? expr)   [attr (wrap-desc expr)]
+                (number? expr) [attr (dec-recursive-join expr)]
+                (= expr '...)  [attr pattern]
+                :else          [attr expr])))
 
           (r-pull [expr value]
             (if (and (norm/ref? value id-attrs)
@@ -675,7 +761,7 @@
 
 (defn- parse-link
   [expr]
-  (if (map? expr)
+  (if (strict-map? expr)
     [pull-join (ffirst (seq expr))]
     [pull-prop expr]))
 
@@ -698,22 +784,23 @@
    (pull* context expr nil))
   ([{ref :ref :as context} expr result]
    (cond
-     (link? ref expr) (pull-link context expr result)
-     (list? expr)     (pull-effects context expr result)
-     (vector? expr)   (pull-props context expr result)
-     (prop? expr)     (pull-prop context expr result)
-     (wildcard? expr) (pull-wildcard context expr result)
-     (map? expr)      (pull-join context expr result)
-     :else            (throw (ex-info "Invalid pull expression"
-                                      {::expr expr})))))
+     (link? ref expr)   (pull-link context expr result)
+     (desc? expr)       (pull-desc context expr result)
+     (list? expr)       (pull-effects context expr result)
+     (vector? expr)     (pull-props context expr result)
+     (prop? expr)       (pull-prop context expr result)
+     (wildcard? expr)   (pull-wildcard context expr result)
+     (strict-map? expr) (pull-join context expr result)
+     :else              (throw (ex-info "Invalid pull expression"
+                                        {::expr expr})))))
 
 (defn- attr-expr
   [expr]
   (cond
-    (keyword? expr) expr
-    (map? expr)     (ffirst expr)
-    (list? expr)    (attr-expr (first expr))
-    :else           nil))
+    (prop? expr)       expr
+    (strict-map? expr) (ffirst expr)
+    (list? expr)       (attr-expr (first expr))
+    :else              nil))
 
 (defn default-pull-impl
   "Evaluates the pull expression, `expr`, against the `:db` given in the
@@ -810,9 +897,13 @@
    (pull db expr nil))
   ([db expr e-ref]
    (let [pfn (get-pull-fn)]
-     (pfn {:id-attrs (::id-attrs db)
-           :db       (::data db)
-           :ref      e-ref}
+     (pfn {:db           (::data db)
+           :id-attrs     (::id-attrs db)
+           :type-attrs   (::type-attrs db)
+           :hierarchy    (::hierarchy db)
+           :prefers      (::prefers db)
+           :descriptions (::descriptions db)
+           :ref          e-ref}
           expr))))
 
 (defn- clear-stale-entities
@@ -1023,16 +1114,16 @@
   is not reactive to them. Instead, it is reactive to changes the
   query tick, which tracks the db-tick and synced."
   [config expr-fn query-v]
-  (let [q-ref  (query-ref)
-        q-tick (query-tick q-ref)
-        expr-r (apply expr-fn (rest query-v))]
+  (let [q-ref        (query-ref)
+        q-tick       (query-tick q-ref)
+        [expr e-ref] (apply expr-fn (rest query-v))]
     (traced-reaction q-ref query-v
       (fn []
         (let [t  @q-tick
               in {:db         (.-state db/app-db)
                   :index      (.-state query-index)
-                  :expr       (first expr-r)
-                  :e-ref      (second expr-r)
+                  :expr       expr
+                  :e-ref      e-ref
                   :q-ref      q-ref
                   :query-tick t}
 

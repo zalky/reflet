@@ -94,7 +94,10 @@ $coll-brace-width:              0.5rem;
     box-shadow: 4px 4px $debug-panel-drop-shadow;
     font-size: $font-size-xs;
     font-family: $font-family-monospace;
-    white-space: pre;
+
+    &.reflet-context-coll {
+        white-space: pre;
+    }
 }
 
 .reflet-global-control {

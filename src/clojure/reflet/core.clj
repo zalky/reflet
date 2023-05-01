@@ -1,5 +1,7 @@
 (ns reflet.core
   (:require [cinch.core :as util]
+            [cljs.env :as env]
+            [cljs.analyzer :as cljs]
             [clojure.spec.alpha :as s]
             [clojure.walk :as w]
             [re-frame.core :as f]
@@ -184,13 +186,76 @@
 (defmacro reg-pull
   "Registers a named pull query. Semantics are similar to Datomic pull,
   but with link and attribute queries. See wiki for full
-  details. Macro prevents keyword evaluation. This is a convenience to
-  facilitate sync expressions."
+  details. Macro prevents list evaluation, part of the grammar for
+  pull fx."
   [& [id [_ bindings & spec] result-fn]]
   (concat
    `(reg-pull-impl ~id
      (fn ~bindings ~@(no-eval-keywords spec)))
    (when result-fn [result-fn])))
+
+(defn- var-sym
+  [id]
+  (->> (hash id)
+       (str "var")
+       (symbol)))
+
+(defmacro reg-desc
+  "Registers an entity description. See wiki for full details. Macro
+  prevents list evaluation, part of the grammar for pull fx. Registers
+  a var symbol for each description so that stale descriptions can be
+  removed on hot reload."
+  [id desc]
+  (let [sym    (var-sym id)
+        ns     (env-namespace &env)
+        fq-sym (symbol ns (str sym))
+        desc   (no-eval-keywords desc)]
+    (swap! env/*compiler* assoc-in [::vars fq-sym] id)
+    `(def ~sym
+       (reg-desc-impl ~id ~desc))))
+
+(defn- defined-var?
+  [sym]
+  (let [n  (symbol (name sym))
+        ns (symbol (namespace sym))]
+    (cljs/gets @env/*compiler* ::cljs/namespaces ns :defs n)))
+
+(defn- remove-var
+  [[sym id]]
+  (swap! env/*compiler* update ::vars dissoc sym)
+  id)
+
+(defmacro clear-stale-vars-impl!
+  "Do not call directly."
+  []
+  `(doseq [id# ~(->> @env/*compiler*
+                     (::vars)
+                     (remove (comp defined-var? first))
+                     (mapv remove-var))]
+     (remove-desc id#)))
+
+(defn shadow-cljs?
+  []
+  (-> @env/*compiler*
+      (::cljs/namespaces)
+      (contains? 'shadow.cljs.devtools.client.shared)))
+
+(defn- clear-stale-vars-shadow!
+  []
+  `(when (-> shadow.cljs.devtools.client.shared/runtime-ref
+             (deref)
+             (:state-ref)
+             (deref)
+             (:shadow.cljs.devtools.client.shared/ws-connected))
+     (js/cljs-eval "(reflet.core/clear-stale-vars-impl!)")))
+
+(defmacro clear-stale-vars!
+  "Clear stale descriptions during hot-reloading. Not needed for
+  production builds. Currently only works with shadow-cljs."
+  []
+  (if (shadow-cljs?)
+    (clear-stale-vars-shadow!)
+    nil))
 
 (defmacro once
   [& forms]

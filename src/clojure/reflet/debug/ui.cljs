@@ -396,7 +396,9 @@
   (f/with-ref* {:debug/id [debug/el]}
     (let [cb #(f/disp [::impl/set-context-pos el])]
       [:div {:ref      (i/el! el :mount cb)
-             :class    "reflet-context"
+             :class    ["reflet-context"
+                        (when (coll? value)
+                          "reflet-context-coll")]
              :style    pos
              :on-click #(.stopPropagation %)}
        (with-out-str (pprint/pprint value))])))

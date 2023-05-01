@@ -1,6 +1,6 @@
 .PHONY: npm cljs nuke clean
 
-version-number  = 0.2.0
+version-number  = 0.3.0
 group-id        = io.zalky
 artifact-id     = reflet
 description     = A set of tools for building Re-frame + React based web apps with graph and non-graph data models
